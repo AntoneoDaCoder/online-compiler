@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ProjectRoot>$(MSBuildProjectDirectory)</ProjectRoot>
+    <BaseOutputPath>$(ProjectRoot)/bin</BaseOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Code Examples\**\*.cs" />
+    <None Include="Code Examples\**\*.cs" />
+  </ItemGroup>
+
+</Project>
