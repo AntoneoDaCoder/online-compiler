@@ -19,14 +19,17 @@ powershell -NoProfile -Command ^
   " $content = $content -replace 'https://127\.0\.0\.1:(\d+)', 'https://host.docker.internal:$1';" ^
   " Set-Content -Path $path -Value $content"
 
-echo Building runner image
-cd ../InMemoryRunner
-docker build -t csharp-runner:local .
-minikube image load csharp-runner:local
+echo Building and loading API image
 cd ..
+docker build -t api-server:local -f ServerAPIApp/Dockerfile .
+minikube image load api-server:local
 
-echo Starting API container
-docker-compose build
-docker-compose up -d
+echo Building and loading runner image
+docker build -t csharp-runner:local -f InMemoryRunner/Dockerfile .
+minikube image load csharp-runner:local
+
+echo Deploying API to Kubernetes
+kubectl apply -f k8s/rbac.yaml
+kubectl apply -f k8s/api-deployment.yaml
 
 echo API is ready to run code
