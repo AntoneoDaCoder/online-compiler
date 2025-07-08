@@ -1,6 +1,5 @@
 ﻿using ServerAPIApp.Core.DTOs;
-using System.Text.Json;
-using System.Text;
+using System.Net.Http.Json;
 
 namespace ServerAPIApp.Core.Services
 {
@@ -18,10 +17,7 @@ namespace ServerAPIApp.Core.Services
         {
             response.Result.ResponseSentAt = DateTime.UtcNow;
 
-            var serializedDto = JsonSerializer.Serialize(response);
-            var requestContent = new StringContent(serializedDto, Encoding.UTF8, "application/json");
-
-            await _client.PostAsync(callbackUrl, requestContent, cancellationToken);
+            await _client.PostAsJsonAsync(callbackUrl, response, cancellationToken);
         }
 
         public void Dispose()

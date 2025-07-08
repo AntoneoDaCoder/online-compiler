@@ -4,23 +4,28 @@ using Microsoft.Extensions.Hosting;
 using ServerAPIApp.Core.DTOs;
 using ServerAPIApp.Core.Enums;
 using System.Collections.Concurrent;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace ServerAPIApp.Core.Services
 {
     public class KubernetesJobManager : IHostedService, IDisposable
     {
-        private const int _jobMemoryLimitMb = 192;
+        private const int _podMemoryLimitMb = 96;
         private const int _memoryBudgetMb = 1024;
         private const string _namespace = "default";
         private const string _imageName = "csharp-runner:local";
         private const string _containerName = "runner";
+        private const string _deploymentName = "runners-deployment";
         private const int _pollIntervalMs = 500;
+        private const int _numReplicas = _memoryBudgetMb / _podMemoryLimitMb;
 
         private ConcurrentDictionary<Guid, CodeRequestDto> _resultCallbacks = new ConcurrentDictionary<Guid, CodeRequestDto>();
         private IKubernetes _client;
         private CallbackService _callbackService;
         private CancellationTokenSource? _cts;
         private Task? _pollingTask;
+        private HttpClient _httpClient;
         private bool _isDisposed;
         private bool _isPolling;
 
@@ -28,6 +33,7 @@ namespace ServerAPIApp.Core.Services
         {
             _client = client;
             _callbackService = callbackService;
+            _httpClient = new HttpClient();
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -41,6 +47,8 @@ namespace ServerAPIApp.Core.Services
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             await EnsureResourceQuotaExistsAsync(_cts.Token);
+
+            await EnsureDeploymentExistsAsync(_cts.Token);
 
             _pollingTask = Task.Run(() => PollKubernetesAsync(_cts.Token), _cts.Token);
         }
@@ -64,85 +72,139 @@ namespace ServerAPIApp.Core.Services
             _cts = null;
         }
 
+        //public async Task<bool> ExecuteAsync(CodeRequestDto request, CancellationToken token)
+        //{
+        //    var jobName = request.RequestId.ToString();
+
+        //    var job = new V1Job
+        //    {
+        //        Metadata = new V1ObjectMeta(name: jobName, namespaceProperty: _namespace),
+        //        Spec = new V1JobSpec
+        //        {
+        //            ActiveDeadlineSeconds = 60,
+        //            Template = new V1PodTemplateSpec
+        //            {
+        //                Spec = new V1PodSpec
+        //                {
+        //                    RestartPolicy = "Never",
+        //                    Containers = new List<V1Container>
+        //                    {
+        //                        new V1Container
+        //                        {
+        //                            Name = _containerName,
+        //                            Image = _imageName,
+        //                            Env = new List<V1EnvVar>
+        //                            {
+        //                                new V1EnvVar { Name = "USER_CODE", Value = request.Code },
+        //                                new V1EnvVar { Name = "EXECUTION_TIMEOUT", Value = request.MaxAllowedTimeInMilliseconds.ToString() }
+        //                            },
+        //                    VolumeMounts = new List<V1VolumeMount>
+        //                    {
+        //                        new V1VolumeMount
+        //                        {
+        //                            Name = "app-volume",
+        //                            MountPath = "/workspace"
+        //                        }
+        //                    },
+        //                    WorkingDir = "/workspace",
+        //                    Resources = new V1ResourceRequirements
+        //                    {
+        //                        Limits = new Dictionary<string, ResourceQuantity>
+        //                        {
+        //                            ["memory"] = new ResourceQuantity($"{_jobMemoryLimitMb}Mi")
+        //                        },
+        //                        Requests = new Dictionary<string, ResourceQuantity>
+        //                        {
+        //                            ["memory"] = new ResourceQuantity($"{_jobMemoryLimitMb}Mi")
+        //                        }
+        //                    },
+        //                    SecurityContext = new V1SecurityContext
+        //                    {
+        //                        RunAsNonRoot = true,
+        //                        ReadOnlyRootFilesystem = false,
+        //                        AllowPrivilegeEscalation = false
+        //                    }
+        //                }
+        //        },
+        //                    Volumes = new List<V1Volume>
+        //        {
+        //            new V1Volume
+        //            {
+        //                Name = "app-volume",
+        //                EmptyDir = new V1EmptyDirVolumeSource()
+        //            }
+        //        }
+        //                }
+        //            }
+        //        }
+        //    };
+
+        //    try
+        //    {
+        //        await _client.BatchV1.CreateNamespacedJobAsync(job, _namespace, cancellationToken: token);
+
+        //        _resultCallbacks.TryAdd(request.RequestId, request);
+
+        //        return true;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine("[KubernetesJobManager] Failed to schedule execution. Reason: " + ex.Message);
+
+        //        return false;
+        //    }
+        //}
+
+        //can be done automatically via kubernetes service + readinessprobe, but i want to try and balance the load manually
         public async Task<bool> ExecuteAsync(CodeRequestDto request, CancellationToken token)
         {
-            var jobName = request.RequestId.ToString();
+            var pods = await _client.CoreV1.ListNamespacedPodAsync(
+                             namespaceParameter: _namespace,
+                             labelSelector: "app=runner,status=free",
+                             cancellationToken: token);
 
-            var job = new V1Job
-            {
-                Metadata = new V1ObjectMeta(name: jobName, namespaceProperty: _namespace),
-                Spec = new V1JobSpec
-                {
-                    ActiveDeadlineSeconds = 60,
-                    Template = new V1PodTemplateSpec
-                    {
-                        Spec = new V1PodSpec
-                        {
-                            RestartPolicy = "Never",
-                            Containers = new List<V1Container>
-                            {
-                                new V1Container
-                                {
-                                    Name = _containerName,
-                                    Image = _imageName,
-                                    Env = new List<V1EnvVar>
-                                    {
-                                        new V1EnvVar { Name = "USER_CODE", Value = request.Code },
-                                        new V1EnvVar { Name = "EXECUTION_TIMEOUT", Value = request.MaxAllowedTimeInMilliseconds.ToString() }
-                                    },
-                            VolumeMounts = new List<V1VolumeMount>
-                            {
-                                new V1VolumeMount
-                                {
-                                    Name = "app-volume",
-                                    MountPath = "/workspace"
-                                }
-                            },
-                            WorkingDir = "/workspace",
-                            Resources = new V1ResourceRequirements
-                            {
-                                Limits = new Dictionary<string, ResourceQuantity>
-                                {
-                                    ["memory"] = new ResourceQuantity($"{_jobMemoryLimitMb}Mi")
-                                },
-                                Requests = new Dictionary<string, ResourceQuantity>
-                                {
-                                    ["memory"] = new ResourceQuantity($"{_jobMemoryLimitMb}Mi")
-                                }
-                            },
-                            SecurityContext = new V1SecurityContext
-                            {
-                                RunAsNonRoot = true,
-                                ReadOnlyRootFilesystem = false,
-                                AllowPrivilegeEscalation = false
-                            }
-                        }
-                },
-                            Volumes = new List<V1Volume>
-                {
-                    new V1Volume
-                    {
-                        Name = "app-volume",
-                        EmptyDir = new V1EmptyDirVolumeSource()
-                    }
-                }
-                        }
-                    }
-                }
-            };
+            if (pods.Items.Count == 0)
+                return false;
+
+            var targetPod = pods.Items.First();
+
+            var podName = targetPod.Metadata.Name;
+
+            var podIp = targetPod.Status.PodIP;
 
             try
             {
-                await _client.BatchV1.CreateNamespacedJobAsync(job, _namespace, cancellationToken: token);
+                var response = await _httpClient.PostAsJsonAsync($"http://{podIp}:5000/run", request, token);
 
-                _resultCallbacks.TryAdd(request.RequestId, request);
+                response.EnsureSuccessStatusCode();
+
+                var patch = new V1Patch
+                (
+                    new
+                    {
+                        Metadata = new
+                        {
+                            Labels = new Dictionary<string, string>
+                            {
+                                ["app"] = "runner",
+                                ["status"] = "busy"
+                            }
+                        },
+                    },
+                    V1Patch.PatchType.MergePatch
+                );
+
+                await _client.CoreV1.PatchNamespacedPodAsync(
+                       body: patch,
+                       name: podName,
+                       namespaceParameter: _namespace,
+                       cancellationToken: token);
 
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[KubernetesJobManager] Failed to schedule execution. Reason: " + ex.Message);
-
+                Console.WriteLine($"[KubernetesJobManager] Error sending request to {podName}: {ex.Message}; \r\n{ex.StackTrace}");
                 return false;
             }
         }
@@ -180,6 +242,7 @@ namespace ServerAPIApp.Core.Services
                 _pollingTask = null;
                 _client.Dispose();
                 _isPolling = false;
+                _httpClient.Dispose();
             }
             _isDisposed = true;
         }
@@ -204,7 +267,84 @@ namespace ServerAPIApp.Core.Services
                         }
                     }
                 };
-                await _client.CoreV1.CreateNamespacedResourceQuotaAsync(quota, _namespace, cancellationToken: token);
+                await _client.CoreV1.CreateNamespacedResourceQuotaAsync(
+                      body: quota,
+                      namespaceParameter: _namespace,
+                      cancellationToken: token);
+            }
+        }
+
+        private async Task EnsureDeploymentExistsAsync(CancellationToken token)
+        {
+            try
+            {
+                await _client.AppsV1.ReadNamespacedDeploymentAsync(
+                       name: _deploymentName,
+                       namespaceParameter: _namespace,
+                       cancellationToken: token);
+            }
+            catch
+            {
+                var deployment = new V1Deployment
+                {
+                    Metadata = new V1ObjectMeta { Name = _deploymentName, NamespaceProperty = _namespace },
+                    Spec = new V1DeploymentSpec
+                    {
+                        Replicas = _numReplicas,
+                        Selector = new V1LabelSelector()
+                        {
+                            MatchLabels = new Dictionary<string, string>()
+                            {
+                                { "app", "runner" },
+                                { "status", "free" }
+                            }
+                        },
+                        Template = new V1PodTemplateSpec
+                        {
+                            Metadata = new V1ObjectMeta
+                            {
+                                Labels = new Dictionary<string, string>()
+                                {
+                                    { "app", "runner" },
+                                    { "status", "free" }
+                                }
+                            },
+                            Spec = new V1PodSpec
+                            {
+                                Containers = new List<V1Container>()
+                                {
+                                    new V1Container()
+                                    {
+                                        Name = _containerName,
+                                        Image = _imageName,
+                                        Resources = new V1ResourceRequirements
+                                        {
+                                            Limits = new Dictionary<string, ResourceQuantity>
+                                            {
+                                                ["memory"] = new ResourceQuantity($"{_podMemoryLimitMb}Mi")
+                                            },
+                                            Requests = new Dictionary<string, ResourceQuantity>
+                                            {
+                                                ["memory"] = new ResourceQuantity($"{_podMemoryLimitMb}Mi")
+                                            }
+                                        },
+                                        SecurityContext = new V1SecurityContext
+                                        {
+                                            RunAsNonRoot = true,
+                                            ReadOnlyRootFilesystem = false,
+                                            AllowPrivilegeEscalation = false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                await _client.AppsV1.CreateNamespacedDeploymentAsync(
+                        body: deployment,
+                        namespaceParameter: _namespace,
+                        cancellationToken: token);
             }
         }
 
