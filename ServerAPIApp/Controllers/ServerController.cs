@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
-using ServerAPIApp.Core.DTOs;
-using ServerAPIApp.Core.Enums;
+using Shared.DTOs;
+using Shared.Enums;
 using ServerAPIApp.Core.Services;
-using System.Text.Json;
 
 namespace ServerAPIApp.Controllers
 {
     [ApiController]
+    [Route("api")]
     public class ServerController : ControllerBase
     {
         private CodeDispatcher _dispatcher;
@@ -15,7 +15,7 @@ namespace ServerAPIApp.Controllers
             _dispatcher = dispatcher;
         }
 
-        [HttpPost("execute")]
+        [HttpPost("jobs/start")]
         public async Task<IActionResult> ExecuteCode([FromBody] CodeRequestDto dto, CancellationToken cancellationToken)
         {
             try
@@ -53,6 +53,14 @@ namespace ServerAPIApp.Controllers
 
                 return StatusCode(500, response);
             }
+        }
+
+        [HttpPost("jobs/complete")]
+        public async Task<IActionResult> GetPodResponse([FromBody] CodeResponseDto podResponse, CancellationToken cancellationToken)
+        {
+            await _dispatcher.CompleteExecutionAsync(podResponse, cancellationToken);
+
+            return Ok();
         }
     }
 }
