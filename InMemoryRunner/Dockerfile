@@ -7,6 +7,7 @@ WORKDIR /src
 RUN useradd -u 1001 -m runneruser
 
 COPY ["InMemoryRunner/","InMemoryRunner/"]
+COPY ["Shared/","Shared/"]
 
 RUN dotnet restore "InMemoryRunner/InMemoryRunner.csproj"
 

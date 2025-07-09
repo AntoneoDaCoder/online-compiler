@@ -6,6 +6,7 @@ WORKDIR /src
 
 COPY ["ServerAPIApp.Core/", "ServerAPIApp.Core/"]
 COPY ["ServerAPIApp/", "ServerAPIApp/"]
+COPY ["Shared/", "Shared/"]
 
 RUN dotnet restore "ServerAPIApp/ServerAPIApp.csproj"
 
