@@ -1,4 +1,4 @@
-﻿using ServerAPIApp.Core.DTOs;
+﻿using Shared.DTOs;
 using System.Net.Http.Json;
 
 namespace ServerAPIApp.Core.Services

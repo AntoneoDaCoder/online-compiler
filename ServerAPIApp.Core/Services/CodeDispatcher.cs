@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Hosting;
-using ServerAPIApp.Core.DTOs;
+using Shared.DTOs;
 using System.Threading.Channels;
 
 namespace ServerAPIApp.Core.Services
@@ -32,6 +32,11 @@ namespace ServerAPIApp.Core.Services
         public async Task ScheduleForExecutionAsync(CodeRequestDto request, CancellationToken cancellationToken)
         {
             await _channel.Writer.WriteAsync(request, cancellationToken);
+        }
+
+        public async Task CompleteExecutionAsync(CodeResponseDto response, CancellationToken cancellationToken)
+        {
+            await _jobManager.CompleteJobAsync(response, cancellationToken);
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -136,7 +141,7 @@ namespace ServerAPIApp.Core.Services
             }
             catch (OperationCanceledException)
             {
-                // Ожидаемое завершение
+                // expected shut down
             }
             catch (Exception ex)
             {
