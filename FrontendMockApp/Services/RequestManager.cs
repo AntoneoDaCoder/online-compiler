@@ -1,5 +1,5 @@
 ﻿using FrontendMockApp.Abstractions;
-using FrontendMockApp.DTOs;
+using Shared.DTOs;
 using System.Text.Json;
 using System.Collections.Concurrent;
 

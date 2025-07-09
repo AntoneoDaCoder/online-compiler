@@ -12,5 +12,8 @@
     <Compile Remove="Code Examples\**\*.cs" />
     <None Include="Code Examples\**\*.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+  </ItemGroup>
 
 </Project>

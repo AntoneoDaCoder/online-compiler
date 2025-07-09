@@ -1,4 +1,4 @@
-﻿using FrontendMockApp.DTOs;
+﻿using Shared.DTOs;
 using System.Text.Json;
 using System.Text;
 using FrontendMockApp.Abstractions;
@@ -7,8 +7,8 @@ namespace FrontendMockApp.Services
 {
     public class CodeRequestProducer : IDisposable
     {
-        private const string _serverTestUrl = "http://localhost:12345";
-        private const string _serverTestEndpoint = "execute";
+        private const string _serverTestUrl = "http://localhost:12345/api";
+        private const string _serverTestEndpoint = "jobs/start";
         private const int _maxTimeoutInMilliseconds = 12000;
 
         private Uri _requestUri;
@@ -17,7 +17,7 @@ namespace FrontendMockApp.Services
         private IRequestObserver _requestObserver;
         private CancellationTokenSource? _cts;
         private Task? _postingTask;
-        private volatile bool _isPosting = false;
+        private bool _isPosting = false;
         private bool _isDisposed = false;
         private string _callbackUrl;
 
@@ -47,7 +47,7 @@ namespace FrontendMockApp.Services
             _isPosting = true;
 
             _cts = new CancellationTokenSource();
-            _postingTask = Task.Run(() => PostAsync(_cts.Token), _cts.Token);
+            _postingTask = PostAsync(_cts.Token);
 
             Console.WriteLine("[Producer] is ready to send requests.");
         }
@@ -76,7 +76,7 @@ namespace FrontendMockApp.Services
 
         public async Task PostSingleExecutionRequestAsync(CodeRequestDto codeRequest, CancellationToken cancellationToken)
         {
-            ArgumentNullException.ThrowIfNull(codeRequest.CallbackUrl, nameof(codeRequest.CallbackUrl));
+            ArgumentException.ThrowIfNullOrEmpty(codeRequest.CallbackUrl, nameof(codeRequest.CallbackUrl));
 
             var serializedDto = JsonSerializer.Serialize(codeRequest);
             var requestContent = new StringContent(serializedDto, Encoding.UTF8, "application/json");
@@ -85,7 +85,7 @@ namespace FrontendMockApp.Services
             {
                 var serverInitResponse = await _httpClient.PostAsync(_requestUri, requestContent, cancellationToken);
 
-                var msgContent = serverInitResponse.Content.ReadAsStringAsync(cancellationToken).Result;
+                var msgContent = await serverInitResponse.Content.ReadAsStringAsync(cancellationToken);
 
                 _requestObserver.NotifySubscribers(msgContent);
             }
@@ -147,22 +147,22 @@ namespace FrontendMockApp.Services
             //}
             if (!cancellationToken.IsCancellationRequested)
             {
-                for (int i = 0; i < 5; i++)
-                    foreach (var example in _testExamples)
+                // for (int i = 0; i < 5; i++)
+                foreach (var example in _testExamples)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
+
+                    var requestDto = new CodeRequestDto()
                     {
-                        if (cancellationToken.IsCancellationRequested)
-                            break;
+                        Code = example.Value,
+                        MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                        CallbackUrl = _callbackUrl,
+                        RequestSentAt = DateTime.UtcNow
+                    };
 
-                        var requestDto = new CodeRequestDto()
-                        {
-                            Code = example.Value,
-                            MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                            CallbackUrl = _callbackUrl,
-                            RequestSentAt = DateTime.UtcNow
-                        };
-
-                        await PostSingleExecutionRequestAsync(requestDto, cancellationToken);
-                    }
+                    await PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+                }
             }
         }
     }
