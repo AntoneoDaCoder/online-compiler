@@ -16,11 +16,13 @@ namespace ServerAPIApp.Controllers
         }
 
         [HttpPost("jobs/start")]
-        public async Task<IActionResult> ExecuteCode([FromBody] CodeRequestDto dto, CancellationToken cancellationToken)
+        public async Task<IActionResult> ScheduleCodeExecutionAsync([FromBody] CodeRequestDto dto, CancellationToken cancellationToken)
         {
             try
             {
                 await _dispatcher.ScheduleForExecutionAsync(dto, cancellationToken);
+
+                Console.WriteLine($"[API Controller] Received a request [Id:{dto.RequestId}], server time: {DateTime.Now}");
 
                 var response = new CodeResponseDto()
                 {
@@ -56,9 +58,13 @@ namespace ServerAPIApp.Controllers
         }
 
         [HttpPost("jobs/complete")]
-        public async Task<IActionResult> GetPodResponse([FromBody] CodeResponseDto podResponse, CancellationToken cancellationToken)
+        public async Task<IActionResult> CompleteCodeExecutionAsync([FromBody] CodeResponseDto podResponse, CancellationToken cancellationToken)
         {
+            Console.WriteLine($"[API Controller] Got pod's response [Id:{podResponse.RequestId}], time: {DateTime.UtcNow}");
+
             await _dispatcher.CompleteExecutionAsync(podResponse, cancellationToken);
+
+            Console.WriteLine($"[API Controller] Sent a response [Id:{podResponse.RequestId}] to client, time: {DateTime.UtcNow}");
 
             return Ok();
         }
