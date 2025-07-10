@@ -54,3 +54,6 @@ class HeavyCorrectExample
         return totalValue;
     }
 }
+
+
+HeavyCorrectExample.Main();

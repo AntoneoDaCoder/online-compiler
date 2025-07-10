@@ -41,3 +41,5 @@ class MediumCorrectExample
     }
 }
 
+
+MediumCorrectExample.Main();

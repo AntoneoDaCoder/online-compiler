@@ -22,3 +22,7 @@ class LightCorrectExample
     }
 }
 
+
+LightCorrectExample.Main();
+
+

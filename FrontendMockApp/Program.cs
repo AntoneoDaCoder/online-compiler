@@ -2,7 +2,7 @@
 
 class Program
 {
-    const string _callbackUrl = "http://host.docker.internal:23456/callback/";
+    const string _callbackUrl = "http://host.minikube.internal:23456/callback/";
     const string _urlPrefix = "http://+:23456/callback/";
 
 
