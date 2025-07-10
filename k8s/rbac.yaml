@@ -12,11 +12,14 @@ metadata:
   name: api-server-role
 rules:
 - apiGroups: [""]
-  resources: ["resourcequotas"]
+  resources: ["resourcequotas", "pods"]
   verbs: ["create", "get", "list", "watch", "update", "patch"]
 - apiGroups: ["apps"]
   resources: ["deployments"]
   verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+- apiGroups: [""] 
+  resources: ["pods/status"]
+  verbs: ["get", "patch"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1

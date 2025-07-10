@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Shared.DTOs;
 using System.Collections.Concurrent;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace ServerAPIApp.Core.Services
 {
@@ -57,7 +58,7 @@ namespace ServerAPIApp.Core.Services
         {
             var pods = await _client.CoreV1.ListNamespacedPodAsync(
                              namespaceParameter: _namespace,
-                             labelSelector: "app=runner,status=free",
+                             labelSelector: "app=runner,readyForExecution=yes",
                              cancellationToken: token);
 
             if (pods.Items.Count == 0)
@@ -68,6 +69,9 @@ namespace ServerAPIApp.Core.Services
             var podName = targetPod.Metadata.Name;
 
             var podIp = targetPod.Status.PodIP;
+
+            Console.WriteLine($"[KubernetesJobManager] Trying to execute request [Id:{request.RequestId}," +
+                $" Data: {JsonSerializer.Serialize(request, new JsonSerializerOptions { WriteIndented = true })} in pod [Name:{podName}]");
 
             try
             {
@@ -84,7 +88,7 @@ namespace ServerAPIApp.Core.Services
                             Labels = new Dictionary<string, string>
                             {
                                 ["app"] = "runner",
-                                ["status"] = "busy"
+                                ["readyForExecution"] = "no"
                             }
                         },
                     },
@@ -97,7 +101,12 @@ namespace ServerAPIApp.Core.Services
                        namespaceParameter: _namespace,
                        cancellationToken: token);
 
+                Console.WriteLine($"[KubernetesJobManager] Successfully assigned request [Id:{request.RequestId}] to pod [Name:{podName}]");
+
                 _resultCallbacks.TryAdd(request.RequestId, (podName, request.CallbackUrl));
+
+                Console.WriteLine($"[KubernetesJobManager] Current state of pending callbacks:\r\n "
+                    + JsonSerializer.Serialize(_resultCallbacks, new JsonSerializerOptions { WriteIndented = true }));
 
                 return true;
             }
@@ -129,7 +138,7 @@ namespace ServerAPIApp.Core.Services
                             Labels = new Dictionary<string, string>
                             {
                                 ["app"] = "runner",
-                                ["status"] = "free"
+                                ["readyForExecution"] = "yes"
                             }
                         },
                     },
@@ -225,7 +234,8 @@ namespace ServerAPIApp.Core.Services
                             MatchLabels = new Dictionary<string, string>()
                             {
                                 { "app", "runner" },
-                                { "status", "free" }
+                                { "readyForExecution", "yes" +
+                                "" }
                             }
                         },
                         Template = new V1PodTemplateSpec
@@ -235,7 +245,7 @@ namespace ServerAPIApp.Core.Services
                                 Labels = new Dictionary<string, string>()
                                 {
                                     { "app", "runner" },
-                                    { "status", "free" }
+                                    { "readyForExecution", "yes" }
                                 }
                             },
                             Spec = new V1PodSpec

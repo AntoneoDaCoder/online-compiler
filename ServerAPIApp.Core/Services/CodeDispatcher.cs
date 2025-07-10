@@ -127,14 +127,14 @@ namespace ServerAPIApp.Core.Services
                             {
                                 await RescheduleExecution(request, cancellationToken);
 
-                                Console.WriteLine("rescheduling exectuion?");
+                                Console.WriteLine("rescheduling execution?");
                             }
                         }
                         catch (Exception ex)
                         {
                             await RescheduleExecution(request, cancellationToken);
 
-                            Console.WriteLine("rescheduling exectuion due to an exception?");
+                            Console.WriteLine("rescheduling execution due to an exception? Exception: " + ex);
                         }
                     }
                 }
