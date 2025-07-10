@@ -23,6 +23,10 @@ class Runner
     private static HttpListener _listener = new HttpListener();
     private static HttpClient _client = new HttpClient();
     private static List<AssemblyMetadata> _metadataCache;
+    private static JsonSerializerOptions _options = new JsonSerializerOptions
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     static Runner()
     {
@@ -61,11 +65,13 @@ class Runner
         return _metadataCache.Select(am => am.GetReference());
     }
 
-    private static async Task NotifyJobManagerAsync(CodeResponseDto response, string callbackUrl, CancellationToken cancellationToken)
+    private static async Task NotifyJobManagerAsync(CodeResponseDto response, string callbackUrl, Guid requestId, CancellationToken cancellationToken)
     {
         response.Result.ResponseSentAt = DateTime.UtcNow;
 
         await _client.PostAsJsonAsync(callbackUrl, response, cancellationToken);
+
+        Console.WriteLine($"[Runner] Sent response [Id:{response.RequestId}] to request [Id:{requestId}]");
     }
 
     private static async Task ListenAsync(CancellationToken cancellationToken)
@@ -82,7 +88,10 @@ class Runner
                     {
                         var requestString = await reader.ReadToEndAsync(cancellationToken);
 
-                        var codeRequest = JsonSerializer.Deserialize<CodeRequestDto>(requestString);
+                        var codeRequest = JsonSerializer.Deserialize<CodeRequestDto>(requestString, _options);
+
+                        Console.WriteLine($"[Runner] Received request [Id:{codeRequest.RequestId}, Data: " +
+                            $"{requestString}]");
 
                         _ = ExecuteUserCodeAsync(codeRequest, cancellationToken);
 
@@ -111,6 +120,7 @@ class Runner
     {
         var result = new CodeResponseDto()
         {
+            RequestId = request.RequestId,
             Result = new ExecutionResultDto()
             {
                 RequestSentAt = request.RequestSentAt
@@ -145,7 +155,7 @@ class Runner
             foreach (var diag in compilationResult.Diagnostics)
                 result.Result.ConsoleOutput = string.Join("\n", compilationResult.Diagnostics);
 
-            await NotifyJobManagerAsync(result, _apiCallbackUrl, cancellationToken);
+            await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
 
             return;
         }
@@ -174,7 +184,9 @@ class Runner
             result.Result.ExitCode = 124;
             result.Result.ConsoleOutput = "Execution timed out.";
 
-            await NotifyJobManagerAsync(result, _apiCallbackUrl, cancellationToken);
+            await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
+
+            File.Delete(_tmpDllPath);
 
             return;
         }
@@ -196,7 +208,9 @@ class Runner
             result.Result.Status = ExecutionStatus.Succeded;
         }
 
-        await NotifyJobManagerAsync(result, _apiCallbackUrl, cancellationToken);
+        File.Delete(_tmpDllPath);
+
+        await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
     }
 
     private static void ReleaseResources()
