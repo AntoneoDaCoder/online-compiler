@@ -7,9 +7,9 @@ namespace FrontendMockApp.Services
 {
     public class CodeRequestProducer : IDisposable
     {
-        private const string _serverTestUrl = "http://localhost:12345/api";
+        private const string _serverTestUrl = "http://localhost:12345/api/";
         private const string _serverTestEndpoint = "jobs/start";
-        private const int _maxTimeoutInMilliseconds = 12000;
+        private const int _maxTimeoutInMilliseconds = 2000;
 
         private Uri _requestUri;
 
@@ -148,21 +148,33 @@ namespace FrontendMockApp.Services
             if (!cancellationToken.IsCancellationRequested)
             {
                 // for (int i = 0; i < 5; i++)
-                foreach (var example in _testExamples)
+                //foreach (var example in _testExamples)
+                //{
+                //    if (cancellationToken.IsCancellationRequested)
+                //        break;
+
+                //    var requestDto = new CodeRequestDto()
+                //    {
+                //        Code = example.Value,
+                //        MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                //        CallbackUrl = _callbackUrl,
+                //        RequestSentAt = DateTime.UtcNow
+                //    };
+
+                //    await PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+                //}
+
+                var example = _testExamples.First();
+
+                var requestDto = new CodeRequestDto()
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
+                    Code = example.Value,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow
+                };
 
-                    var requestDto = new CodeRequestDto()
-                    {
-                        Code = example.Value,
-                        MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                        CallbackUrl = _callbackUrl,
-                        RequestSentAt = DateTime.UtcNow
-                    };
-
-                    await PostSingleExecutionRequestAsync(requestDto, cancellationToken);
-                }
+                await PostSingleExecutionRequestAsync(requestDto, cancellationToken);
             }
         }
     }
