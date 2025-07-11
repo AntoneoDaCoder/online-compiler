@@ -40,8 +40,3 @@ class RuntimeErrorExample
         return left;
     }
 }
-
-
-
-
-RuntimeErrorExample.Main();

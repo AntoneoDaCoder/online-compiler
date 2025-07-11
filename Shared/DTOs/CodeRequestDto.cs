@@ -1,13 +1,8 @@
-﻿using Shared.Enums;
-using System.Text.Json.Serialization;
-
-namespace Shared.DTOs
+﻿namespace Shared.DTOs
 {
     public sealed class CodeRequestDto
     {
         public Guid RequestId { get; set; } = Guid.NewGuid();
-
-        [JsonIgnore]
         public string Code { get; set; } = string.Empty;
         public long MaxAllowedTimeInMilliseconds { get; set; }
         public string CallbackUrl { get; set; } = string.Empty;

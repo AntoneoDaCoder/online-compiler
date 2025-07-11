@@ -33,6 +33,3 @@ class TimeoutExample
 }
 
 
-TimeoutExample.Main();
-
-

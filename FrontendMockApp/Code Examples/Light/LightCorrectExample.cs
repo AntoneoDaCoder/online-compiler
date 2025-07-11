@@ -23,6 +23,3 @@ class LightCorrectExample
 }
 
 
-LightCorrectExample.Main();
-
-

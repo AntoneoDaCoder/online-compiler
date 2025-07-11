@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -90,8 +91,7 @@ class Runner
 
                         var codeRequest = JsonSerializer.Deserialize<CodeRequestDto>(requestString, _options);
 
-                        Console.WriteLine($"[Runner] Received request [Id:{codeRequest.RequestId}, Data: " +
-                            $"{requestString}]");
+                        Console.WriteLine($"[Runner] Received request [Id:{codeRequest.RequestId}]");
 
                         _ = ExecuteUserCodeAsync(codeRequest, cancellationToken);
 
@@ -135,6 +135,7 @@ class Runner
             OutputKind.ConsoleApplication,
             optimizationLevel: OptimizationLevel.Release,
             allowUnsafe: false);
+
 
         var compiledAssembly = CSharpCompilation.Create(
             "UserProgram",

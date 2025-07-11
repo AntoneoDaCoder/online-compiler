@@ -40,6 +40,3 @@ class MediumCorrectExample
         return left;
     }
 }
-
-
-MediumCorrectExample.Main();

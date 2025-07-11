@@ -70,8 +70,7 @@ namespace ServerAPIApp.Core.Services
 
             var podIp = targetPod.Status.PodIP;
 
-            Console.WriteLine($"[KubernetesJobManager] Trying to execute request [Id:{request.RequestId}," +
-                $" Data: {JsonSerializer.Serialize(request, new JsonSerializerOptions { WriteIndented = true })} in pod [Name:{podName}]");
+            Console.WriteLine($"[KubernetesJobManager] Trying to execute request [Id:{request.RequestId} in pod [Name:{podName}]");
 
             try
             {

@@ -21,6 +21,3 @@ class CompileErrorExample
         return min
         }
 }
-
-
-CompileErrorExample.Main();
