@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -12,6 +11,7 @@ using Shared.Enums;
 class Runner
 {
     const string _tmpDllPath = "/tmp/UserProgram.dll";
+    const string _tmpRuntimeConfigPath = "/tmp/UserProgram.runtimeconfig.json";
     const string _apiCallbackUrl = "http://api-server:8080/api/jobs/complete";
     const string _boilerplateUsings = """
                 using System;
@@ -20,6 +20,17 @@ class Runner
                 using System.Text;
                 using System.Threading.Tasks;
                 """;
+    const string _runtimeConfig = """
+                {
+                    "runtimeOptions": {
+                    "tfm": "net9.0",
+                    "framework": {
+                        "name": "Microsoft.NETCore.App",
+                        "version": "9.0.0"
+                        }
+                    }
+                }
+               """;
 
     private static HttpListener _listener = new HttpListener();
     private static HttpClient _client = new HttpClient();
@@ -164,6 +175,8 @@ class Runner
         ms.Seek(0, SeekOrigin.Begin);
 
         File.WriteAllBytes(_tmpDllPath, ms.ToArray());
+        File.WriteAllText(_tmpRuntimeConfigPath, _runtimeConfig);
+
 
         using var proc = new Process
         {
@@ -210,6 +223,7 @@ class Runner
         }
 
         File.Delete(_tmpDllPath);
+        File.Delete(_tmpRuntimeConfigPath);
 
         await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
     }
