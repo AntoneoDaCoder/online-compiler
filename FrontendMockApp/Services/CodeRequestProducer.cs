@@ -148,33 +148,33 @@ namespace FrontendMockApp.Services
             if (!cancellationToken.IsCancellationRequested)
             {
                 // for (int i = 0; i < 5; i++)
-                //foreach (var example in _testExamples)
-                //{
-                //    if (cancellationToken.IsCancellationRequested)
-                //        break;
-
-                //    var requestDto = new CodeRequestDto()
-                //    {
-                //        Code = example.Value,
-                //        MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                //        CallbackUrl = _callbackUrl,
-                //        RequestSentAt = DateTime.UtcNow
-                //    };
-
-                //    await PostSingleExecutionRequestAsync(requestDto, cancellationToken);
-                //}
-
-                var example = _testExamples.First();
-
-                var requestDto = new CodeRequestDto()
+                foreach (var example in _testExamples)
                 {
-                    Code = example.Value,
-                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                    CallbackUrl = _callbackUrl,
-                    RequestSentAt = DateTime.UtcNow
-                };
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
 
-                await PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+                    var requestDto = new CodeRequestDto()
+                    {
+                        Code = example.Value,
+                        MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                        CallbackUrl = _callbackUrl,
+                        RequestSentAt = DateTime.UtcNow
+                    };
+
+                    await PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+                }
+
+                //var example = _testExamples.First();
+
+                //var requestDto = new CodeRequestDto()
+                //{
+                //    Code = example.Value,
+                //    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                //    CallbackUrl = _callbackUrl,
+                //    RequestSentAt = DateTime.UtcNow
+                //};
+
+                //await PostSingleExecutionRequestAsync(requestDto, cancellationToken);
             }
         }
     }

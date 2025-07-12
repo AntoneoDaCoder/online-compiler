@@ -61,6 +61,8 @@ namespace ServerAPIApp.Core.Services
                              labelSelector: "app=runner,readyForExecution=yes",
                              cancellationToken: token);
 
+            Console.WriteLine($"[KubernetesJobManager] Found {pods.Items.Count} available runners, time:" + DateTime.UtcNow.ToString("o"));
+
             if (pods.Items.Count == 0)
                 return false;
 
@@ -70,10 +72,15 @@ namespace ServerAPIApp.Core.Services
 
             var podIp = targetPod.Status.PodIP;
 
-            Console.WriteLine($"[KubernetesJobManager] Trying to execute request [Id:{request.RequestId} in pod [Name:{podName}]");
+            Console.WriteLine($"[KubernetesJobManager] Trying to execute request [Id:{request.RequestId}] in pod [Name:{podName}], time:" + DateTime.UtcNow.ToString("o"));
 
             try
             {
+                _resultCallbacks.TryAdd(request.RequestId, (podName, request.CallbackUrl));
+
+                Console.WriteLine($"[KubernetesJobManager] Current state of pending callbacks:\r\n "
+                    + JsonSerializer.Serialize(_resultCallbacks, new JsonSerializerOptions { WriteIndented = true }) + $", time:" + DateTime.UtcNow.ToString("o"));
+
                 var response = await _httpClient.PostAsJsonAsync($"http://{podIp}:5000/run", request, token);
 
                 response.EnsureSuccessStatusCode();
@@ -100,18 +107,13 @@ namespace ServerAPIApp.Core.Services
                        namespaceParameter: _namespace,
                        cancellationToken: token);
 
-                Console.WriteLine($"[KubernetesJobManager] Successfully assigned request [Id:{request.RequestId}] to pod [Name:{podName}]");
-
-                _resultCallbacks.TryAdd(request.RequestId, (podName, request.CallbackUrl));
-
-                Console.WriteLine($"[KubernetesJobManager] Current state of pending callbacks:\r\n "
-                    + JsonSerializer.Serialize(_resultCallbacks, new JsonSerializerOptions { WriteIndented = true }));
+                Console.WriteLine($"[KubernetesJobManager] Successfully assigned request [Id:{request.RequestId}] to pod [Name:{podName}], time:" + DateTime.UtcNow.ToString("o"));
 
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[KubernetesJobManager] Error sending request to {podName}: {ex}");
+                Console.WriteLine($"[KubernetesJobManager] Error sending request to {podName}: {ex}, time:" + DateTime.UtcNow.ToString("o"));
 
                 return false;
             }
@@ -123,7 +125,7 @@ namespace ServerAPIApp.Core.Services
             {
                 if (!_resultCallbacks.TryGetValue(podResponse.RequestId, out var requestData))
                 {
-                    throw new InvalidOperationException($"Job [Id:{podResponse.RequestId}] doesn't exist");
+                    throw new InvalidOperationException($"Job [Id:{podResponse.RequestId}] doesn't exist, time:" + DateTime.UtcNow.ToString("o"));
                 }
 
                 await _callbackService.NotifyClientAsync(podResponse, requestData.CallbackUrl, cancellationToken);
@@ -154,7 +156,7 @@ namespace ServerAPIApp.Core.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[KubernetesJobManager] Failed to complete job [Id:{podResponse.RequestId}], reason: {ex}");
+                Console.WriteLine($"[KubernetesJobManager] Failed to complete job [Id:{podResponse.RequestId}], reason: {ex}, time:" + DateTime.UtcNow.ToString("o"));
             }
         }
 
@@ -233,8 +235,7 @@ namespace ServerAPIApp.Core.Services
                             MatchLabels = new Dictionary<string, string>()
                             {
                                 { "app", "runner" },
-                                { "readyForExecution", "yes" +
-                                "" }
+                                { "readyForExecution", "yes" }
                             }
                         },
                         Template = new V1PodTemplateSpec

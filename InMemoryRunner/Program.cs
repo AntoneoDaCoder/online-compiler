@@ -201,6 +201,7 @@ class Runner
             await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
 
             File.Delete(_tmpDllPath);
+            File.Delete(_tmpRuntimeConfigPath);
 
             return;
         }

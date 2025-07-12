@@ -60,11 +60,11 @@ namespace ServerAPIApp.Controllers
         [HttpPost("jobs/complete")]
         public async Task<IActionResult> CompleteCodeExecutionAsync([FromBody] CodeResponseDto podResponse, CancellationToken cancellationToken)
         {
-            Console.WriteLine($"[API Controller] Got pod's response [Id:{podResponse.RequestId}], time: {DateTime.UtcNow}");
+            Console.WriteLine($"[API Controller] Got pod's response [Id:{podResponse.RequestId}], time:" + DateTime.UtcNow.ToString("o"));
 
             await _dispatcher.CompleteExecutionAsync(podResponse, cancellationToken);
 
-            Console.WriteLine($"[API Controller] Sent a response [Id:{podResponse.RequestId}] to client, time: {DateTime.UtcNow}");
+            Console.WriteLine($"[API Controller] Sent a response [Id:{podResponse.RequestId}] to client, time:" + DateTime.UtcNow.ToString("o"));
 
             return Ok();
         }
