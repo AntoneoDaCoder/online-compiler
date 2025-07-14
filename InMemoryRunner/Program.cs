@@ -67,7 +67,11 @@ class Runner
         _listener.Prefixes.Add("http://*:5000/run/");
         _listener.Start();
 
+        File.WriteAllText(_tmpRuntimeConfigPath, _runtimeConfig);
+
         await ListenAsync(cts.Token);
+
+        File.Delete(_tmpRuntimeConfigPath);
 
         return 0;
     }
@@ -175,8 +179,6 @@ class Runner
         ms.Seek(0, SeekOrigin.Begin);
 
         File.WriteAllBytes(_tmpDllPath, ms.ToArray());
-        File.WriteAllText(_tmpRuntimeConfigPath, _runtimeConfig);
-
 
         using var proc = new Process
         {
@@ -224,7 +226,6 @@ class Runner
         }
 
         File.Delete(_tmpDllPath);
-        File.Delete(_tmpRuntimeConfigPath);
 
         await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
     }
@@ -236,5 +237,8 @@ class Runner
 
         _client.Dispose();
         _listener.Close();
+
+        if (File.Exists(_tmpRuntimeConfigPath))
+            File.Delete(_tmpRuntimeConfigPath);
     }
 }
