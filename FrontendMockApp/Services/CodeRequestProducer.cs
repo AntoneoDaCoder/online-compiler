@@ -9,7 +9,6 @@ namespace FrontendMockApp.Services
     {
         private const string _serverTestUrl = "http://localhost:12345/api/";
         private const string _serverTestEndpoint = "jobs/start";
-        private const int _maxTimeoutInMilliseconds = 2000;
 
         private Uri _requestUri;
         private HttpClient _httpClient;
@@ -50,6 +49,8 @@ namespace FrontendMockApp.Services
                 Console.WriteLine($"[Producer] Error while sending request: {ex}");
             }
         }
+
+
 
         public void Dispose()
         {

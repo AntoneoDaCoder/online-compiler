@@ -1,0 +1,133 @@
+﻿using Shared.Models;
+
+namespace ServerAPIApp.Core.Repositories
+{
+    public class ProblemRepository
+    {
+        private Dictionary<string, Problem> _database = new Dictionary<string, Problem>();
+
+        public ProblemRepository()
+        {
+            InitRepository();
+        }
+
+        private void InitRepository()
+        {
+            var heavyTemplate = new Problem()
+            {
+                AdditionalDefinitions =
+                """
+                    class Item
+                    {
+                        public int Value;
+                        public int Weight;
+                        public double Ratio => (double)Value / Weight;
+                    }
+                """,
+                TestCases = new List<TestCase>()
+                {
+                    new()
+                    {
+                        Name = "Test_SingleItem_FitsExactly",
+                        TestInitialization =
+                        """
+                                var items = new[] { new Item { Value = 60, Weight = 10 } };
+                                int capacity = 10;
+                        """,
+                        InputExpression = "var result = new Solution().FractionalKnapsack(items, capacity);",
+                        OutputExpression = "Assert.AreEqual(60.0, result, 1e-6);"
+                    },
+                    new()
+                    {
+                        Name = "Test_SingleItem_Partial",
+                        TestInitialization =
+                        """
+                               var items = new[] { new Item { Value = 100, Weight = 20 } };
+                               int capacity = 10;
+                        """,
+                        InputExpression = "var result = new Solution().FractionalKnapsack(items, capacity);",
+                        OutputExpression = "Assert.AreEqual(50.0, result, 1e-6);"
+                    },
+                    new()
+                    {
+                        Name = "Test_MultipleItems_Mixed",
+                        TestInitialization =
+                        """
+                               var items = new[]
+                               {
+                                    new Item { Value = 60, Weight = 10 },
+                                    new Item { Value = 100, Weight = 20 },
+                                    new Item { Value = 120, Weight = 30 }
+                               };
+                               int capacity = 50;
+                        """,
+                        InputExpression = "var result = new Solution().FractionalKnapsack(items, capacity);",
+                        OutputExpression = "Assert.AreEqual(240.0, result, 1e-6);"
+                    },
+                    new()
+                    {
+                        Name = "Test_ZeroCapacity",
+                        TestInitialization =
+                        """
+                                var items = new[] { new Item { Value = 100, Weight = 1 } };
+                        """,
+                        InputExpression = "var result = new Solution().FractionalKnapsack(items, 0);",
+                        OutputExpression = "Assert.AreEqual(0, result, 1e-6);"
+                    },
+                    new()
+                    {
+                        Name = "Test_EmptyItems",
+                        InputExpression = "var result = new Solution().FractionalKnapsack(Array.Empty<Item>(), 50);",
+                        OutputExpression = "Assert.AreEqual(0, result, 1e-6);"
+                    },
+                    new()
+                    {
+                        Name = "Test_HeavyItems_ShouldChooseBestRatio",
+                        TestInitialization =
+                        """
+                               var items = new[]
+                               {
+                                    new Item { Value = 100, Weight = 50 }, // ratio = 2.0
+                                    new Item { Value = 60, Weight = 10 }   // ratio = 6.0
+                               };
+                        """,
+                        InputExpression = "var result = new Solution().FractionalKnapsack(items, 20);",
+                        OutputExpression = "Assert.AreEqual(100.0, result, 1e-6);"
+                    },
+                    new()
+                    {
+                        Name = "Test_Performance_WithLargeInput",
+                        TestInitialization =
+                        """
+                                var items = new Item[1000];
+                                var rnd = new Random(42);
+
+                                for (int i = 0; i < items.Length; i++)
+                                {
+                                    int value = rnd.Next(1, 1000);
+                                    int weight = rnd.Next(1, 100);
+                                    items[i] = new Item { Value = value, Weight = weight };
+                                }
+                                items = items.OrderBy(_ => rnd.Next()).ToArray();
+                                int capacity = 10000;
+                        """,
+                        InputExpression = "var result = new Solution().FractionalKnapsack(items, capacity);",
+                        OutputExpression = "Assert.Greater(result, 0.0);"
+                    },
+                }
+            };
+
+
+            heavyTemplate.Name = "HeavyCorrectExample.cs";
+            _database["HeavyCorrectExample.cs"] = heavyTemplate;
+
+            heavyTemplate.Name = "TimeoutExample.cs";
+            _database["TimeoutExample.cs"] = heavyTemplate;
+        }
+
+        public Problem GetProblem(string name)
+        {
+            return _database[name];
+        }
+    }
+}

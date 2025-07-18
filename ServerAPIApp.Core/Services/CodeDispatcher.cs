@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Hosting;
+using ServerAPIApp.Core.Repositories;
 using Shared.DTOs;
+using Shared.Models;
 using System.Threading.Channels;
 
 namespace ServerAPIApp.Core.Services
@@ -7,13 +9,14 @@ namespace ServerAPIApp.Core.Services
     public class CodeDispatcher : IDisposable, IHostedService
     {
         private Channel<CodeRequestDto> _channel;
+        private ProblemRepository _repository;
         private KubernetesJobManager _jobManager;
         private CancellationTokenSource? _cts;
         private Task? _consumeTask;
         private bool _isConsuming;
         private bool _disposed;
 
-        public CodeDispatcher(KubernetesJobManager jobManager)
+        public CodeDispatcher(KubernetesJobManager jobManager, ProblemRepository repository)
         {
             _channel = Channel.CreateUnbounded<CodeRequestDto>
              (
@@ -24,6 +27,7 @@ namespace ServerAPIApp.Core.Services
                 }
              );
             _jobManager = jobManager;
+            _repository = repository;
         }
 
         public ChannelReader<CodeRequestDto> Reader => _channel.Reader;
@@ -123,7 +127,19 @@ namespace ServerAPIApp.Core.Services
                     {
                         try
                         {
-                            if (!await _jobManager.ExecuteAsync(request, cancellationToken))
+                            var problem = _repository.GetProblem(request.ProblemName);
+
+                            var newSolution = new ProblemSolutionDto()
+                            {
+                                RequestId = request.RequestId,
+                                Problem = problem,
+                                Code = request.Code,
+                                SentAt = request.RequestSentAt,
+                                MaxAllowedTimeInMilliseconds = request.MaxAllowedTimeInMilliseconds,
+                                CallbackUrl = request.CallbackUrl,
+                            };
+
+                            if (!await _jobManager.ExecuteAsync(newSolution, cancellationToken))
                             {
                                 await RescheduleExecution(request, cancellationToken);
 

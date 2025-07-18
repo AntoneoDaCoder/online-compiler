@@ -54,7 +54,7 @@ namespace ServerAPIApp.Core.Services
         }
 
         //can be done automatically via kubernetes service + readinessprobe, but i want to try and balance the load manually
-        public async Task<bool> ExecuteAsync(CodeRequestDto request, CancellationToken token)
+        public async Task<bool> ExecuteAsync(ProblemSolutionDto request, CancellationToken token)
         {
             var pods = await _client.CoreV1.ListNamespacedPodAsync(
                              namespaceParameter: _namespace,

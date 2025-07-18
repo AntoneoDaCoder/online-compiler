@@ -1,34 +1,31 @@
 ﻿//recursive solution of the knapsack problem (should timeout because of O(n^2))
 class TimeoutExample
 {
-
-    static void Main()
+    public class Solution
     {
-        int[] weights = new int[100];
-        int[] values = new int[100];
+        public double FractionalKnapsack(Item[] items, int capacity)
+        {            
+            var sortedItems = items.OrderByDescending(i => i.Ratio).ToArray();
 
-        for (int i = 0; i < 100; i++)
-        {
-            weights[i] = 1 + (i % 5);
-            values[i] = 10 + (i % 10);
+            return FractionalKnapsackRecursive(sortedItems, capacity, 0);
         }
 
-        int capacity = 50;
-        int maxValue = Knapsack(weights, values, weights.Length, capacity);
-        Console.WriteLine("Максимальная ценность: " + maxValue);
-    }
+        private double FractionalKnapsackRecursive(Item[] items, int capacity, int index)
+        {
+            if (capacity == 0 || index == items.Length)
+                return 0.0;
 
-    static int Knapsack(int[] weights, int[] values, int n, int capacity)
-    {
-        if (n == 0 || capacity == 0)
-            return 0;
+            var current = items[index];
 
-        if (weights[n - 1] > capacity)
-            return Knapsack(weights, values, n - 1, capacity);
-
-        int include = values[n - 1] + Knapsack(weights, values, n - 1, capacity - weights[n - 1]);
-        int exclude = Knapsack(weights, values, n - 1, capacity);
-        return Math.Max(include, exclude);
+            if (current.Weight <= capacity)
+            {
+                return current.Value + FractionalKnapsackRecursive(items, capacity - current.Weight, index + 1);
+            }
+            else
+            {
+                return current.Ratio * capacity;
+            }
+        }
     }
 }
 

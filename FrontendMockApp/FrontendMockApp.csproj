@@ -8,9 +8,23 @@
     <ProjectRoot>$(MSBuildProjectDirectory)</ProjectRoot>
     <BaseOutputPath>$(ProjectRoot)/bin</BaseOutputPath>
   </PropertyGroup>
+
   <ItemGroup>
-    <Compile Remove="Code Examples\**\*.cs" />
-    <None Include="Code Examples\**\*.cs" />
+    <Compile Remove="Code Examples\Heavy\HeavyCorrectExample.cs" />
+    <Compile Remove="Code Examples\Heavy\TimeoutExample.cs" />
+    <Compile Remove="Code Examples\Light\CompileErrorExample.cs" />
+    <Compile Remove="Code Examples\Light\LightCorrectExample.cs" />
+    <Compile Remove="Code Examples\Medium\MediumCorrectExample.cs" />
+    <Compile Remove="Code Examples\Medium\RuntimeErrorExample.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Code Examples\Heavy\HeavyCorrectExample.cs" />
+    <None Include="Code Examples\Heavy\TimeoutExample.cs" />
+    <None Include="Code Examples\Light\CompileErrorExample.cs" />
+    <None Include="Code Examples\Light\LightCorrectExample.cs" />
+    <None Include="Code Examples\Medium\MediumCorrectExample.cs" />
+    <None Include="Code Examples\Medium\RuntimeErrorExample.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj" />

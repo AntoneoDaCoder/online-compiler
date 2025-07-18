@@ -175,24 +175,52 @@ namespace FrontendMockApp.Services
         {
             if (!cancellationToken.IsCancellationRequested)
             {
+                // for (int i = 0; i < 30; i++)
+                //   for (int i = 0; i < 10; i++)
                 // for (int i = 0; i < 5; i++)
-                foreach (var example in _testExamples)
+                //foreach (var example in _testExamples)
+                //{
+                //    if (cancellationToken.IsCancellationRequested)
+                //        break;
+
+                //    var requestDto = new CodeRequestDto()
+                //    {
+                //        Code = example.Value,
+                //        MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                //        CallbackUrl = _callbackUrl,
+                //        RequestSentAt = DateTime.UtcNow,
+                //        ProblemName = example.Key,
+                //    };
+
+                //    _stats.RequestsSent++;
+
+                //    await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+                //}
+
+                var heavyOk = _testExamples["HeavyCorrectExample.cs"];
+                var heavyBad = _testExamples["TimeoutExample.cs"];
+
+                var requestDto = new CodeRequestDto()
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
+                    Code = heavyOk,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "HeavyCorrectExample.cs",
+                };
 
-                    var requestDto = new CodeRequestDto()
-                    {
-                        Code = example.Value,
-                        MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                        CallbackUrl = _callbackUrl,
-                        RequestSentAt = DateTime.UtcNow
-                    };
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
-                    _stats.RequestsSent++;
+                requestDto = new CodeRequestDto()
+                {
+                    Code = heavyBad,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "TimeoutExample.cs",
+                };
 
-                    await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
-                }
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
                 //var example = _testExamples.First();
 

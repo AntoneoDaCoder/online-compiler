@@ -1,24 +1,30 @@
-﻿using System.Reflection;
-using System.Diagnostics;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
+using NUnit.Framework;
+using NUnitLite;
 using Shared.DTOs;
 using Shared.Enums;
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http.Json;
+using System.Reflection;
+using System.Text;
+using System.Text.Json;
 
 class Runner
 {
     const string _tmpDllPath = "/tmp/UserProgram.dll";
     const string _tmpRuntimeConfigPath = "/tmp/UserProgram.runtimeconfig.json";
     const string _apiCallbackUrl = "http://api-server:8080/api/jobs/complete";
+    const int _maxProcessLifetime = 25000;
     const string _boilerplateUsings = """
                 using System;
                 using System.Collections.Generic;
                 using System.Linq;
                 using System.Text;
                 using System.Threading.Tasks;
+                using NUnit.Framework;
+                using NUnitLite;
                 """;
     const string _runtimeConfig = """
                 {
@@ -50,6 +56,8 @@ class Runner
             AssemblyMetadata.CreateFromFile(typeof(List<>).Assembly.Location),
             AssemblyMetadata.CreateFromFile(Assembly.Load("System.Runtime").Location),
             AssemblyMetadata.CreateFromFile(typeof(Task).Assembly.Location),
+            AssemblyMetadata.CreateFromFile(typeof(Assert).Assembly.Location),
+            AssemblyMetadata.CreateFromFile(typeof(AutoRun).Assembly.Location)
         };
     }
 
@@ -104,7 +112,7 @@ class Runner
                     {
                         var requestString = await reader.ReadToEndAsync(cancellationToken);
 
-                        var codeRequest = JsonSerializer.Deserialize<CodeRequestDto>(requestString, _options);
+                        var codeRequest = JsonSerializer.Deserialize<ProblemSolutionDto>(requestString, _options);
 
                         Console.WriteLine($"[Runner] Received request [Id:{codeRequest.RequestId}]");
 
@@ -131,18 +139,18 @@ class Runner
         }
     }
 
-    private static async Task ExecuteUserCodeAsync(CodeRequestDto request, CancellationToken cancellationToken)
+    private static async Task ExecuteUserCodeAsync(ProblemSolutionDto request, CancellationToken cancellationToken)
     {
         var result = new CodeResponseDto()
         {
             RequestId = request.RequestId,
             Result = new ExecutionResultDto()
             {
-                RequestSentAt = request.RequestSentAt
+                RequestSentAt = request.SentAt
             }
         };
 
-        var fullCode = _boilerplateUsings + "\n" + request.Code;
+        var fullCode = WrapUserCode(request);
 
         var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
 
@@ -192,7 +200,7 @@ class Runner
         };
         proc.Start();
 
-        if (!proc.WaitForExit((int)request.MaxAllowedTimeInMilliseconds))
+        if (!proc.WaitForExit(_maxProcessLifetime))
         {
             proc.Kill();
             result.Status = RequestStatus.Failed;
@@ -215,6 +223,11 @@ class Runner
             result.Result.Status = ExecutionStatus.RuntimeError;
 
             string errorString = await proc.StandardError.ReadToEndAsync(cancellationToken);
+
+            if (errorString.Contains("TestTimeoutException") || errorString.Contains("exceeded Timeout value"))
+            {
+                result.Result.Status = ExecutionStatus.TimedOut;
+            }
 
             result.Result.ConsoleOutput = errorString;
         }
@@ -239,5 +252,45 @@ class Runner
 
         if (File.Exists(_tmpRuntimeConfigPath))
             File.Delete(_tmpRuntimeConfigPath);
+    }
+
+    private static string WrapUserCode(ProblemSolutionDto problemSolutionDto)
+    {
+        var sb = new StringBuilder(_boilerplateUsings);
+
+        sb.AppendLine(
+            $$"""
+            {{problemSolutionDto.Problem.AdditionalDefinitions}}
+            {{problemSolutionDto.Code}}
+            public class Program
+            {
+                static int Main(string[] args)
+                {
+                    return new AutoRun().Execute(args);
+                }
+            }
+            [TestFixture]
+            public class GeneratedTests
+            {      
+            """);
+
+
+        foreach(var testCase in problemSolutionDto.Problem.TestCases)
+        {
+            sb.AppendLine(
+                $$"""
+                [Test,Timeout({{problemSolutionDto.MaxAllowedTimeInMilliseconds}})]
+                public void {{testCase.Name}}()
+                {
+                    {{testCase.TestInitialization}}
+                    {{testCase.InputExpression}}
+                    {{testCase.OutputExpression}}
+                }
+                """
+                );
+        }
+        sb.AppendLine("}");
+
+        return sb.ToString();
     }
 }
