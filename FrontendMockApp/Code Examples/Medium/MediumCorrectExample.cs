@@ -40,4 +40,3 @@ class MediumCorrectExample
         return left;
     }
 }
-

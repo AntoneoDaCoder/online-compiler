@@ -1,6 +1,6 @@
-﻿using ServerAPIApp.Core.Enums;
+﻿using Shared.Enums;
 
-namespace ServerAPIApp.Core.DTOs
+namespace Shared.DTOs
 {
     public sealed class CodeResponseDto
     {

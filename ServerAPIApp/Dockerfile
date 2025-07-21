@@ -6,6 +6,7 @@ WORKDIR /src
 
 COPY ["ServerAPIApp.Core/", "ServerAPIApp.Core/"]
 COPY ["ServerAPIApp/", "ServerAPIApp/"]
+COPY ["Shared/", "Shared/"]
 
 RUN dotnet restore "ServerAPIApp/ServerAPIApp.csproj"
 
@@ -18,4 +19,5 @@ RUN dotnet publish -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
 ENTRYPOINT ["dotnet", "ServerAPIApp.dll"]

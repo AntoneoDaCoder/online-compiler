@@ -40,6 +40,3 @@ class RuntimeErrorExample
         return left;
     }
 }
-
-
-

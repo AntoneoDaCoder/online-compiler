@@ -1,140 +1,296 @@
-﻿using System.Diagnostics;
-using System.IO;
-using System.Reflection;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using NUnit.Framework;
+using NUnitLite;
+using Shared.DTOs;
+using Shared.Enums;
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http.Json;
+using System.Reflection;
+using System.Text;
+using System.Text.Json;
 
-class InMemoryRunner
+class Runner
 {
-    //const string _tmpDllPath = "/tmp/UserProgram.dll";
-
-    public static async Task<int> Main()
-    {
-        string? code = Environment.GetEnvironmentVariable("USER_CODE");
-        if (string.IsNullOrWhiteSpace(code))
-        {
-            Console.Error.WriteLine("No USER_CODE provided");
-            return 1;
-        }
-
-        string boilerplateUsings = """
+    const string _tmpDllPath = "/tmp/UserProgram.dll";
+    const string _tmpRuntimeConfigPath = "/tmp/UserProgram.runtimeconfig.json";
+    const string _apiCallbackUrl = "http://api-server:8080/api/jobs/complete";
+    const int _maxProcessLifetime = 25000;
+    const string _boilerplateUsings = """
                 using System;
                 using System.Collections.Generic;
                 using System.Linq;
                 using System.Text;
                 using System.Threading.Tasks;
+                using NUnit.Framework;
+                using NUnitLite;
                 """;
+    const string _runtimeConfig = """
+                {
+                    "runtimeOptions": {
+                    "tfm": "net9.0",
+                    "framework": {
+                        "name": "Microsoft.NETCore.App",
+                        "version": "9.0.0"
+                        }
+                    }
+                }
+               """;
 
-        var fullCode = boilerplateUsings + "\n" + code;
+    private static HttpListener _listener = new HttpListener();
+    private static HttpClient _client = new HttpClient();
+    private static List<AssemblyMetadata> _metadataCache;
+    private static JsonSerializerOptions _options = new JsonSerializerOptions
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    static Runner()
+    {
+        _metadataCache = new List<AssemblyMetadata>
+        {
+            AssemblyMetadata.CreateFromFile(typeof(object).Assembly.Location),
+            AssemblyMetadata.CreateFromFile(typeof(Console).Assembly.Location),
+            AssemblyMetadata.CreateFromFile(typeof(Enumerable).Assembly.Location),
+            AssemblyMetadata.CreateFromFile(typeof(List<>).Assembly.Location),
+            AssemblyMetadata.CreateFromFile(Assembly.Load("System.Runtime").Location),
+            AssemblyMetadata.CreateFromFile(typeof(Task).Assembly.Location),
+            AssemblyMetadata.CreateFromFile(typeof(Assert).Assembly.Location),
+            AssemblyMetadata.CreateFromFile(typeof(AutoRun).Assembly.Location)
+        };
+    }
+
+    public static async Task<int> Main()
+    {
+        AppDomain.CurrentDomain.ProcessExit += (_, __) => ReleaseResources();
 
         using var cts = new CancellationTokenSource();
-        int timeoutInMilliseconds = int.TryParse(Environment.GetEnvironmentVariable("EXECUTION_TIMEOUT"), out var t) ? t : 3;
+        Console.CancelKeyPress += (s, e) =>
+        {
+            e.Cancel = true;
+            cts.Cancel();
+        };
 
-        cts.CancelAfter(TimeSpan.FromMilliseconds(timeoutInMilliseconds));
+        _listener.Prefixes.Add("http://*:5000/run/");
+        _listener.Start();
 
+        File.WriteAllText(_tmpRuntimeConfigPath, _runtimeConfig);
 
-        var syntaxTree = CSharpSyntaxTree.ParseText(fullCode);
+        await ListenAsync(cts.Token);
 
-        var references = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
-            .Select(a => MetadataReference.CreateFromFile(a.Location));
+        File.Delete(_tmpRuntimeConfigPath);
+
+        return 0;
+    }
+
+    private static IEnumerable<MetadataReference> GetReferences()
+    {
+        return _metadataCache.Select(am => am.GetReference());
+    }
+
+    private static async Task NotifyJobManagerAsync(CodeResponseDto response, string callbackUrl, Guid requestId, CancellationToken cancellationToken)
+    {
+        response.Result.ResponseSentAt = DateTime.UtcNow;
+
+        await _client.PostAsJsonAsync(callbackUrl, response, cancellationToken);
+
+        Console.WriteLine($"[Runner] Sent response [Id:{response.RequestId}] to request [Id:{requestId}]");
+    }
+
+    private static async Task ListenAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var context = await _listener.GetContextAsync();
+
+                using (var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding))
+                {
+                    try
+                    {
+                        var requestString = await reader.ReadToEndAsync(cancellationToken);
+
+                        var codeRequest = JsonSerializer.Deserialize<ProblemSolutionDto>(requestString, _options);
+
+                        Console.WriteLine($"[Runner] Received request [Id:{codeRequest.RequestId}]");
+
+                        _ = ExecuteUserCodeAsync(codeRequest, cancellationToken);
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error processing callback: {ex}");
+                    }
+                    finally
+                    {
+                        context.Response.Close();
+                    }
+                }
+            }
+        }
+        catch (HttpListenerException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Runner] Error in listening loop: {ex}");
+        }
+    }
+
+    private static async Task ExecuteUserCodeAsync(ProblemSolutionDto request, CancellationToken cancellationToken)
+    {
+        var result = new CodeResponseDto()
+        {
+            RequestId = request.RequestId,
+            Result = new ExecutionResultDto()
+            {
+                RequestSentAt = request.SentAt
+            }
+        };
+
+        var fullCode = WrapUserCode(request);
+
+        var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
 
         var options = new CSharpCompilationOptions(
-             OutputKind.ConsoleApplication,
-             optimizationLevel: OptimizationLevel.Release,
-             allowUnsafe: false);
+            OutputKind.ConsoleApplication,
+            optimizationLevel: OptimizationLevel.Release,
+            allowUnsafe: false);
+
 
         var compiledAssembly = CSharpCompilation.Create(
             "UserProgram",
             new[] { syntaxTree },
-            references,
+            GetReferences(),
             options);
 
         using var ms = new MemoryStream();
-        var result = compiledAssembly.Emit(ms);
 
-        if (!result.Success)
+        var compilationResult = compiledAssembly.Emit(ms, cancellationToken: cancellationToken);
+
+        if (!compilationResult.Success)
         {
-            Console.WriteLine("[Compile error]");
-            foreach (var diag in result.Diagnostics)
-                Console.Error.WriteLine(diag.ToString());
-            return 1;
+            result.Status = RequestStatus.Failed;
+            result.Result.Status = ExecutionStatus.CompileError;
+            result.Result.ExitCode = 1;
+
+            foreach (var diag in compilationResult.Diagnostics)
+                result.Result.ConsoleOutput = string.Join("\n", compilationResult.Diagnostics);
+
+            await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
+
+            return;
         }
 
         ms.Seek(0, SeekOrigin.Begin);
 
-        //File.WriteAllBytes(_tmpDllPath, ms.ToArray());
+        File.WriteAllBytes(_tmpDllPath, ms.ToArray());
 
-        //var proc = new Process
-        //{
-        //    StartInfo = new ProcessStartInfo
-        //    {
-        //        FileName = "dotnet",
-        //        Arguments = $"{_tmpDllPath}",
-        //        RedirectStandardOutput = true,
-        //        RedirectStandardError = true
-        //    }
-        //};
-        //proc.Start();
-
-        //if (!proc.WaitForExit(timeoutInMilliseconds))
-        //{
-        //    proc.Kill();
-        //    Console.Error.WriteLine("Execution timed out.");
-        //    return 124;
-        //}
-
-        //Console.WriteLine(await proc.StandardOutput.ReadToEndAsync());
-        //Console.Error.WriteLine(await proc.StandardError.ReadToEndAsync());
-
-        //return proc.ExitCode;
-
-        var assembly = Assembly.Load(ms.ToArray());
-
-        var entryPoint = assembly.EntryPoint;
-        Task task;
-
-        if (entryPoint.GetParameters().Length == 0)
-            task = Task.Run(() => entryPoint.Invoke(null, null));
-        else
-            task = Task.Run(() => entryPoint.Invoke(null, new object[] { Array.Empty<string>() }));
-
-        await Task.WhenAny(task, Task.Delay(Timeout.Infinite, cts.Token));
-
-        if (task.IsFaulted)
+        using var proc = new Process
         {
-            Console.WriteLine("[Runtime error]");
-            var ex = task.Exception?.Flatten()?.InnerExceptions.FirstOrDefault();
-            if (ex != null)
+            StartInfo = new ProcessStartInfo
             {
-                while (ex is TargetInvocationException tie && tie.InnerException != null)
-                    ex = tie.InnerException;
+                FileName = "dotnet",
+                Arguments = $"{_tmpDllPath}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            }
+        };
+        proc.Start();
 
-                Console.Error.WriteLine($"{ex.GetType()}: {ex.Message}");
+        if (!proc.WaitForExit(_maxProcessLifetime))
+        {
+            proc.Kill();
+            result.Status = RequestStatus.Failed;
+            result.Result.Status = ExecutionStatus.TimedOut;
+            result.Result.ExitCode = 124;
+            result.Result.ConsoleOutput = "Execution timed out.";
 
-                var stack = ex.StackTrace?
-                    .Split('\n')
-                    .Where(line =>
-                        !line.Contains("System.RuntimeMethodHandle") &&
-                        !line.Contains("System.Reflection") &&
-                        !line.Contains("System.Threading.Tasks") &&
-                        !line.Contains("InMemoryRunner"))
-                    .ToArray();
+            await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
 
-                if (stack != null)
-                    foreach (var line in stack)
-                        Console.Error.WriteLine(line.Trim());
+            File.Delete(_tmpDllPath);
+
+            return;
+        }
+
+        result.Result.ExitCode = proc.ExitCode;
+
+        if (proc.ExitCode != 0)
+        {
+            result.Status = RequestStatus.Failed;
+            result.Result.Status = ExecutionStatus.RuntimeError;
+
+            string errorString = await proc.StandardError.ReadToEndAsync(cancellationToken);
+
+            if (errorString.Contains("TestTimeoutException") || errorString.Contains("exceeded Timeout value"))
+            {
+                result.Result.Status = ExecutionStatus.TimedOut;
             }
 
-            return 1;
+            result.Result.ConsoleOutput = errorString;
         }
-
-        if (cts.IsCancellationRequested)
+        else
         {
-            Console.Error.WriteLine("Execution timed out.");
-            return 124;
+            result.Status = RequestStatus.Succeeded;
+            result.Result.Status = ExecutionStatus.Succeded;
         }
 
-        return 0;
+        File.Delete(_tmpDllPath);
+
+        await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
+    }
+
+    private static void ReleaseResources()
+    {
+        foreach (var md in _metadataCache)
+            md.Dispose();
+
+        _client.Dispose();
+        _listener.Close();
+
+        if (File.Exists(_tmpRuntimeConfigPath))
+            File.Delete(_tmpRuntimeConfigPath);
+    }
+
+    private static string WrapUserCode(ProblemSolutionDto problemSolutionDto)
+    {
+        var sb = new StringBuilder(_boilerplateUsings);
+
+        sb.AppendLine(
+            $$"""
+            {{problemSolutionDto.Problem.AdditionalDefinitions}}
+            {{problemSolutionDto.Code}}
+            public class Program
+            {
+                static int Main(string[] args)
+                {
+                    return new AutoRun().Execute(args);
+                }
+            }
+            [TestFixture]
+            public class GeneratedTests
+            {      
+            """);
+
+
+        foreach(var testCase in problemSolutionDto.Problem.TestCases)
+        {
+            sb.AppendLine(
+                $$"""
+                [Test,Timeout({{problemSolutionDto.MaxAllowedTimeInMilliseconds}})]
+                public void {{testCase.Name}}()
+                {
+                    {{testCase.TestInitialization}}
+                    {{testCase.InputExpression}}
+                    {{testCase.OutputExpression}}
+                }
+                """
+                );
+        }
+        sb.AppendLine("}");
+
+        return sb.ToString();
     }
 }

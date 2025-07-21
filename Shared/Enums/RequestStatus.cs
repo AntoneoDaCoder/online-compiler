@@ -1,4 +1,4 @@
-﻿namespace FrontendMockApp.Enums
+﻿namespace Shared.Enums
 {
     public enum RequestStatus
     {

@@ -1,4 +1,4 @@
-﻿namespace ServerAPIApp.Core.Enums
+﻿namespace Shared.Enums
 {
     public enum ExecutionStatus
     {

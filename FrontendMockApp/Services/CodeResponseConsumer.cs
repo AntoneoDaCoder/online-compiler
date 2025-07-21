@@ -11,7 +11,7 @@ namespace FrontendMockApp.Services
         private IRequestObserver _requestObserver;
 
         private bool _disposed;
-        private volatile bool _isListening;
+        private bool _isListening;
 
         public CodeResponseConsumer(string urlPrefix, IRequestObserver requestObserver)
         {
@@ -34,7 +34,7 @@ namespace FrontendMockApp.Services
             _cts = new CancellationTokenSource();
 
             _listener.Start();
-            _listeningTask = Task.Run(() => ListenAsync(_cts.Token), _cts.Token);
+            _listeningTask = ListenAsync(_cts.Token);
 
             Console.WriteLine("[Consumer] is ready to accept incoming requests.");
         }

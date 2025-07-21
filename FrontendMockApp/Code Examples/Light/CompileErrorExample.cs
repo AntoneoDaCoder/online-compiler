@@ -21,4 +21,3 @@ class CompileErrorExample
         return min
         }
 }
-

@@ -1,13 +1,12 @@
-﻿using FrontendMockApp.Enums;
-
-namespace FrontendMockApp.DTOs
+﻿namespace Shared.DTOs
 {
     public sealed class CodeRequestDto
     {
         public Guid RequestId { get; set; } = Guid.NewGuid();
+        public string ProblemName { get; set; } = string.Empty;
         public string Code { get; set; } = string.Empty;
         public long MaxAllowedTimeInMilliseconds { get; set; }
-        public string? CallbackUrl { get; set; }
+        public string CallbackUrl { get; set; } = string.Empty;
         public DateTime RequestSentAt { get; set; }
     }
 }
