@@ -32,46 +32,41 @@ class Program
             var fileName = Path.GetFileName(filePath);
             string code = File.ReadAllText(filePath);
 
-            string extracted = ExtractSolutionClassContent(code);
+            string extracted = ExtractOuterWrapper(code);
             examples[fileName] = extracted;
         }
 
         return examples;
     }
 
-    static string ExtractSolutionClassContent(string code)
+    static string ExtractOuterWrapper(string code)
     {
         var lines = code.Split('\n');
         var sb = new StringBuilder();
-        bool insideSolution = false;
         int braceLevel = 0;
+        bool copying = false;
 
         foreach (var rawLine in lines)
         {
-            string line = rawLine.TrimEnd();
+            var line = rawLine.TrimEnd();
 
-            if (!insideSolution)
+            if (!copying)
             {
                 if (line.Contains("class Solution"))
                 {
-                    insideSolution = true;
-                   
-                    if (line.Contains("{"))
-                        braceLevel = 1;
+                    copying = true;
                 }
-                continue;
             }
-            else
+
+            if (copying)
             {
-               
-                braceLevel += line.Count(c => c == '{');
-                braceLevel -= line.Count(c => c == '}');
+                sb.AppendLine(rawLine);
 
-               
-                if (braceLevel > 0 || (braceLevel == 0 && !line.Trim().Equals("}")))
-                    sb.AppendLine(rawLine);
 
-                if (braceLevel == 0)
+                braceLevel += rawLine.Count(c => c == '{');
+                braceLevel -= rawLine.Count(c => c == '}');
+
+                if (braceLevel == 0 && line.Contains("}"))
                     break;
             }
         }

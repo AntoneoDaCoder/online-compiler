@@ -10,22 +10,25 @@ class TimeoutExample
             return FractionalKnapsackRecursive(sortedItems, capacity, 0);
         }
 
+        // Artificially exponential version (не оптимальный, просто ради нагрузки)
         private double FractionalKnapsackRecursive(Item[] items, int capacity, int index)
         {
             if (capacity == 0 || index == items.Length)
                 return 0.0;
 
-            var current = items[index];
+            double takeFull = 0;
+            if (items[index].Weight <= capacity)
+            {
+                takeFull = items[index].Value + FractionalKnapsackRecursive(items, capacity - items[index].Weight, index + 1);
+            }
 
-            if (current.Weight <= capacity)
-            {
-                return current.Value + FractionalKnapsackRecursive(items, capacity - current.Weight, index + 1);
-            }
-            else
-            {
-                return current.Ratio * capacity;
-            }
+            double takePartial = items[index].Ratio * Math.Min(capacity, items[index].Weight);
+
+            double skip = FractionalKnapsackRecursive(items, capacity, index + 1);
+
+            return Math.Max(Math.Max(takeFull, takePartial), skip);
         }
+
     }
 }
 

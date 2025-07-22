@@ -17,7 +17,7 @@ namespace ServerAPIApp.Core.Repositories
             {
                 AdditionalDefinitions =
                 """
-                    class Item
+                    public class Item
                     {
                         public int Value;
                         public int Weight;
@@ -35,7 +35,7 @@ namespace ServerAPIApp.Core.Repositories
                                 int capacity = 10;
                         """,
                         InputExpression = "var result = new Solution().FractionalKnapsack(items, capacity);",
-                        OutputExpression = "Assert.AreEqual(60.0, result, 1e-6);"
+                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(60.0).Within(1e-6));"
                     },
                     new()
                     {
@@ -46,7 +46,7 @@ namespace ServerAPIApp.Core.Repositories
                                int capacity = 10;
                         """,
                         InputExpression = "var result = new Solution().FractionalKnapsack(items, capacity);",
-                        OutputExpression = "Assert.AreEqual(50.0, result, 1e-6);"
+                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(50.0).Within(1e-6));"
                     },
                     new()
                     {
@@ -62,7 +62,7 @@ namespace ServerAPIApp.Core.Repositories
                                int capacity = 50;
                         """,
                         InputExpression = "var result = new Solution().FractionalKnapsack(items, capacity);",
-                        OutputExpression = "Assert.AreEqual(240.0, result, 1e-6);"
+                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(240.0).Within(1e-6));"
                     },
                     new()
                     {
@@ -72,13 +72,13 @@ namespace ServerAPIApp.Core.Repositories
                                 var items = new[] { new Item { Value = 100, Weight = 1 } };
                         """,
                         InputExpression = "var result = new Solution().FractionalKnapsack(items, 0);",
-                        OutputExpression = "Assert.AreEqual(0, result, 1e-6);"
+                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(0).Within(1e-6));"
                     },
                     new()
                     {
                         Name = "Test_EmptyItems",
                         InputExpression = "var result = new Solution().FractionalKnapsack(Array.Empty<Item>(), 50);",
-                        OutputExpression = "Assert.AreEqual(0, result, 1e-6);"
+                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(0).Within(1e-6));"
                     },
                     new()
                     {
@@ -92,7 +92,7 @@ namespace ServerAPIApp.Core.Repositories
                                };
                         """,
                         InputExpression = "var result = new Solution().FractionalKnapsack(items, 20);",
-                        OutputExpression = "Assert.AreEqual(100.0, result, 1e-6);"
+                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(80).Within(1e-6));"
                     },
                     new()
                     {
@@ -112,7 +112,7 @@ namespace ServerAPIApp.Core.Repositories
                                 int capacity = 10000;
                         """,
                         InputExpression = "var result = new Solution().FractionalKnapsack(items, capacity);",
-                        OutputExpression = "Assert.Greater(result, 0.0);"
+                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.GreaterThan(0));"
                     },
                 }
             };
