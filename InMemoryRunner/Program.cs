@@ -176,8 +176,6 @@ class Runner
 
         var fullCode = WrapUserCode(request);
 
-        Console.WriteLine(fullCode);
-
         var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
 
         var options = new CSharpCompilationOptions(
@@ -236,7 +234,7 @@ class Runner
 
             await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
 
-            //  File.Delete(_tmpDllPath);
+            File.Delete(_tmpDllPath);
 
             return;
         }
@@ -272,7 +270,7 @@ class Runner
             result.Result.Status = ExecutionStatus.Succeded;
         }
 
-        //  File.Delete(_tmpDllPath);
+        File.Delete(_tmpDllPath);
 
         await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
     }
