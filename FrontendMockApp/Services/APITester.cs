@@ -211,16 +211,16 @@ namespace FrontendMockApp.Services
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
-                requestDto = new CodeRequestDto()
-                {
-                    Code = heavyBad,
-                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                    CallbackUrl = _callbackUrl,
-                    RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "TimeoutExample.cs",
-                };
+                //var requestDto = new CodeRequestDto()
+                //{
+                //    Code = heavyBad,
+                //    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                //    CallbackUrl = _callbackUrl,
+                //    RequestSentAt = DateTime.UtcNow,
+                //    ProblemName = "TimeoutExample.cs",
+                //};
 
-                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+                //await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
                 //var example = _testExamples.First();
 

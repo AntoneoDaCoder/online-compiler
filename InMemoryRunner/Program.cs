@@ -26,6 +26,7 @@ class Runner
                 using NUnit.Framework;
                 using NUnitLite;
                 """;
+
     const string _runtimeConfig = """
                 {
                     "runtimeOptions": {
@@ -37,6 +38,11 @@ class Runner
                     }
                 }
                """;
+
+    static string[] _dllsToCopy = new[] {
+            "nunitlite.dll",
+            "nunit.framework.dll"
+        };
 
     private static HttpListener _listener = new HttpListener();
     private static HttpClient _client = new HttpClient();
@@ -77,9 +83,27 @@ class Runner
 
         File.WriteAllText(_tmpRuntimeConfigPath, _runtimeConfig);
 
+
+
+        foreach (var dll in _dllsToCopy)
+        {
+            var source = Path.Combine("/app", dll);
+            var dest = Path.Combine("/tmp", dll);
+            if (File.Exists(source))
+                File.Copy(source, dest, overwrite: true);
+        }
+
         await ListenAsync(cts.Token);
 
         File.Delete(_tmpRuntimeConfigPath);
+
+
+        foreach (var dll in _dllsToCopy)
+        {
+            var dest = Path.Combine("/tmp", dll);
+            if (File.Exists(dest))
+                File.Delete(dest);
+        }
 
         return 0;
     }
@@ -152,6 +176,8 @@ class Runner
 
         var fullCode = WrapUserCode(request);
 
+        Console.WriteLine(fullCode);
+
         var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
 
         var options = new CSharpCompilationOptions(
@@ -210,7 +236,7 @@ class Runner
 
             await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
 
-            File.Delete(_tmpDllPath);
+            //  File.Delete(_tmpDllPath);
 
             return;
         }
@@ -222,11 +248,20 @@ class Runner
             result.Status = RequestStatus.Failed;
             result.Result.Status = ExecutionStatus.RuntimeError;
 
-            string errorString = await proc.StandardError.ReadToEndAsync(cancellationToken);
+            //because nuunitlite throws everything into stdout (even errors, it treats them as test result)
+            string errorString = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
 
-            if (errorString.Contains("TestTimeoutException") || errorString.Contains("exceeded Timeout value"))
+            if (errorString.Contains("Test execution timed out"))
             {
                 result.Result.Status = ExecutionStatus.TimedOut;
+            }
+            else if (errorString.Contains("AssertionException"))
+            {
+                result.Result.Status = ExecutionStatus.FailedToExecute;
+            }
+            else
+            {
+                result.Result.Status = ExecutionStatus.RuntimeError;
             }
 
             result.Result.ConsoleOutput = errorString;
@@ -237,7 +272,7 @@ class Runner
             result.Result.Status = ExecutionStatus.Succeded;
         }
 
-        File.Delete(_tmpDllPath);
+        //  File.Delete(_tmpDllPath);
 
         await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
     }
@@ -252,6 +287,13 @@ class Runner
 
         if (File.Exists(_tmpRuntimeConfigPath))
             File.Delete(_tmpRuntimeConfigPath);
+
+        foreach (var dll in _dllsToCopy)
+        {
+            var dest = Path.Combine("/tmp", dll);
+            if (File.Exists(dest))
+                File.Delete(dest);
+        }
     }
 
     private static string WrapUserCode(ProblemSolutionDto problemSolutionDto)
@@ -266,7 +308,10 @@ class Runner
             {
                 static int Main(string[] args)
                 {
-                    return new AutoRun().Execute(args);
+                    var argsWithNoResult = args.Concat(new[] { "--noresult" }).ToArray();
+                    var result = new AutoRun().Execute(argsWithNoResult);
+                    Console.Out.Flush();
+                    return result;
                 }
             }
             [TestFixture]
@@ -275,16 +320,32 @@ class Runner
             """);
 
 
-        foreach(var testCase in problemSolutionDto.Problem.TestCases)
+        foreach (var testCase in problemSolutionDto.Problem.TestCases)
         {
             sb.AppendLine(
                 $$"""
-                [Test,Timeout({{problemSolutionDto.MaxAllowedTimeInMilliseconds}})]
+                [Test]
                 public void {{testCase.Name}}()
                 {
                     {{testCase.TestInitialization}}
-                    {{testCase.InputExpression}}
-                    {{testCase.OutputExpression}}
+
+                    var testTask = Task.Run( ()=>
+                    {
+                        {{testCase.InputExpression}}
+                        {{testCase.OutputExpression}}
+                    });
+                    
+                    try
+                    {
+                        if (!testTask.Wait(TimeSpan.FromMilliseconds({{problemSolutionDto.MaxAllowedTimeInMilliseconds}})))
+                        {
+                            Assert.Fail("Test execution timed out");
+                        }
+                    }
+                    catch(AggregateException ae)
+                    {
+                        throw ae.InnerException ?? ae;
+                    }
                 }
                 """
                 );
