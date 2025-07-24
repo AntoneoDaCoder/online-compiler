@@ -210,6 +210,7 @@ namespace FrontendMockApp.Services
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "HeavyCorrectExample.cs",
+                    Language = "csharp"
                 };
 
                 _stats.RequestsSent++;
@@ -223,6 +224,7 @@ namespace FrontendMockApp.Services
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "TimeoutExample.cs",
+                    Language = "csharp"
                 };
 
                 _stats.RequestsSent++;
@@ -236,6 +238,7 @@ namespace FrontendMockApp.Services
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "LightCorrectExample.cs",
+                    Language = "csharp"
                 };
 
                 _stats.RequestsSent++;
@@ -249,6 +252,7 @@ namespace FrontendMockApp.Services
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "CompileErrorExample.cs",
+                    Language = "csharp"
                 };
 
                 _stats.RequestsSent++;
@@ -262,6 +266,7 @@ namespace FrontendMockApp.Services
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "CheatingExample.cs",
+                    Language = "csharp"
                 };
 
                 _stats.RequestsSent++;
