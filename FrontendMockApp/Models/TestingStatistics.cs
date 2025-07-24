@@ -9,7 +9,7 @@
         public TimeSpan SessionDuration => SessionEndedAt - SessionStartedAt;
         public int RequestsSent { get; set; }
         public int ResponsesReceived { get; set; }
-        public int ResponsesWithStatusCode { get; set; }
+        public int ResponsesWithStatusCode { get; set; } = 0;
         public double HealthRatio => (double)ResponsesWithStatusCode / RequestsSent;
         public double AverageLatency { get; set; }
     }

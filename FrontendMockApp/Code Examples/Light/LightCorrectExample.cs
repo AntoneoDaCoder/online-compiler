@@ -1,24 +1,20 @@
 ﻿//find array min value example
 class LightCorrectExample
 {
-    static void Main()
+    public class Solution
     {
-        int[] numbers = { 5, 3, 8, 1, 4 };
-        int min = FindMinimum(numbers);
-        Console.WriteLine("Array minimum: " + min);
-    }
-
-    static int FindMinimum(int[] arr)
-    {
-        int min = arr[0];
-        for (int i = 1; i < arr.Length; i++)
+        public int FindMinimum(int[] arr)
         {
-            if (arr[i] < min)
+            int min = arr[0];
+            for (int i = 1; i < arr.Length; i++)
             {
-                min = arr[i];
+                if (arr[i] < min)
+                {
+                    min = arr[i];
+                }
             }
+            return min;
         }
-        return min;
     }
 }
 

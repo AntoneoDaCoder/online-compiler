@@ -10,6 +10,7 @@ using System.Net.Http.Json;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 class Runner
 {
@@ -253,7 +254,7 @@ class Runner
             {
                 result.Result.Status = ExecutionStatus.TimedOut;
             }
-            else if (errorString.Contains("AssertionException"))
+            else if (errorString.Contains("AssertionException") || errorString.Contains("Failed :", StringComparison.OrdinalIgnoreCase))
             {
                 result.Result.Status = ExecutionStatus.FailedToExecute;
             }
@@ -262,7 +263,16 @@ class Runner
                 result.Result.Status = ExecutionStatus.RuntimeError;
             }
 
-            result.Result.ConsoleOutput = errorString;
+            var failedTestNames = new StringBuilder();
+
+            var matchCollection = Regex.Matches(errorString, @"\d+\)\s+Failed\s+:\s+([\w\.]+)");
+
+            foreach (Match match in matchCollection)
+            {
+                failedTestNames.AppendLine(match.Groups[1].Value);
+            }
+
+            result.Result.ConsoleOutput = failedTestNames.ToString();
         }
         else
         {

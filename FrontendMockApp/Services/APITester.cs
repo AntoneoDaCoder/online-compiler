@@ -199,6 +199,9 @@ namespace FrontendMockApp.Services
 
                 var heavyOk = _testExamples["HeavyCorrectExample.cs"];
                 var heavyBad = _testExamples["TimeoutExample.cs"];
+                var lightOk = _testExamples["LightCorrectExample.cs"];
+                var lightBad = _testExamples["CompileErrorExample.cs"];
+                var lightCheating = _testExamples["CheatingExample.cs"];
 
                 var requestDto = new CodeRequestDto()
                 {
@@ -209,18 +212,61 @@ namespace FrontendMockApp.Services
                     ProblemName = "HeavyCorrectExample.cs",
                 };
 
+                _stats.RequestsSent++;
+
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
-                //var requestDto = new CodeRequestDto()
-                //{
-                //    Code = heavyBad,
-                //    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                //    CallbackUrl = _callbackUrl,
-                //    RequestSentAt = DateTime.UtcNow,
-                //    ProblemName = "TimeoutExample.cs",
-                //};
+                requestDto = new CodeRequestDto()
+                {
+                    Code = heavyBad,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "TimeoutExample.cs",
+                };
 
-                //await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = lightOk,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "LightCorrectExample.cs",
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = lightBad,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "CompileErrorExample.cs",
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = lightCheating,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "CheatingExample.cs",
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
                 //var example = _testExamples.First();
 

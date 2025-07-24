@@ -117,12 +117,55 @@ namespace ServerAPIApp.Core.Repositories
                 }
             };
 
+            var lightTemplate = new Problem()
+            {
+                TestCases = new List<TestCase>()
+                {
+                    new()
+                    {
+                        Name="Test_SingleValue",
+                        TestInitialization =
+                        """
+                                var arr = new int[]{123456};
+                        """,
+                        InputExpression = "var result = new Solution().FindMinimum(arr);",
+                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(123456));"
+                    },
+                    new()
+                    {
+                        Name="Test_SeveralValues",
+                        TestInitialization =
+                        """
+                                var rnd = new Random();
+                                var arr = new int[rnd.Next(100,1000)];
+
+                                for(int i=0;i<arr.Length;i++)
+                                {
+                                    arr[i] = rnd.Next(-1000,1200120);
+                                }
+                        """,
+                        InputExpression = "var result = new Solution().FindMinimum(arr);",
+                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(arr.Min()));"
+                    },
+                }
+            };
+
 
             heavyTemplate.Name = "HeavyCorrectExample.cs";
             _database["HeavyCorrectExample.cs"] = heavyTemplate;
 
             heavyTemplate.Name = "TimeoutExample.cs";
             _database["TimeoutExample.cs"] = heavyTemplate;
+
+            lightTemplate.Name = "LightCorrectExample.cs";
+            _database["LightCorrectExample.cs"] = lightTemplate;
+
+            lightTemplate.Name = "CompileErrorExample.cs";
+            _database["CompileErrorExample.cs"] = lightTemplate;
+
+            lightTemplate.Name = "CheatingExample.cs";
+            _database["CheatingExample.cs"] = lightTemplate;
+
         }
 
         public Problem GetProblem(string name)
