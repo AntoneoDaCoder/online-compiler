@@ -16,7 +16,7 @@ class Runner
 {
     const string _tmpDllPath = "/tmp/UserProgram.dll";
     const string _tmpRuntimeConfigPath = "/tmp/UserProgram.runtimeconfig.json";
-    const string _apiCallbackUrl = "http://api-server:8080/api/jobs/complete";
+    const string _apiCallbackUrl = "http://api-server.default.svc.cluster.local:8080/api/jobs/complete";
     const int _maxProcessLifetime = 25000;
     const string _boilerplateUsings = """
                 using System;
@@ -118,9 +118,16 @@ class Runner
     {
         response.Result.ResponseSentAt = DateTime.UtcNow;
 
-        await _client.PostAsJsonAsync(callbackUrl, response, cancellationToken);
+        try
+        {
+            await _client.PostAsJsonAsync(callbackUrl, response, cancellationToken);
 
-        Console.WriteLine($"[Runner] Sent response [Id:{response.RequestId}] to request [Id:{requestId}]");
+            Console.WriteLine($"[Runner] Sent response [Id:{response.RequestId}] to request [Id:{requestId}]");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Runner] Failed to send response [Id:{requestId}]: {ex}");
+        }
     }
 
     private static async Task ListenAsync(CancellationToken cancellationToken)
@@ -143,6 +150,7 @@ class Runner
 
                         _ = ExecuteUserCodeAsync(codeRequest, cancellationToken);
 
+                        Console.WriteLine($"[Runner] Scheduled request [Id:{codeRequest.RequestId}]");
                     }
                     catch (Exception ex)
                     {
@@ -169,9 +177,10 @@ class Runner
         var result = new CodeResponseDto()
         {
             RequestId = request.RequestId,
+            Language = request.Language,
             Result = new ExecutionResultDto()
             {
-                RequestSentAt = request.SentAt
+                RequestSentAt = request.SentAt,
             }
         };
 
@@ -191,9 +200,12 @@ class Runner
             GetReferences(),
             options);
 
+
         using var ms = new MemoryStream();
 
         var compilationResult = compiledAssembly.Emit(ms, cancellationToken: cancellationToken);
+
+        Console.WriteLine($"[Runner] Compiled request [Id:{request.RequestId}]");
 
         if (!compilationResult.Success)
         {
@@ -213,6 +225,8 @@ class Runner
 
         File.WriteAllBytes(_tmpDllPath, ms.ToArray());
 
+        Console.WriteLine($"[Runner] Wrote compiled dll on disk [Id:{request.RequestId}]");
+
         using var proc = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -225,6 +239,8 @@ class Runner
         };
         proc.Start();
 
+        Console.WriteLine($"[Runner] Started process [Id:{request.RequestId}]");
+
         if (!proc.WaitForExit(_maxProcessLifetime))
         {
             proc.Kill();
@@ -236,6 +252,8 @@ class Runner
             await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
 
             File.Delete(_tmpDllPath);
+
+            Console.WriteLine($"[Runner] Processed timeout [Id:{request.RequestId}]");
 
             return;
         }
@@ -273,14 +291,20 @@ class Runner
             }
 
             result.Result.ConsoleOutput = failedTestNames.ToString();
+
+            Console.WriteLine($"[Runner] Processed runtime error [Id:{request.RequestId}]");
         }
         else
         {
             result.Status = RequestStatus.Succeeded;
             result.Result.Status = ExecutionStatus.Succeded;
+
+            Console.WriteLine($"[Runner] Processed successfull execution [Id:{request.RequestId}]");
         }
 
         File.Delete(_tmpDllPath);
+
+        Console.WriteLine($"[Runner] Deleted tmp dll [Id:{request.RequestId}]");
 
         await NotifyJobManagerAsync(result, _apiCallbackUrl, request.RequestId, cancellationToken);
     }

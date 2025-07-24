@@ -1,0 +1,58 @@
+﻿using k8s;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using ServerAPIApp.Core.Configs;
+using ServerAPIApp.Core.Repositories;
+using ServerAPIApp.Core.Services;
+using ServerAPIApp.Core.Abstractions;
+using Microsoft.Extensions.Options;
+
+namespace ServerAPIApp.Core.Extensions
+{
+    public static class ServiceCollectionExtension
+    {
+        public static IServiceCollection BindLanguageConfigs(this IServiceCollection services, IConfiguration conf)
+        {
+            services.Configure<LanguageConfig>("csharp", conf.GetSection("Languages:csharp"));
+
+            return services;
+        }
+
+        public static IServiceCollection RegisterServices(this IServiceCollection services)
+        {
+            services.AddSingleton<ProblemRepository>();
+
+            services.AddSingleton<IKubernetes>(sp =>
+            {
+                var config = KubernetesClientConfiguration.BuildDefaultConfig();
+                return new Kubernetes(config);
+            });
+
+            services.AddSingleton<CallbackService>();
+
+            services.AddSingleton<IKubernetesJobManager>
+                (sp =>
+                {
+                    var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+
+                    return new KubernetesJobManager
+                    (
+                        "csharp",
+                        sp.GetRequiredService<IKubernetes>(),
+                        monitor,
+                        sp.GetRequiredService<CallbackService>()
+                    );
+                }
+            );
+
+
+            services.AddHostedService<ManagerAdapter>();
+
+            services.AddSingleton<ICodeDispatcher, CodeDispatcher>();
+            services.AddHostedService(provider => provider.GetRequiredService<ICodeDispatcher>());
+
+
+            return services;
+        }
+    }
+}

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Shared.DTOs;
 using Shared.Enums;
-using ServerAPIApp.Core.Services;
+using ServerAPIApp.Core.Abstractions;
 
 namespace ServerAPIApp.Controllers
 {
@@ -9,8 +9,8 @@ namespace ServerAPIApp.Controllers
     [Route("api")]
     public class ServerController : ControllerBase
     {
-        private CodeDispatcher _dispatcher;
-        public ServerController(CodeDispatcher dispatcher)
+        private ICodeDispatcher _dispatcher;
+        public ServerController(ICodeDispatcher dispatcher)
         {
             _dispatcher = dispatcher;
         }

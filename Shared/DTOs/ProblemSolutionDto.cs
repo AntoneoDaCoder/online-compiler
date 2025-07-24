@@ -6,6 +6,7 @@ namespace Shared.DTOs
     {
         public Guid RequestId { get; set; }
         public long MaxAllowedTimeInMilliseconds { get; set; }
+        public string Language { get; set; } = string.Empty;
         public string Code { get; set; } = string.Empty;
         public Problem Problem { get; set; }
         public string CallbackUrl { get; set; } = string.Empty;
