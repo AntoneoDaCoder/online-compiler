@@ -6,12 +6,12 @@ WORKDIR /src
 
 RUN useradd -u 1001 -m runneruser
 
-COPY ["InMemoryRunner/","InMemoryRunner/"]
+COPY ["Runners/DotNetRunner/","DotNetRunner/"]
 COPY ["Shared/","Shared/"]
 
-RUN dotnet restore "InMemoryRunner/InMemoryRunner.csproj"
+RUN dotnet restore "DotNetRunner/DotNetRunner.csproj"
 
-WORKDIR /src/InMemoryRunner
+WORKDIR /src/DotNetRunner
 RUN dotnet build -c Release -o /app/build
 
 FROM build AS publish
@@ -23,4 +23,4 @@ COPY --from=publish /app/publish .
 
 USER 1001
 
-ENTRYPOINT ["dotnet", "InMemoryRunner.dll"]
+ENTRYPOINT ["dotnet", "DotNetRunner.dll"]
