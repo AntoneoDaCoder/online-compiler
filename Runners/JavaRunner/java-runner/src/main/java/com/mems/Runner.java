@@ -3,30 +3,20 @@ package com.mems;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
 import javax.tools.JavaCompiler;
-import javax.tools.JavaCompiler.CompilationTask;
-import javax.tools.JavaFileObject;
-import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -38,7 +28,6 @@ import com.mems.Shared.DTOs.ExecutionResultDto;
 import com.mems.Shared.DTOs.ProblemSolutionDto;
 import com.mems.Shared.Enums.ExecutionStatus;
 import com.mems.Shared.Enums.RequestStatus;
-import com.mems.Shared.Models.Problem;
 import com.mems.Shared.Models.TestCase;
 
 public class Runner 
@@ -64,38 +53,13 @@ public class Runner
     private static final ObjectMapper objectMapper = JsonUtils.getObjectMapper();
     
     public static void main(String[] args) throws Exception {
-        ProblemSolutionDto request = new ProblemSolutionDto();
-        request.requestId = UUID.randomUUID();
-        request.code = """
-            class SimpleTest {
-                public static int add(int a, int b) {
-                    return a - b;
-                }
-            }
-            """;
-        
-        request.problem = new Problem();
-        request.problem.testCases = Arrays.asList(
-            new TestCase(
-                "testSuccess", 
-                "", 
-                "assertEquals(5, SimpleTest.add(2, 3));",
-                ""
-            ),
-            new TestCase(
-                "testRuntimeError", 
-                "",                            
-                "throw new RuntimeException(\"runtime error\");",  
-                ""
-            )
-        );
-        
-        request.maxAllowedTimeInMilliseconds = 1000;
-        request.sentAt = LocalDateTime.now();
-        
-        executeUserCode(request);
-        
-        Thread.sleep(3000);
+        Runtime.getRuntime().addShutdownHook(new Thread(Runner::releaseResources));
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(6000), 0);
+        server.createContext("/run/", new RequestHandler());
+        server.start();
+
+        System.out.println("JavaRunner started on port 6000");
     }
     
     static class RequestHandler implements HttpHandler {
@@ -135,7 +99,7 @@ public class Runner
                 response.result.status = ExecutionStatus.COMPILE_ERROR;
                 response.result.exitCode = 1;
                 response.result.consoleOutput = "Compilation failed";
-                //notifyJobManager(response);
+                notifyJobManager(response);
                 return;
             }
             
@@ -178,6 +142,7 @@ public class Runner
                     response.status = RequestStatus.FAILED;
                     response.result.status = parseTestResults(output.toString());
                     response.result.consoleOutput = extractFailedTestNames(output.toString());
+                    System.out.println(response.result.consoleOutput);
                 }
             }
             
@@ -235,8 +200,6 @@ public class Runner
                 @RunWith(JUnit4.class)
                 public static class GeneratedTests {
                     public GeneratedTests() {}
-            
-
             """);
         
         for (TestCase testCase : request.problem.testCases) {
@@ -266,7 +229,7 @@ public class Runner
     private static ExecutionStatus parseTestResults(String output) {
         if (output.contains("Test timed out")) {
             return ExecutionStatus.TIMED_OUT;
-        } else if (output.contains("AssertionError") || output.contains("FAILURE")) {
+        } else if (output.contains("expected")) {
             return ExecutionStatus.FAILED_TO_EXECUTE;
         } else if (output.contains("runtime")) {
             return ExecutionStatus.RUNTIME_ERROR;
@@ -276,10 +239,16 @@ public class Runner
     
     private static String extractFailedTestNames(String output) {
         return Arrays.stream(output.split("\n"))
-            .filter(line -> line.contains(") test") && line.contains("FAILED"))
-            .map(line -> line.substring(0, line.indexOf("(")).trim())
+            .filter(line -> line.startsWith("Test failed:"))
+            .map(line -> {
+                int start = "Test failed: ".length();
+                int end = line.indexOf('(');
+                if (end == -1) end = line.length();
+                return line.substring(start, end).trim();
+            })
             .collect(Collectors.joining("\n"));
     }
+
     
     private static void notifyJobManager(CodeResponseDto response) {
         response.result.responseSentAt = LocalDateTime.now();

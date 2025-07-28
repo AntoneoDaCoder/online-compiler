@@ -15,9 +15,9 @@
   <PropertyGroup>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\Shared\Shared.csproj" />
-  </ItemGroup>
+<ItemGroup>
+	<ProjectReference Include="..\..\Shared\Shared.csproj" />
+</ItemGroup>
 
 </Project>
 
