@@ -15,6 +15,8 @@ namespace ServerAPIApp.Core.Extensions
         {
             services.Configure<LanguageConfig>("csharp", conf.GetSection("Languages:csharp"));
 
+            services.Configure<LanguageConfig>("swift", conf.GetSection("Languages:swift"));
+
             return services;
         }
 
@@ -44,6 +46,21 @@ namespace ServerAPIApp.Core.Extensions
                     );
                 }
             );
+
+            services.AddSingleton<IKubernetesJobManager>
+               (sp =>
+               {
+                   var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+
+                   return new KubernetesJobManager
+                   (
+                       "swift",
+                       sp.GetRequiredService<IKubernetes>(),
+                       monitor,
+                       sp.GetRequiredService<CallbackService>()
+                   );
+               }
+           );
 
 
             services.AddHostedService<ManagerAdapter>();
