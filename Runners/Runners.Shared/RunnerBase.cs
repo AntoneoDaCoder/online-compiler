@@ -97,7 +97,10 @@ namespace Runners.Shared
         {
             var wrappedCode = _runner.WrapCode(request);
 
-            var compilationResult = _runner.CompileCode(wrappedCode, out var pInfo, cancellationToken);
+
+            Console.WriteLine("[Runner] Compiling code");
+
+            var compilationResult = await _runner.CompileCodeAsync(wrappedCode, cancellationToken);
 
             if (!compilationResult.Success)
             {
@@ -120,7 +123,11 @@ namespace Runners.Shared
                 return;
             }
 
-            var executionResult = await _runner.ExecuteCodeAsync(request.RequestId, request.SentAt, pInfo!, cancellationToken);
+            Console.WriteLine("[Runner] Code has been compiled, ready to execute it");
+
+            var executionResult = await _runner.ExecuteCodeAsync(request.RequestId, request.SentAt, cancellationToken);
+
+            Console.WriteLine("[Runner] Got the execution results, sending them back to the client");
 
             await NotifyJobManagerAsync(executionResult, _apiCallbackUrl, request.RequestId, cancellationToken);
         }
