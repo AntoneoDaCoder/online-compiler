@@ -38,61 +38,66 @@ namespace Runners.Shared.Runners
 
             sb.AppendLine(
                 $$"""
-                import Foundation
-                import Dispatch
-                import Glibc
+        import Foundation
+        import Dispatch
+        import Glibc
 
-                signal(SIGABRT) { _ in fputs("TEST_ERROR: signal SIGABRT\n", stderr); exit(1) }
-                signal(SIGSEGV) { _ in fputs("TEST_ERROR: signal SIGSEGV\n", stderr); exit(1) }
-                signal(SIGILL)  { _ in fputs("TEST_ERROR: signal SIGILL\n", stderr); exit(1) }
-                signal(SIGFPE)  { _ in fputs("TEST_ERROR: signal SIGFPE\n", stderr); exit(1) }
-                
-                final class SwiftTestGenerator {
-                    static func assertEqual<T: Equatable>(_ lhs: T, _ rhs: T, testName: String) {
-                        if lhs == rhs {
-                            print("[TEST_PASS]: \(testName)")
-                        } else {
-                            print("[TEST_FAIL]: \(testName) — expected \(rhs), got \(lhs)")
-                        }
-                    }
+        signal(SIGABRT) { _ in fputs("TEST_ERROR: signal SIGABRT\n", stderr); exit(1) }
+        signal(SIGSEGV) { _ in fputs("TEST_ERROR: signal SIGSEGV\n", stderr); exit(1) }
+        signal(SIGILL)  { _ in fputs("TEST_ERROR: signal SIGILL\n", stderr); exit(1) }
+        signal(SIGFPE)  { _ in fputs("TEST_ERROR: signal SIGFPE\n", stderr); exit(1) }
 
-                    static func assertGreater<T: Comparable>(_ lhs: T, _ rhs: T, testName: String) {
-                        if lhs > rhs {
-                            print("[TEST_PASS]: \(testName)")
-                        } else {
-                            print("[TEST_FAIL]: \(testName) — \(rhs) is not greater than \(lhs)")
-                        }
-                    }
-
-                    static func assertApproxEqual(_ lhs: Double, _ rhs: Double, accuracy: Double = 1e-6, testName: String) {
-                        if abs(lhs - rhs) <= accuracy {
-                            print("[TEST_PASS]: \(testName)")
-                        } else {
-                            print("[TEST_FAIL]: \(testName) — expected approx \(rhs), got \(lhs)")
-                        }
-                    }
+        final class SwiftTestGenerator {
+            static func assertEqual<T: Equatable>(_ lhs: T, _ rhs: T, testName: String) {
+                if lhs == rhs {
+                    print("[TEST_PASS]: \(testName)")
+                } else {
+                    print("[TEST_FAIL]: \(testName) — expected \(rhs), got \(lhs)")
+                    hasFailedTests = true
                 }
+            }
 
-                {{problemSolutionDto.Problem.AdditionalDefinitions}}
-
-                {{problemSolutionDto.Code}}
-
-                func runWithTimeout(seconds: Double, task: @escaping () -> Void) -> Bool {
-                    let group = DispatchGroup()
-                    group.enter()
-            
-                    DispatchQueue.global().async {
-                        task()
-                        group.leave()
-                    }
-
-                    let result = group.wait(timeout: .now() + seconds)
-                    return result == .success
+            static func assertGreater<T: Comparable>(_ lhs: T, _ rhs: T, testName: String) {
+                if lhs > rhs {
+                    print("[TEST_PASS]: \(testName)")
+                } else {
+                    print("[TEST_FAIL]: \(testName) — \(rhs) is not greater than \(lhs)")
+                    hasFailedTests = true
                 }
+            }
 
-                func runTests() {
-                """
-                );
+            static func assertApproxEqual(_ lhs: Double, _ rhs: Double, accuracy: Double = 1e-6, testName: String) {
+                if abs(lhs - rhs) <= accuracy {
+                    print("[TEST_PASS]: \(testName)")
+                } else {
+                    print("[TEST_FAIL]: \(testName) — expected approx \(rhs), got \(lhs)")
+                    hasFailedTests = true
+                }
+            }
+        }
+
+        {{problemSolutionDto.Problem.AdditionalDefinitions}}
+
+        {{problemSolutionDto.Code}}
+
+        func runWithTimeout(seconds: Double, task: @escaping () -> Void) -> Bool {
+            let group = DispatchGroup()
+            group.enter()
+
+            DispatchQueue.global().async {
+                task()
+                group.leave()
+            }
+
+            let result = group.wait(timeout: .now() + seconds)
+            return result == .success
+        }
+
+        var hasFailedTests = false
+
+        func runTests() {
+        """
+            );
 
             double timeoutSeconds = Math.Max(0.1, problemSolutionDto.MaxAllowedTimeInMilliseconds / 1000.0);
 
@@ -100,27 +105,35 @@ namespace Runners.Shared.Runners
             {
                 sb.AppendLine(
                     $$"""
-                    let {{testCase.Name}}_success = runWithTimeout(seconds: {{timeoutSeconds}}) {
-                        {{testCase.TestInitialization}}
+            let {{testCase.Name}}_success = runWithTimeout(seconds: {{timeoutSeconds}}) {
+                {{testCase.TestInitialization}}
 
-                        {{testCase.InputExpression}}
+                {{testCase.InputExpression}}
 
-                        {{testCase.OutputExpression}}
-                    }
-
-                    if !{{testCase.Name}}_success {
-                        print("[TEST_TIMED_OUT] {{testCase.Name}} timed out after {{timeoutSeconds}}s")
-                        exit(124)
-                    } 
-                    """
-                    );
+                {{testCase.OutputExpression}}
             }
 
-            sb.AppendLine("}");
+            if !{{testCase.Name}}_success {
+                print("[TEST_TIMED_OUT] {{testCase.Name}} timed out after {{timeoutSeconds}}s")
+                exit(124)
+            }
+            """
+                );
+            }
+
+            sb.AppendLine(
+                """
+            if hasFailedTests {
+                exit(1)
+            }
+        }
+        """
+            );
 
             sb.AppendLine("runTests()");
             return sb.ToString();
         }
+
 
         public async Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
         {
@@ -202,21 +215,29 @@ namespace Runners.Shared.Runners
                 {
                     result.Result.Status = ExecutionStatus.TimedOut;
                 }
-                else if (Regex.IsMatch(stdOut, "TEST_FAIL"))
+                else if (stdOut.Contains("[TEST_FAIL]:"))
                 {
                     result.Result.Status = ExecutionStatus.FailedToExecute;
 
-                    var matchCollection = Regex.Matches(stdOut, @"\(([^)]+)\) - expected");
-
                     var failedTestNames = new StringBuilder();
+                    var lines = stdOut.Split('\n');
 
-                    foreach (Match match in matchCollection)
+                    foreach (var line in lines)
                     {
-                        failedTestNames.AppendLine(match.Groups[1].Value);
+                        if (line.StartsWith("[TEST_FAIL]:"))
+                        {
+                            var testNameMatch = Regex.Match(line, @"\[TEST_FAIL\]:\s*(.*?)\s*—");
+
+                            if (testNameMatch.Success)
+                            {
+                                failedTestNames.AppendLine(testNameMatch.Groups[1].Value);
+                            }
+                        }
                     }
 
                     result.Result.ConsoleOutput = failedTestNames.ToString();
                 }
+
                 else
                 {
                     result.Result.Status = ExecutionStatus.RuntimeError;

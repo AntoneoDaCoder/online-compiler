@@ -257,16 +257,38 @@ namespace ServerAPIApp.Core.Repositories
                 }
             };
 
+            var lightTemplateSwift = new Problem()
+            {
+                TestCases = new List<TestCase>()
+                {
+                    new()
+                    {
+                        Name="Test_SingleValue",
+                        TestInitialization =
+                        """
+                                let arr = [123456]
+                        """,
+                        InputExpression = "let result = Solution().findMinimum(arr)",
+                        OutputExpression = "SwiftTestGenerator.assertEqual(result, 123456, testName: \"Test_SingleValue\")"
+                    },
+                    new()
+                    {
+                        Name="Test_SeveralValues",
+                        TestInitialization =
+                        """
+                              var rng = SystemRandomNumberGenerator()
+                              let size = Int.random(in: 100..<1000, using: &rng)
+                              let arr = (0..<size).map { _ in Int.random(in: -1000..<1200120, using: &rng) }
+                        """,
+                        InputExpression = "let result = Solution().findMinimum(arr)",
+                        OutputExpression = "SwiftTestGenerator.assertEqual(result, arr.min()!, testName: \"Test_SeveralValues\")"
+                    },
+                }
+            };
 
 
             heavyTemplate.Name = "HeavyCorrectExample.cs";
             _database["HeavyCorrectExample.cs"] = heavyTemplate;
-
-            heavyTemplateSwift.Name = "HeavyCorrectExample.swift";
-            _database["HeavyCorrectExample.swift"] = heavyTemplateSwift;
-
-            heavyTemplateSwift.Name = "TimeoutExample.swift";
-            _database["TimeoutExample.swift"] = heavyTemplateSwift;
 
             heavyTemplate.Name = "TimeoutExample.cs";
             _database["TimeoutExample.cs"] = heavyTemplate;
@@ -279,6 +301,23 @@ namespace ServerAPIApp.Core.Repositories
 
             lightTemplate.Name = "CheatingExample.cs";
             _database["CheatingExample.cs"] = lightTemplate;
+
+
+
+            heavyTemplateSwift.Name = "HeavyCorrectExample.swift";
+            _database["HeavyCorrectExample.swift"] = heavyTemplateSwift;
+
+            heavyTemplateSwift.Name = "TimeoutExample.swift";
+            _database["TimeoutExample.swift"] = heavyTemplateSwift;
+
+            lightTemplateSwift.Name = "LightCorrectExample.swift";
+            _database["LightCorrectExample.swift"] = lightTemplateSwift;
+
+            lightTemplateSwift.Name = "CompileErrorExample.swift";
+            _database["CompileErrorExample.swift"] = lightTemplateSwift;
+
+            lightTemplateSwift.Name = "CheatingExample.swift";
+            _database["CheatingExample.swift"] = lightTemplateSwift;
 
         }
 

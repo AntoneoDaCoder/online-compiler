@@ -28,6 +28,7 @@ namespace ServerAPIApp.Controllers
                 {
                     RequestId = dto.RequestId,
                     Status = RequestStatus.Acknowledged,
+                    Language = dto.Language,
                     Result = new ExecutionResultDto()
                     {
                         Status = ExecutionStatus.Pending,
@@ -43,6 +44,7 @@ namespace ServerAPIApp.Controllers
                 {
                     RequestId = dto.RequestId,
                     Status = RequestStatus.Failed,
+                    Language = dto.Language,
                     Result = new ExecutionResultDto()
                     {
                         Status = ExecutionStatus.FailedToExecute,
