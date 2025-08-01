@@ -6,12 +6,13 @@ WORKDIR /src
 
 RUN useradd -u 1001 -m runneruser
 
-COPY ["Runners/DotNetRunner/","DotNetRunner/"]
+COPY ["Runners/DotNetRunner/","Runners/DotNetRunner/"]
+COPY ["Runners/Runners.Shared/","Runners/Runners.Shared/"]
 COPY ["Shared/","Shared/"]
 
-RUN dotnet restore "DotNetRunner/DotNetRunner.csproj"
+RUN dotnet restore "Runners/DotNetRunner/DotNetRunner.csproj"
 
-WORKDIR /src/DotNetRunner
+WORKDIR /src/Runners/DotNetRunner
 RUN dotnet build -c Release -o /app/build
 
 FROM build AS publish
