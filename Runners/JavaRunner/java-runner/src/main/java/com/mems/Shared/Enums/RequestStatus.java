@@ -1,5 +1,7 @@
 package com.mems.Shared.Enums;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum RequestStatus {
     NO_STATUS(0),
     ACKNOWLEDGED(1),
@@ -14,6 +16,7 @@ public enum RequestStatus {
         this.value = value;
     }
 
+    @JsonValue
     public int getValue() {
         return value;
     }

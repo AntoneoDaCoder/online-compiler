@@ -8,8 +8,9 @@ COPY java-runner/src ./src
 RUN mvn package -DskipTests
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21-jre-jammy 
+FROM eclipse-temurin:21-jdk-jammy
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/java-runner-1.0-shaded.jar app.jar
+
 USER 1001
 ENTRYPOINT ["java", "-jar", "app.jar"]

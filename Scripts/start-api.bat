@@ -7,8 +7,12 @@ cd ..
 docker build -t api-server:local -f ServerAPIApp/Dockerfile .
 minikube image load api-server:local
 
+echo Building and loading csharp runner image
+docker build -t csharp-runner:local -f Runners/DotNetRunner/Dockerfile .
+minikube image load csharp-runner:local
+
 echo Building and loading java runner image
-docker build -t java-runner:local -f Runners/JavaRunner/Dockerfile .
+docker build -t java-runner:local -f Runners/JavaRunner/Dockerfile Runners/JavaRunner/
 minikube image load java-runner:local
 
 echo Deploying API to Kubernetes

@@ -1,5 +1,7 @@
 package com.mems.Shared.Enums;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum ExecutionStatus {
     NO_STATUS(0),
     SUCCEEDED(1),
@@ -16,6 +18,7 @@ public enum ExecutionStatus {
         this.value = value;
     }
 
+    @JsonValue
     public int getValue() {
         return value;
     }

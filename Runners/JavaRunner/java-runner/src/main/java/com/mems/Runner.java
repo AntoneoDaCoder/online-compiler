@@ -1,6 +1,7 @@
 package com.mems;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
@@ -8,6 +9,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
@@ -38,6 +40,7 @@ public class Runner
     private static final String TMP_CLASS_FILE = TMP_DIR + "/UserProgram.class";
     private static final String API_CALLBACK_URL = "http://api-server.default.svc.cluster.local:8080/api/jobs/complete";
     private static final int MAX_PROCESS_LIFETIME_MS = 25000;
+    private static final int RUNNER_PORT = 5000;
     
     private static final String BOILERPLATE_IMPORTS = """
         import java.util.*;
@@ -55,11 +58,11 @@ public class Runner
     public static void main(String[] args) throws Exception {
         Runtime.getRuntime().addShutdownHook(new Thread(Runner::releaseResources));
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(6000), 0);
-        server.createContext("/run/", new RequestHandler());
+        HttpServer server = HttpServer.create(new InetSocketAddress(RUNNER_PORT), 0);
+        server.createContext("/run", new RequestHandler());
         server.start();
 
-        System.out.println("JavaRunner started on port 6000");
+        System.out.println("[JavaRunner] Java runner started on port "+ RUNNER_PORT);
     }
     
     static class RequestHandler implements HttpHandler {
@@ -75,7 +78,7 @@ public class Runner
                 
                 exchange.sendResponseHeaders(200, -1);
             } catch (Exception e) {
-                System.err.println("Error processing request: " + e);
+                System.err.println("[JavaRunner] Error processing request: " + e);
                 exchange.sendResponseHeaders(500, -1);
             } finally {
                 exchange.close();
@@ -85,6 +88,7 @@ public class Runner
     
     private static void executeUserCode(ProblemSolutionDto request) {
         CodeResponseDto response = new CodeResponseDto();
+
         response.requestId = request.requestId;
         response.language = "java";
         response.result = new ExecutionResultDto();
@@ -99,17 +103,19 @@ public class Runner
                 response.result.status = ExecutionStatus.COMPILE_ERROR;
                 response.result.exitCode = 1;
                 response.result.consoleOutput = "Compilation failed";
+
                 notifyJobManager(response);
+
                 return;
             }
             
-            // Execute the compiled code
             String separator = System.getProperty("path.separator");
             String classpath = TMP_DIR + separator + getJunitClasspath();
+
             ProcessBuilder pb = new ProcessBuilder("java", "-cp", classpath, TMP_CLASS_NAME);
             pb.redirectErrorStream(true);
-            Process process = pb.start();
 
+            Process process = pb.start();
             StringBuilder output = new StringBuilder();
             Thread outputReader = new Thread(() -> {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
@@ -122,8 +128,10 @@ public class Runner
                 }
             });
             outputReader.start();
-            
+
             boolean completed = process.waitFor(MAX_PROCESS_LIFETIME_MS, TimeUnit.MILLISECONDS);
+
+            System.out.println("[JavaRunner] Process wait completed.");
             
             if (!completed) {
                 process.destroyForcibly();
@@ -137,12 +145,14 @@ public class Runner
                 if (process.exitValue() == 0) {
                     response.status = RequestStatus.SUCCEEDED;
                     response.result.status = ExecutionStatus.SUCCEEDED;
+
+                    System.out.println("[JavaRunner] Code successfully executed");
                 } else {
-                    System.out.println(output.toString());
                     response.status = RequestStatus.FAILED;
                     response.result.status = parseTestResults(output.toString());
                     response.result.consoleOutput = extractFailedTestNames(output.toString());
-                    System.out.println(response.result.consoleOutput);
+
+                    System.out.println("[JavaRunner] Status code is different from 0");
                 }
             }
             
@@ -150,27 +160,49 @@ public class Runner
             response.status = RequestStatus.FAILED;
             response.result.status = ExecutionStatus.RUNTIME_ERROR;
             response.result.consoleOutput = e.toString();
+
+            System.out.println("[JavaRunner] Exception occurred:" + e);
         } finally {
             cleanupTempFiles();
-            //notifyJobManager(response);
+
+            notifyJobManager(response);
         }
     }
     
     private static boolean compileJavaFile(String javaFilePath) {
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        int compileResult = compiler.run(
-            null, 
-            null, 
-            null, 
-            "-d", TMP_DIR,
-            Paths.get(TMP_DIR, "UserProgram.java").toString()
-        );
+        try {
+            JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 
-        if (compileResult != 0) {
+            if (compiler == null) {
+                System.err.println("[JavaRunner] JavaCompiler not available.");
+
+                return false;
+            }
+
+            ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
+
+            int compileResult = compiler.run(
+                null,
+                null,
+                errorOut,
+                "-d", TMP_DIR,
+                javaFilePath
+            );
+
+            if (compileResult != 0) {
+                System.err.println("[JavaRunner] Compilation failed with exit code: " + compileResult);
+                System.err.println("[JavaRunner] Compiler output:\n" + errorOut.toString(StandardCharsets.UTF_8));
+
+                return false;
+            }
+
+            return true;
+        } catch (Exception e) {
+            System.err.println("Exception during compilation: " + e.getMessage());
+            e.printStackTrace();
+
             return false;
         }
-
-        return true;
     }
     
     private static String wrapUserCode(ProblemSolutionDto request) {
@@ -178,18 +210,11 @@ public class Runner
         
         sb.append(request.problem.additionalDefinitions).append("\n");
         sb.append(request.code).append("\n");
-        
         sb.append("""
             public class UserProgram {
                 public static void main(String[] args) {
                     try {
                         Result result = JUnitCore.runClasses(GeneratedTests.class);
-
-                        for (Failure failure : result.getFailures()) {
-                            System.out.println("Test failed: " + failure.toString());
-                        }
-
-                        System.out.println(result.wasSuccessful() ? "All tests passed" : "Some tests failed");
                         System.exit(result.wasSuccessful() ? 0 : 1);
                     } catch (Throwable t) {
                         t.printStackTrace();
@@ -220,6 +245,7 @@ public class Runner
         
         sb.append("}");
         sb.append("}");
+        
         String result = sb.toString();
 
         // remove package
@@ -259,9 +285,11 @@ public class Runner
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(response)))
                 .build();
-            
-            httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                
+            HttpResponse<String> httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
             System.out.println("[JavaRunner] Sent response [Id:" + response.requestId + "]");
+            System.out.println("[JavaRunner] HTTP Status code: " + httpResponse.statusCode());
         } catch (Exception e) {
             System.err.println("[JavaRunner] Failed to send response [Id:" + response.requestId + "]: " + e);
         }
