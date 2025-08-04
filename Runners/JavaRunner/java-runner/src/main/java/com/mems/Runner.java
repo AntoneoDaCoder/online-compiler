@@ -49,6 +49,7 @@ public class Runner
         import org.junit.runner.*;
         import org.junit.runners.*;
         import static org.junit.Assert.*;
+        import org.junit.internal.*;
         import org.junit.runner.notification.Failure;
         """;
     
@@ -97,12 +98,23 @@ public class Runner
         try {
             String fullCode = wrapUserCode(request);
             Files.writeString(Paths.get(TMP_JAVA_FILE), fullCode);
+
+            ByteArrayOutputStream errorOutput = new ByteArrayOutputStream();
+            boolean compiled = compileJavaFile(TMP_JAVA_FILE, errorOutput);
             
-            if (!compileJavaFile(TMP_JAVA_FILE)) {
+            if (!compiled) {
                 response.status = RequestStatus.FAILED;
                 response.result.status = ExecutionStatus.COMPILE_ERROR;
                 response.result.exitCode = 1;
-                response.result.consoleOutput = "Compilation failed";
+
+                String fullError = errorOutput.toString(StandardCharsets.UTF_8);
+                int index = fullError.indexOf("error:");
+
+                if (index != -1) {
+                    fullError = fullError.substring(index);
+                }
+                
+                response.result.consoleOutput = fullError;
 
                 notifyJobManager(response);
 
@@ -148,10 +160,10 @@ public class Runner
 
                     System.out.println("[JavaRunner] Code successfully executed");
                 } else {
+                    System.out.print(output);
                     response.status = RequestStatus.FAILED;
                     response.result.status = parseTestResults(output.toString());
                     response.result.consoleOutput = extractFailedTestNames(output.toString());
-
                     System.out.println("[JavaRunner] Status code is different from 0");
                 }
             }
@@ -169,7 +181,7 @@ public class Runner
         }
     }
     
-    private static boolean compileJavaFile(String javaFilePath) {
+    private static boolean compileJavaFile(String javaFilePath, ByteArrayOutputStream errorOut) {
         try {
             JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 
@@ -178,8 +190,6 @@ public class Runner
 
                 return false;
             }
-
-            ByteArrayOutputStream errorOut = new ByteArrayOutputStream();
 
             int compileResult = compiler.run(
                 null,
@@ -207,15 +217,28 @@ public class Runner
     
     private static String wrapUserCode(ProblemSolutionDto request) {
         StringBuilder sb = new StringBuilder(BOILERPLATE_IMPORTS);
-        
+        sb.append("public class UserProgram {");
         sb.append(request.problem.additionalDefinitions).append("\n");
         sb.append(request.code).append("\n");
         sb.append("""
-            public class UserProgram {
+            
                 public static void main(String[] args) {
                     try {
-                        Result result = JUnitCore.runClasses(GeneratedTests.class);
-                        System.exit(result.wasSuccessful() ? 0 : 1);
+                        JUnitCore junit = new JUnitCore();
+                        junit.addListener(new TextListener(System.out));
+
+                        Result result = junit.run(GeneratedTests.class);
+
+                        for (Failure failure : result.getFailures()) {
+                            System.err.println("[TEST FAILED] " + failure.getTestHeader());
+                            System.err.println(failure.getMessage());
+                        }
+
+                        if (result.wasSuccessful()) {
+                            System.exit(0);
+                        } else {
+                            System.exit(1);
+                        }
                     } catch (Throwable t) {
                         t.printStackTrace();
                         System.exit(2);
@@ -225,6 +248,7 @@ public class Runner
                 @RunWith(JUnit4.class)
                 public static class GeneratedTests {
                     public GeneratedTests() {}
+
             """);
         
         for (TestCase testCase : request.problem.testCases) {
@@ -253,11 +277,11 @@ public class Runner
     }
     
     private static ExecutionStatus parseTestResults(String output) {
-        if (output.contains("Test timed out")) {
+        if (output.contains("test timed out")) {
             return ExecutionStatus.TIMED_OUT;
-        } else if (output.contains("expected")) {
+        } else if (output.contains("FAILURES!!!")) {
             return ExecutionStatus.FAILED_TO_EXECUTE;
-        } else if (output.contains("runtime")) {
+        } else if (output.contains("Exception") || output.contains("at ")) {
             return ExecutionStatus.RUNTIME_ERROR;
         }
         return ExecutionStatus.NO_STATUS;
@@ -265,16 +289,15 @@ public class Runner
     
     private static String extractFailedTestNames(String output) {
         return Arrays.stream(output.split("\n"))
-            .filter(line -> line.startsWith("Test failed:"))
+            .filter(line -> line.startsWith("[TEST FAILED]"))
             .map(line -> {
-                int start = "Test failed: ".length();
+                int start = "[TEST FAILED] ".length();
                 int end = line.indexOf('(');
                 if (end == -1) end = line.length();
                 return line.substring(start, end).trim();
             })
             .collect(Collectors.joining("\n"));
     }
-
     
     private static void notifyJobManager(CodeResponseDto response) {
         response.result.responseSentAt = LocalDateTime.now();

@@ -11,10 +11,19 @@
 
   <ItemGroup>
     <Compile Remove="Code Examples\**\*.cs" />
+    <Compile Remove="Code Examples\Java\Light\**" />
+    <Compile Remove="Code Examples\Java\Medium\**" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="Code Examples\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Remove="Code Examples\Java\Light\**" />
+    <EmbeddedResource Remove="Code Examples\Java\Medium\**" />
+    <None Remove="Code Examples\Java\Light\**" />
+    <None Remove="Code Examples\Java\Medium\**" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj" />

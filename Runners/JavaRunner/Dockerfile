@@ -1,5 +1,5 @@
 # Stage 1: Build with Maven
-FROM maven:3.9.6-eclipse-temurin-21 AS build 
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS build 
 RUN useradd -u 1001 -m runneruser
 WORKDIR /app
 COPY java-runner/pom.xml ./pom.xml
@@ -8,7 +8,7 @@ COPY java-runner/src ./src
 RUN mvn package -DskipTests
 
 # Stage 2: Runtime
-FROM eclipse-temurin:21-jdk-jammy
+FROM eclipse-temurin:21-jdk-alpine
 WORKDIR /app
 COPY --from=build /app/target/java-runner-1.0-shaded.jar app.jar
 
