@@ -305,6 +305,21 @@ namespace FrontendMockApp.Services
                 _stats.RequestsSent++;
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                var siteJava = _testExamples["ForbiddenExample.java"];
+                requestDto = new CodeRequestDto()
+                {
+                    Code = siteJava,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "ForbiddenExample.java",
+                    Language = "java"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
                 //var example = _testExamples.First();
 
                 //var requestDto = new CodeRequestDto()

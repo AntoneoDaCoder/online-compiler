@@ -1,6 +1,6 @@
 # Stage 1: Build with Maven
 FROM maven:3.9.6-eclipse-temurin-21-alpine AS build 
-RUN useradd -u 1001 -m runneruser
+RUN adduser -u 1001 -D runneruser
 WORKDIR /app
 COPY java-runner/pom.xml ./pom.xml
 RUN mvn dependency:go-offline -f pom.xml

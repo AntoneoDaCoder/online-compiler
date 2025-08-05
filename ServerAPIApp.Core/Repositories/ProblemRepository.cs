@@ -220,6 +220,27 @@ namespace ServerAPIApp.Core.Repositories
 
             commonTemplate.Name = "TimeOut.java";
             _database["TimeOut.java"] = commonTemplate;
+
+            var forbiddenProblem = new Problem
+            {
+                AdditionalDefinitions = "",
+                TestCases = new List<TestCase>
+                {
+                    new TestCase
+                    {
+                        Name = "testAdd",
+                        TestInitialization = "",
+                        InputExpression = """
+                        Solution.openSite(); 
+                        int result = 2+3;
+                        """,
+                        OutputExpression = "assertEquals(5, result);"
+                    }
+                }
+            };
+
+            forbiddenProblem.Name = "ForbiddenExample.java";
+            _database["ForbiddenExample.java"] = forbiddenProblem;
         }
 
         public Problem GetProblem(string name)

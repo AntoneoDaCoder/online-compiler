@@ -13,7 +13,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -24,6 +26,10 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.expr.MethodCallExpr;
+import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.mems.Helpers.JsonUtils;
 import com.mems.Shared.DTOs.CodeResponseDto;
 import com.mems.Shared.DTOs.ExecutionResultDto;
@@ -45,6 +51,7 @@ public class Runner
     private static final String BOILERPLATE_IMPORTS = """
         import java.util.*;
         import java.util.stream.*;
+        import java.io.*;
         import org.junit.*;
         import org.junit.runner.*;
         import org.junit.runners.*;
@@ -65,6 +72,35 @@ public class Runner
 
         System.out.println("[JavaRunner] Java runner started on port "+ RUNNER_PORT);
     }
+
+    public static List<String> checkForbiddenAPIs(String sourceCode) {
+        CompilationUnit cu = StaticJavaParser.parse(sourceCode);
+        List<String> violations = new ArrayList<>();
+
+        // ProcessBuilder
+        cu.findAll(ObjectCreationExpr.class).forEach(expr -> {
+            String typeName = expr.getType().getNameAsString();
+            if ("ProcessBuilder".equals(typeName)) {
+                violations.add("Usage of ProcessBuilder is forbidden.");
+            }
+        });
+
+        // Runtime.getRuntime().exec(...)
+        cu.findAll(MethodCallExpr.class).forEach(method -> {
+            String methodName = method.getNameAsString();
+
+            // System.load
+            if ("load".equals(methodName) || "loadLibrary".equals(methodName)) {
+                method.getScope().ifPresent(scope -> {
+                    if (scope.toString().equals("System")) {
+                        violations.add("Usage of System." + methodName + "() is forbidden.");
+                    }
+                });
+            }
+        });
+
+        return violations;
+    }
     
     static class RequestHandler implements HttpHandler {
         @Override
@@ -74,7 +110,7 @@ public class Runner
                 ProblemSolutionDto request = objectMapper.readValue(requestBody, ProblemSolutionDto.class);
                 
                 System.out.println("[JavaRunner] Received request [Id:" + request.requestId + "]");
-                
+
                 CompletableFuture.runAsync(() -> executeUserCode(request));
                 
                 exchange.sendResponseHeaders(200, -1);
@@ -98,6 +134,22 @@ public class Runner
         try {
             String fullCode = wrapUserCode(request);
             Files.writeString(Paths.get(TMP_JAVA_FILE), fullCode);
+
+            List<String> violations = checkForbiddenAPIs(fullCode);
+
+            if (violations.isEmpty()) {
+                System.out.println("Code is safe.");
+            } else {
+                System.out.println("Forbidden API usage detected:");
+                response.status = RequestStatus.FAILED;
+                response.result.status = ExecutionStatus.CANCELLED;
+                response.result.exitCode = 2;
+                response.result.consoleOutput = String.join("\n", violations);
+                
+                notifyJobManager(response);
+
+                return;
+            }
 
             ByteArrayOutputStream errorOutput = new ByteArrayOutputStream();
             boolean compiled = compileJavaFile(TMP_JAVA_FILE, errorOutput);
