@@ -166,6 +166,81 @@ namespace ServerAPIApp.Core.Repositories
             lightTemplate.Name = "CheatingExample.cs";
             _database["CheatingExample.cs"] = lightTemplate;
 
+            var compileErrorProblem = new Problem
+            {
+                AdditionalDefinitions = "",
+                TestCases = new List<TestCase>
+                {
+                    new TestCase
+                    {
+                        Name = "testAdd",
+                        TestInitialization = "",
+                        InputExpression = "int result = Solution.add(2, 3);",
+                        OutputExpression = "assertEquals(5, result);"
+                    }
+                }
+            };
+
+            compileErrorProblem.Name = "CompileError.java";
+            _database["CompileError.java"] = compileErrorProblem;
+
+            var commonTemplate = new Problem
+            {
+                AdditionalDefinitions = """
+                public static class Item {
+                    public int value;
+                    public int weight;
+
+                    public Item(int value, int weight) {
+                        this.value = value;
+                        this.weight = weight;
+                    }
+
+                    public double getRatio() {
+                        return (double) value / weight;
+                    }
+                }
+                """,
+                TestCases = new List<TestCase>
+                {
+                    new TestCase
+                    {
+                        Name = "testTimeOut",
+                        TestInitialization = """
+                            Item[] items = new Item[30];
+                            for (int i = 0; i < items.length; i++) {
+                                items[i] = new Item(100, 1);
+                            }
+                        """,
+                        InputExpression = "double result = new Solution().fractionalKnapsack(items, 15);",
+                        OutputExpression = "assertTrue(result > 0);"
+                    }
+                }
+            };
+
+            commonTemplate.Name = "TimeOut.java";
+            _database["TimeOut.java"] = commonTemplate;
+
+            var forbiddenProblem = new Problem
+            {
+                AdditionalDefinitions = "",
+                TestCases = new List<TestCase>
+                {
+                    new TestCase
+                    {
+                        Name = "testAdd",
+                        TestInitialization = "",
+                        InputExpression = """
+                        Solution.openSite(); 
+                        int result = 2+3;
+                        """,
+                        OutputExpression = "assertEquals(5, result);"
+                    }
+                }
+            };
+
+            forbiddenProblem.Name = "ForbiddenExample.java";
+            _database["ForbiddenExample.java"] = forbiddenProblem;
         }
 
         public Problem GetProblem(string name)

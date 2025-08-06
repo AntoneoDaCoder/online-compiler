@@ -15,6 +15,8 @@ namespace ServerAPIApp.Core.Extensions
         {
             services.Configure<LanguageConfig>("csharp", conf.GetSection("Languages:csharp"));
 
+            services.Configure<LanguageConfig>("java", conf.GetSection("Languages:java"));
+
             return services;
         }
 
@@ -38,6 +40,21 @@ namespace ServerAPIApp.Core.Extensions
                     return new KubernetesJobManager
                     (
                         "csharp",
+                        sp.GetRequiredService<IKubernetes>(),
+                        monitor,
+                        sp.GetRequiredService<CallbackService>()
+                    );
+                }
+            );
+
+            services.AddSingleton<IKubernetesJobManager>
+                (sp =>
+                {
+                    var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+
+                    return new KubernetesJobManager
+                    (
+                        "java",
                         sp.GetRequiredService<IKubernetes>(),
                         monitor,
                         sp.GetRequiredService<CallbackService>()

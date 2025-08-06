@@ -26,5 +26,5 @@ class HeavyCorrectExample
             return totalValue;
         }
     }
-    
+
 }

@@ -26,8 +26,12 @@ class Program
             throw new DirectoryNotFoundException($"Folder not found: {examplesDir}");
         }
 
-        string[] filePaths = Directory.GetFiles(examplesDir, "*.cs", SearchOption.AllDirectories);
-        foreach (var filePath in filePaths)
+        string[] csPaths = Directory.GetFiles(examplesDir, "*.cs", SearchOption.AllDirectories);
+        string[] javaPaths = Directory.GetFiles(examplesDir, "*.java", SearchOption.AllDirectories);
+
+        string[] allPaths = javaPaths.Concat(csPaths).ToArray();
+
+        foreach (var filePath in allPaths)
         {
             var fileName = Path.GetFileName(filePath);
             string code = File.ReadAllText(filePath);
