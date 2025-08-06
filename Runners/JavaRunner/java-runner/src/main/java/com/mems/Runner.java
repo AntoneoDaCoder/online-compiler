@@ -85,7 +85,6 @@ public class Runner
             }
         });
 
-        // Runtime.getRuntime().exec(...)
         cu.findAll(MethodCallExpr.class).forEach(method -> {
             String methodName = method.getNameAsString();
 
