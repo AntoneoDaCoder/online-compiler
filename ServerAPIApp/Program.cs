@@ -1,4 +1,5 @@
 using ServerAPIApp.Core.Extensions;
+using ServerAPIApp.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,8 +11,12 @@ builder.Services.BindLanguageConfigs(builder.Configuration);
 
 builder.Services.RegisterServices();
 
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 app.MapControllers();
+
+app.MapHub<ResultHub>("/hubs/result");
 
 app.Run();
