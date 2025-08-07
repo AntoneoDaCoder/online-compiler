@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "SQLRunner": {
+    "SqlRunner": {
       "commandName": "Project"
     },
     "Container (Dockerfile)": {
