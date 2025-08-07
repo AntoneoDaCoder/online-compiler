@@ -5,33 +5,33 @@ metadata:
   namespace: default
 
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
-  name: api-server-global-role
+  namespace: default
+  name: api-server-role
 rules:
 - apiGroups: [""]
-  resources: ["namespaces"]
-  verbs: ["create", "get"]
-- apiGroups: [""]
-  resources: ["resourcequotas", "pods", "pods/status"]
+  resources: ["resourcequotas", "pods"]
   verbs: ["create", "get", "list", "watch", "update", "patch"]
 - apiGroups: ["apps"]
   resources: ["deployments"]
   verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+- apiGroups: [""] 
+  resources: ["pods/status"]
+  verbs: ["get", "patch"]
 
 ---
-
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
-  name: api-server-global-rolebinding
+  name: api-server-rolebinding
+  namespace: default
 subjects:
 - kind: ServiceAccount
   name: api-server-sa
   namespace: default
 roleRef:
-  kind: ClusterRole
-  name: api-server-global-role
+  kind: Role
+  name: api-server-role
   apiGroup: rbac.authorization.k8s.io

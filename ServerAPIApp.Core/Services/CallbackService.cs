@@ -17,14 +17,7 @@ namespace ServerAPIApp.Core.Services
         {
             response.Result.ResponseSentAt = DateTime.UtcNow;
 
-            try
-            {
-                await _client.PostAsJsonAsync(callbackUrl, response, cancellationToken);
-            }
-            catch
-            {
-
-            }
+            await _client.PostAsJsonAsync(callbackUrl, response, cancellationToken);
         }
 
         public void Dispose()

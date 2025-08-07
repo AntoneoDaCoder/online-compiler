@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Shared.DTOs;
 using Shared.Enums;
-using ServerAPIApp.Core.Abstractions;
-using Microsoft.AspNetCore.SignalR;
-using ServerAPIApp.Hubs;
+using ServerAPIApp.Core.Services;
 
 namespace ServerAPIApp.Controllers
 {
@@ -11,12 +9,10 @@ namespace ServerAPIApp.Controllers
     [Route("api")]
     public class ServerController : ControllerBase
     {
-        private ICodeDispatcher _dispatcher;
-        private IHubContext<ResultHub> _hubContext;
-        public ServerController(ICodeDispatcher dispatcher, IHubContext<ResultHub> hubContext)
+        private CodeDispatcher _dispatcher;
+        public ServerController(CodeDispatcher dispatcher)
         {
             _dispatcher = dispatcher;
-            _hubContext = hubContext;
         }
 
         [HttpPost("jobs/start")]
@@ -32,7 +28,6 @@ namespace ServerAPIApp.Controllers
                 {
                     RequestId = dto.RequestId,
                     Status = RequestStatus.Acknowledged,
-                    Language = dto.Language,
                     Result = new ExecutionResultDto()
                     {
                         Status = ExecutionStatus.Pending,
@@ -48,7 +43,6 @@ namespace ServerAPIApp.Controllers
                 {
                     RequestId = dto.RequestId,
                     Status = RequestStatus.Failed,
-                    Language = dto.Language,
                     Result = new ExecutionResultDto()
                     {
                         Status = ExecutionStatus.FailedToExecute,
@@ -69,9 +63,6 @@ namespace ServerAPIApp.Controllers
             Console.WriteLine($"[API Controller] Got pod's response [Id:{podResponse.RequestId}], time:" + DateTime.UtcNow.ToString("o"));
 
             await _dispatcher.CompleteExecutionAsync(podResponse, cancellationToken);
-
-            await _hubContext.Clients.Group(podResponse.RequestId.ToString())
-                .SendAsync("ExecutionCompleted", podResponse, cancellationToken);
 
             Console.WriteLine($"[API Controller] Sent a response [Id:{podResponse.RequestId}] to client, time:" + DateTime.UtcNow.ToString("o"));
 

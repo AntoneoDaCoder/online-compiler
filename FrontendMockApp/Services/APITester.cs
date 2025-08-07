@@ -122,7 +122,6 @@ namespace FrontendMockApp.Services
             foreach (var response in _pendingRequests)
             {
                 string requestId = response.Key.ToString();
-                string language = response.Value.Language;
                 string reqStatus = response.Value.Status.ToString();
                 string execStatus = response.Value.Result?.Status.ToString() ?? "null";
                 string exitCode = response.Value.Result?.ExitCode.ToString() ?? "null";
@@ -132,7 +131,7 @@ namespace FrontendMockApp.Services
                 string latencyInSeconds = response.Value.Result?.LatencyInSeconds.ToString() ?? "null";
 
                 Console.WriteLine(
-                    $"| ReqId: {Shorten(requestId)} | Language: {language,-10} | ReqSt: {reqStatus,-10} | ExecSt: {execStatus,-10} | Exit: {exitCode,3} |" +
+                    $"| ReqId: {Shorten(requestId)} | ReqSt: {reqStatus,-10} | ExecSt: {execStatus,-10} | Exit: {exitCode,3} |" +
                     $" Out: {output,-40} | Latency: {latencyInSeconds} sec |");
 
             }
@@ -210,12 +209,10 @@ namespace FrontendMockApp.Services
                     MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "FractionalKnapsack",
-                    Language = "csharp"
+                    ProblemName = "HeavyCorrectExample.cs",
                 };
 
                 _stats.RequestsSent++;
-
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
@@ -225,13 +222,10 @@ namespace FrontendMockApp.Services
                     MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "FractionalKnapsack",
-                    Language = "csharp"
+                    ProblemName = "TimeoutExample.cs",
                 };
 
-
                 _stats.RequestsSent++;
-
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
@@ -241,12 +235,10 @@ namespace FrontendMockApp.Services
                     MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "ArrayMin",
-                    Language = "csharp"
+                    ProblemName = "LightCorrectExample.cs",
                 };
 
                 _stats.RequestsSent++;
-
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
@@ -256,12 +248,10 @@ namespace FrontendMockApp.Services
                     MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "ArrayMin",
-                    Language = "csharp"
+                    ProblemName = "CompileErrorExample.cs",
                 };
 
                 _stats.RequestsSent++;
-
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
@@ -271,97 +261,24 @@ namespace FrontendMockApp.Services
                     MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "ArrayMin",
-                    Language = "csharp"
+                    ProblemName = "CheatingExample.cs",
                 };
 
                 _stats.RequestsSent++;
 
-
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
+                //var example = _testExamples.First();
 
-                //heavyOk = _testExamples["HeavyCorrectExample.swift"];
-                //heavyBad = _testExamples["TimeoutExample.swift"];
-                //lightOk = _testExamples["LightCorrectExample.swift"];
-                //lightBad = _testExamples["CompileErrorExample.swift"];
-                //lightCheating = _testExamples["CheatingExample.swift"];
-
-
-                //requestDto = new CodeRequestDto()
+                //var requestDto = new CodeRequestDto()
                 //{
-                //    Code = heavyOk,
+                //    Code = example.Value,
                 //    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
                 //    CallbackUrl = _callbackUrl,
-                //    RequestSentAt = DateTime.UtcNow,
-                //    ProblemName = "FractionalKnapsack",
-                //    Language = "swift"
+                //    RequestSentAt = DateTime.UtcNow
                 //};
 
-                //_stats.RequestsSent++;
-
-
-                //await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
-
-                //requestDto = new CodeRequestDto()
-                //{
-                //    Code = heavyBad,
-                //    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                //    CallbackUrl = _callbackUrl,
-                //    RequestSentAt = DateTime.UtcNow,
-                //    ProblemName = "FractionalKnapsack",
-                //    Language = "swift"
-                //};
-
-                //_stats.RequestsSent++;
-
-
-                //await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
-
-                //requestDto = new CodeRequestDto()
-                //{
-                //    Code = lightOk,
-                //    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                //    CallbackUrl = _callbackUrl,
-                //    RequestSentAt = DateTime.UtcNow,
-                //    ProblemName = "ArrayMin",
-                //    Language = "swift"
-                //};
-
-                //_stats.RequestsSent++;
-
-
-                //await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
-
-                //requestDto = new CodeRequestDto()
-                //{
-                //    Code = lightBad,
-                //    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                //    CallbackUrl = _callbackUrl,
-                //    RequestSentAt = DateTime.UtcNow,
-                //    ProblemName = "ArrayMin",
-                //    Language = "swift"
-                //};
-
-                //_stats.RequestsSent++;
-
-
-                //await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
-
-                //requestDto = new CodeRequestDto()
-                //{
-                //    Code = lightCheating,
-                //    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                //    CallbackUrl = _callbackUrl,
-                //    RequestSentAt = DateTime.UtcNow,
-                //    ProblemName = "ArrayMin",
-                //    Language = "swift"
-                //};
-
-                //_stats.RequestsSent++;
-
-
-                //await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+                //await PostSingleExecutionRequestAsync(requestDto, cancellationToken);
             }
         }
 

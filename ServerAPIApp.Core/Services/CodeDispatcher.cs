@@ -1,23 +1,22 @@
-﻿using ServerAPIApp.Core.Abstractions;
+﻿using Microsoft.Extensions.Hosting;
 using ServerAPIApp.Core.Repositories;
 using Shared.DTOs;
-using System.Diagnostics.CodeAnalysis;
+using Shared.Models;
 using System.Threading.Channels;
 
 namespace ServerAPIApp.Core.Services
 {
-    public class CodeDispatcher : ICodeDispatcher
+    public class CodeDispatcher : IDisposable, IHostedService
     {
         private Channel<CodeRequestDto> _channel;
         private ProblemRepository _repository;
-
-        private Dictionary<string, IKubernetesJobManager> _managers;
+        private KubernetesJobManager _jobManager;
         private CancellationTokenSource? _cts;
         private Task? _consumeTask;
         private bool _isConsuming;
         private bool _disposed;
 
-        public CodeDispatcher(IEnumerable<IKubernetesJobManager> managers, ProblemRepository repository)
+        public CodeDispatcher(KubernetesJobManager jobManager, ProblemRepository repository)
         {
             _channel = Channel.CreateUnbounded<CodeRequestDto>
              (
@@ -27,10 +26,12 @@ namespace ServerAPIApp.Core.Services
                     SingleWriter = false,
                 }
              );
-            _managers = managers.ToDictionary(m => m.Language, StringComparer.OrdinalIgnoreCase);
-
+            _jobManager = jobManager;
             _repository = repository;
         }
+
+        public ChannelReader<CodeRequestDto> Reader => _channel.Reader;
+        public ChannelWriter<CodeRequestDto> Writer => _channel.Writer;
 
         public async Task ScheduleForExecutionAsync(CodeRequestDto request, CancellationToken cancellationToken)
         {
@@ -39,10 +40,7 @@ namespace ServerAPIApp.Core.Services
 
         public async Task CompleteExecutionAsync(CodeResponseDto response, CancellationToken cancellationToken)
         {
-            if (!_managers.TryGetValue(response.Language, out var manager))
-                throw new NotSupportedException($"Language '{response.Language}' is not supported");
-
-            await manager.CompleteJobAsync(response, cancellationToken);
+            await _jobManager.CompleteJobAsync(response, cancellationToken);
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -123,16 +121,13 @@ namespace ServerAPIApp.Core.Services
         {
             try
             {
-                while (await _channel.Reader.WaitToReadAsync(cancellationToken))
+                while (await Reader.WaitToReadAsync(cancellationToken))
                 {
-                    while (_channel.Reader.TryRead(out var request))
+                    while (Reader.TryRead(out var request))
                     {
                         try
                         {
                             var problem = _repository.GetProblem(request.ProblemName);
-
-                            problem.AdditionalDefinitions = problem.AdditionalDefinitions.Where(ad => ad.Language == request.Language).ToList();
-                            problem.TestCases = problem.TestCases.Where(tc => tc.TestLanguage == request.Language).ToList();
 
                             var newSolution = new ProblemSolutionDto()
                             {
@@ -142,13 +137,9 @@ namespace ServerAPIApp.Core.Services
                                 SentAt = request.RequestSentAt,
                                 MaxAllowedTimeInMilliseconds = request.MaxAllowedTimeInMilliseconds,
                                 CallbackUrl = request.CallbackUrl,
-                                Language = request.Language,
                             };
 
-                            if (!_managers.TryGetValue(request.Language, out var manager))
-                                throw new NotSupportedException($"Language '{request.Language}' is not supported");
-
-                            if (!await manager.ExecuteAsync(newSolution, cancellationToken))
+                            if (!await _jobManager.ExecuteAsync(newSolution, cancellationToken))
                             {
                                 await RescheduleExecution(request, cancellationToken);
 
@@ -177,7 +168,7 @@ namespace ServerAPIApp.Core.Services
         private async Task RescheduleExecution(CodeRequestDto request, CancellationToken cancellationToken)
         {
             await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
-            await _channel.Writer.WriteAsync(request, cancellationToken);
+            await Writer.WriteAsync(request, cancellationToken);
         }
     }
 }

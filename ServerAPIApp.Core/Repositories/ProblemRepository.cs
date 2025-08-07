@@ -15,46 +15,20 @@ namespace ServerAPIApp.Core.Repositories
         {
             var heavyTemplate = new Problem()
             {
-                Name = "FractionalKnapsack",
-                AdditionalDefinitions = new List<AdditionalDefinition>()
-                {
-                    new AdditionalDefinition()
+                AdditionalDefinitions =
+                """
+                    public class Item
                     {
-                        Language = "csharp",
-                        Value=
-                        """
-                            public class Item
-                            {
-                                public int Value;
-                                public int Weight;
-                                public double Ratio => (double)Value / Weight;
-                            }
-                        """,
-                    },
-                    new AdditionalDefinition()
-                    {
-                        Language = "swift",
-                        Value =
-                        """
-                            class Item {
-                                var value: Int
-                                var weight: Int
-                                var ratio: Double { return Double(value) / Double(weight) }
-
-                                init(value: Int, weight: Int) {
-                                self.value = value
-                                self.weight = weight
-                               }
-                            }
-                        """
+                        public int Value;
+                        public int Weight;
+                        public double Ratio => (double)Value / Weight;
                     }
-                },
+                """,
                 TestCases = new List<TestCase>()
                 {
                     new()
                     {
                         Name = "Test_SingleItem_FitsExactly",
-                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                 var items = new[] { new Item { Value = 60, Weight = 10 } };
@@ -66,7 +40,6 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_SingleItem_Partial",
-                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                var items = new[] { new Item { Value = 100, Weight = 20 } };
@@ -78,7 +51,6 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_MultipleItems_Mixed",
-                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                var items = new[]
@@ -95,7 +67,6 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_ZeroCapacity",
-                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                 var items = new[] { new Item { Value = 100, Weight = 1 } };
@@ -106,14 +77,12 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_EmptyItems",
-                        TestLanguage = "csharp",
                         InputExpression = "var result = new Solution().FractionalKnapsack(Array.Empty<Item>(), 50);",
                         OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(0).Within(1e-6));"
                     },
                     new()
                     {
                         Name = "Test_HeavyItems_ShouldChooseBestRatio",
-                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                var items = new[]
@@ -128,7 +97,6 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_Performance_WithLargeInput",
-                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                 var items = new Item[1000];
@@ -146,112 +114,16 @@ namespace ServerAPIApp.Core.Repositories
                         InputExpression = "var result = new Solution().FractionalKnapsack(items, capacity);",
                         OutputExpression = "NUnit.Framework.Assert.That(result, Is.GreaterThan(0));"
                     },
-                new()
-                {
-                    Name = "Test_SingleItem_FitsExactly",
-                        TestLanguage = "swift",
-                    TestInitialization =
-                    """
-                        let items = [Item(value: 60, weight: 10)]
-                        let capacity = 10
-                    """,
-                    InputExpression = "let result = Solution().fractionalKnapsack(items, capacity)",
-                    OutputExpression = "SwiftTestGenerator.assertApproxEqual(result, 60, accuracy: 1e-6, testName: \"Test_SingleItem_FitsExactly\")"
-                },
-                new()
-                {
-                    Name = "Test_SingleItem_Partial",
-                        TestLanguage = "swift",
-                    TestInitialization =
-                    """
-                        let items = [Item(value: 100, weight: 20)]
-                        let capacity = 10
-                    """,
-                    InputExpression = "let result = Solution().fractionalKnapsack(items, capacity)",
-                    OutputExpression = "SwiftTestGenerator.assertApproxEqual(result, 50, accuracy: 1e-6, testName: \"Test_SingleItem_Partial\")"
-                },
-                new()
-                {
-                    Name = "Test_MultipleItems_Mixed",
-                        TestLanguage = "swift",
-                    TestInitialization =
-                    """
-                    let items = [
-                        Item(value: 60, weight: 10),
-                        Item(value: 100, weight: 20),
-                        Item(value: 120, weight: 30)
-                    ]
-                    let capacity = 50
-                    """,
-                    InputExpression = "let result = Solution().fractionalKnapsack(items, capacity)",
-                      OutputExpression = "SwiftTestGenerator.assertApproxEqual(result, 240, accuracy: 1e-6, testName: \"Test_MultipleItems_Mixed\")"
-                },
-                new()
-                {
-                    Name = "Test_ZeroCapacity",
-                        TestLanguage = "swift",
-                    TestInitialization =
-                    """
-                    let items = [Item(value: 100, weight: 1)]
-                    """,
-                    InputExpression = "let result = Solution().fractionalKnapsack(items, 0)",
-                     OutputExpression = "SwiftTestGenerator.assertApproxEqual(result, 0, accuracy: 1e-6, testName: \"Test_ZeroCapacity\")"
-                },
-                new()
-                {
-                    Name = "Test_EmptyItems",
-                        TestLanguage = "swift",
-                    TestInitialization = """
-                    let items: [Item] = []
-                    """,
-                    InputExpression = "let result = Solution().fractionalKnapsack(items, 50)",
-                     OutputExpression = "SwiftTestGenerator.assertApproxEqual(result,0, accuracy: 1e-6, testName: \"Test_EmptyItems\")"
-                },
-                new()
-                {
-                    Name = "Test_HeavyItems_ShouldChooseBestRatio",
-                        TestLanguage = "swift",
-                    TestInitialization =
-                    """
-                    let items = [
-                        Item(value: 100, weight: 50), // ratio = 2.0
-                        Item(value: 60, weight: 10)   // ratio = 6.0
-                    ]
-                 """,
-                    InputExpression = "let result = Solution().fractionalKnapsack(items, 20)",
-                     OutputExpression = "SwiftTestGenerator.assertApproxEqual(result, 80, accuracy: 1e-6, testName: \"Test_HeavyItems_ShouldChooseBestRatio\")"
-                },
-                new()
-                {
-                    Name = "Test_Performance_WithLargeInput",
-                        TestLanguage = "swift",
-                    TestInitialization =
-                    """
-                        var items = [Item]()
-                        var rng = SystemRandomNumberGenerator()
-                        for _ in 0..<1000 {
-                        let value = Int.random(in: 1..<1000, using: &rng)
-                        let weight = Int.random(in: 1..<100, using: &rng)
-                        items.append(Item(value: value, weight: weight))
-                    }
-                    items.shuffle()
-                    let capacity = 10000
-                    """,
-                    InputExpression = "let result = Solution().fractionalKnapsack(items, capacity)",
-                     OutputExpression = "SwiftTestGenerator.assertGreater(result, 0, testName: \"Test_Performance_WithLargeInput\")"
-                }
                 }
             };
 
             var lightTemplate = new Problem()
             {
-                Name = "ArrayMin",
                 TestCases = new List<TestCase>()
                 {
                     new()
                     {
                         Name="Test_SingleValue",
-                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                 var arr = new int[]{123456};
@@ -262,7 +134,6 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name="Test_SeveralValues",
-                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                 var rnd = new Random();
@@ -276,37 +147,26 @@ namespace ServerAPIApp.Core.Repositories
                         InputExpression = "var result = new Solution().FindMinimum(arr);",
                         OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(arr.Min()));"
                     },
-                    new()
-                    {
-                        Name="Test_SingleValue",
-                        TestLanguage = "swift",
-                        TestInitialization =
-                        """
-                                let arr = [123456]
-                        """,
-                        InputExpression = "let result = Solution().findMinimum(arr)",
-                        OutputExpression = "SwiftTestGenerator.assertEqual(result, 123456, testName: \"Test_SingleValue\")"
-                    },
-                    new()
-                    {
-                        Name="Test_SeveralValues",
-                        TestLanguage = "swift",
-                        TestInitialization =
-                        """
-                              var rng = SystemRandomNumberGenerator()
-                              let size = Int.random(in: 100..<1000, using: &rng)
-                              let arr = (0..<size).map { _ in Int.random(in: -1000..<1200120, using: &rng) }
-                        """,
-                        InputExpression = "let result = Solution().findMinimum(arr)",
-                        OutputExpression = "SwiftTestGenerator.assertEqual(result, arr.min()!, testName: \"Test_SeveralValues\")"
-                    },
                 }
             };
 
-            _database[heavyTemplate.Name] = heavyTemplate;
-            _database[lightTemplate.Name] = lightTemplate;
-        }
 
+            heavyTemplate.Name = "HeavyCorrectExample.cs";
+            _database["HeavyCorrectExample.cs"] = heavyTemplate;
+
+            heavyTemplate.Name = "TimeoutExample.cs";
+            _database["TimeoutExample.cs"] = heavyTemplate;
+
+            lightTemplate.Name = "LightCorrectExample.cs";
+            _database["LightCorrectExample.cs"] = lightTemplate;
+
+            lightTemplate.Name = "CompileErrorExample.cs";
+            _database["CompileErrorExample.cs"] = lightTemplate;
+
+            lightTemplate.Name = "CheatingExample.cs";
+            _database["CheatingExample.cs"] = lightTemplate;
+
+        }
 
         public Problem GetProblem(string name)
         {

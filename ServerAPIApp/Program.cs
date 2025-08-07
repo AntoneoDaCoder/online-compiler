@@ -1,5 +1,6 @@
-using ServerAPIApp.Core.Extensions;
-using ServerAPIApp.Hubs;
+using k8s;
+using ServerAPIApp.Core.Repositories;
+using ServerAPIApp.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,16 +8,25 @@ builder.WebHost.UseUrls("http://0.0.0.0:8080");
 
 builder.Services.AddControllers();
 
-builder.Services.BindLanguageConfigs(builder.Configuration);
+builder.Services.AddSingleton<ProblemRepository>();
 
-builder.Services.RegisterServices();
+builder.Services.AddSingleton<IKubernetes>(sp =>
+{
+    var config = KubernetesClientConfiguration.BuildDefaultConfig();
+    return new Kubernetes(config);
+});
 
-builder.Services.AddSignalR();
+builder.Services.AddSingleton<CallbackService>();
+
+builder.Services.AddSingleton<KubernetesJobManager>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<KubernetesJobManager>());
+
+builder.Services.AddSingleton<CodeDispatcher>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<CodeDispatcher>());
 
 var app = builder.Build();
 
-app.MapControllers();
 
-app.MapHub<ResultHub>("/hubs/result");
+app.MapControllers();
 
 app.Run();

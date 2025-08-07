@@ -1,8 +1,6 @@
 ﻿using k8s;
 using k8s.Models;
-using Microsoft.Extensions.Options;
-using ServerAPIApp.Core.Abstractions;
-using ServerAPIApp.Core.Configs;
+using Microsoft.Extensions.Hosting;
 using Shared.DTOs;
 using System.Collections.Concurrent;
 using System.Net.Http.Json;
@@ -10,54 +8,34 @@ using System.Text.Json;
 
 namespace ServerAPIApp.Core.Services
 {
-    public class KubernetesJobManager : IKubernetesJobManager
+    public class KubernetesJobManager : IHostedService, IDisposable
     {
-        public string Language { get; }
-
-        protected int _podMemoryLimitMb;
-        protected int _memoryBudgetMb;
-        protected int _numReplicas;
-
-        protected string _imageName = string.Empty;
-        protected string _deploymentName = string.Empty;
-        protected string _containerName = string.Empty;
-        protected string _namespace = string.Empty;
-        protected string _appLabel = string.Empty;
+        private const int _podMemoryLimitMb = 96;
+        private const int _memoryBudgetMb = 1024;
+        private const string _namespace = "default";
+        private const string _imageName = "csharp-runner:local";
+        private const string _containerName = "runner";
+        private const string _deploymentName = "runners-deployment";
+        private const int _numReplicas = _memoryBudgetMb / _podMemoryLimitMb;
 
         private ConcurrentDictionary<Guid, (string Name, string CallbackUrl)> _resultCallbacks =
             new ConcurrentDictionary<Guid, (string Name, string CallbackUrl)>();
-
         private IKubernetes _client;
         private CallbackService _callbackService;
         private CancellationTokenSource? _cts;
         private HttpClient _httpClient;
         private bool _isDisposed;
 
-        public KubernetesJobManager(string language, IKubernetes client, IOptionsMonitor<LanguageConfig> config, CallbackService callbackService)
+        public KubernetesJobManager(IKubernetes client, CallbackService callbackService)
         {
-            Language = language;
             _client = client;
             _callbackService = callbackService;
             _httpClient = new HttpClient();
-
-            var section = config.Get(language);
-
-            _memoryBudgetMb = section.MemoryBudgetMib;
-            _podMemoryLimitMb = section.MemoryLimitMib;
-            _numReplicas = _memoryBudgetMb / _podMemoryLimitMb;
-
-            _imageName = section.ImageName;
-            _deploymentName = language + "-runners-deployment";
-            _containerName = language + "-runner";
-            _namespace = language + "-runners-namespace";
-            _appLabel = language + "-app-runner";
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-            await EnsureNamespaceExistsAsync(_cts.Token);
 
             await EnsureResourceQuotaExistsAsync(_cts.Token);
 
@@ -80,7 +58,7 @@ namespace ServerAPIApp.Core.Services
         {
             var pods = await _client.CoreV1.ListNamespacedPodAsync(
                              namespaceParameter: _namespace,
-                             labelSelector: $"app={_appLabel},readyForExecution=yes",
+                             labelSelector: "app=runner,readyForExecution=yes",
                              cancellationToken: token);
 
             Console.WriteLine($"[KubernetesJobManager] Found {pods.Items.Count} available runners, time:" + DateTime.UtcNow.ToString("o"));
@@ -115,7 +93,7 @@ namespace ServerAPIApp.Core.Services
                         {
                             Labels = new Dictionary<string, string>
                             {
-                                ["app"] = _appLabel,
+                                ["app"] = "runner",
                                 ["readyForExecution"] = "no"
                             }
                         },
@@ -160,7 +138,7 @@ namespace ServerAPIApp.Core.Services
                         {
                             Labels = new Dictionary<string, string>
                             {
-                                ["app"] = _appLabel,
+                                ["app"] = "runner",
                                 ["readyForExecution"] = "yes"
                             }
                         },
@@ -208,34 +186,17 @@ namespace ServerAPIApp.Core.Services
             _isDisposed = true;
         }
 
-        private async Task EnsureNamespaceExistsAsync(CancellationToken token)
-        {
-            try
-            {
-                await _client.CoreV1.ReadNamespaceAsync(_namespace, cancellationToken: token);
-            }
-            catch (k8s.Autorest.HttpOperationException ex) when (ex.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                var ns = new V1Namespace
-                {
-                    Metadata = new V1ObjectMeta { Name = _namespace }
-                };
-
-                await _client.CoreV1.CreateNamespaceAsync(ns, cancellationToken: token);
-            }
-        }
-
         private async Task EnsureResourceQuotaExistsAsync(CancellationToken token)
         {
             try
             {
-                await _client.CoreV1.ReadNamespacedResourceQuotaAsync($"{Language}-runner-quota", _namespace, cancellationToken: token);
+                await _client.CoreV1.ReadNamespacedResourceQuotaAsync("runner-quota", _namespace, cancellationToken: token);
             }
             catch
             {
                 var quota = new V1ResourceQuota
                 {
-                    Metadata = new V1ObjectMeta { Name = $"{Language}-runner-quota", NamespaceProperty = _namespace },
+                    Metadata = new V1ObjectMeta { Name = "runner-quota", NamespaceProperty = _namespace },
                     Spec = new V1ResourceQuotaSpec
                     {
                         Hard = new Dictionary<string, ResourceQuantity>()
@@ -273,7 +234,9 @@ namespace ServerAPIApp.Core.Services
                         {
                             MatchLabels = new Dictionary<string, string>()
                             {
-                                { "app",  _appLabel },                            }
+                                { "app", "runner" },
+                                { "readyForExecution", "yes" }
+                            }
                         },
                         Template = new V1PodTemplateSpec
                         {
@@ -281,7 +244,7 @@ namespace ServerAPIApp.Core.Services
                             {
                                 Labels = new Dictionary<string, string>()
                                 {
-                                     { "app",  _appLabel },
+                                    { "app", "runner" },
                                     { "readyForExecution", "yes" }
                                 }
                             },
