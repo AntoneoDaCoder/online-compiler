@@ -8,6 +8,7 @@ import { CodeTemplate } from '../../models/codeTemplate.model';
 import { HttpClient } from '@angular/common/http';
 import { SignalRService } from '../../services/signalr.service';
 import { v4 as uuidv4 } from 'uuid';
+import { ExecutionResultDto } from '../../models/executionResultDto.model';
 
 @Component({
   selector: 'app-task-detail',
@@ -19,40 +20,40 @@ import { v4 as uuidv4 } from 'uuid';
 export class TaskDetailComponent implements OnInit {
   task: Task | undefined;
   languages: Language[] = [
-    { id: 'swift', name: 'Swift' },
+    // { id: 'swift', name: 'Swift' },
     { id: 'csharp', name: 'C#' },
     { id: 'java', name: 'Java' }
   ];
   selectedLanguage = this.languages[0];
   code: string = '';
   output: string = '';
-
+  parsedResult: ExecutionResultDto | null = null;
 
   templates: CodeTemplate[] = [
-    {
-      language: 'swift',
-      taskName: 'FractionalKnapsack',
-      body:
-        `/*Additional definition for convenience
+//     {
+//       language: 'swift',
+//       taskName: 'FractionalKnapsack',
+//       body:
+//         `/*Additional definition for convenience
 
-class Item {
-  var value: Int
-  var weight: Int
-  var ratio: Double { return Double(value) / Double(weight) }
+// class Item {
+//   var value: Int
+//   var weight: Int
+//   var ratio: Double { return Double(value) / Double(weight) }
 
-  init(value: Int, weight: Int) {
-    self.value = value
-    self.weight = weight
-  }
-}
-  */
+//   init(value: Int, weight: Int) {
+//     self.value = value
+//     self.weight = weight
+//   }
+// }
+//   */
 
-  class Solution {
-    func fractionalKnapsack(_ items: [Item], _ capacity: Int) -> Double {
-      //your solution here
-    }
-}`
-    },
+//   class Solution {
+//     func fractionalKnapsack(_ items: [Item], _ capacity: Int) -> Double {
+//       //your solution here
+//     }
+// }`
+//     },
     {
       language: 'csharp',
       taskName: 'FractionalKnapsack',
@@ -149,21 +150,39 @@ public static class Solution {
     await this.signalRService.startConnection();
     await this.signalRService.joinGroup(requestId);
 
-    this.signalRService.onMessage((message: string) => {
+
+this.signalRService.onMessage((message: any) => {
+  // Проверяем, если message — объект, просто присваиваем
+  if (typeof message === 'string') {
+    try {
+      const data = JSON.parse(message);
+      this.parsedResult = data.result;
+    } catch {
       this.output = message;
-    });
+      this.parsedResult = null;
+    }
+  } else if (typeof message === 'object' && message !== null) {
+    // Если объект — присваиваем напрямую
+    this.parsedResult = message.result || message; // зависит от структуры
+    this.output = '';
+  } else {
+    this.output = String(message);
+    this.parsedResult = null;
+  }
+});
+
 
     const dto = {
       requestId,
       language: this.selectedLanguage.id,
       problemName: this.task?.name ?? '',
       code: this.code,
-      maxAllowedTimeInMilliseconds: 5000,
+      maxAllowedTimeInMilliseconds: 2000,
       callbackUrl: '',
       requestSentAt: new Date()
     };
 
-    this.http.post('https://localhost:12345/api/jobs/start', dto).subscribe({
+    this.http.post('http://localhost:12345/api/jobs/start', dto).subscribe({
       next: () => {
         this.output = 'Ожидаем ответ от сервера...';
       },

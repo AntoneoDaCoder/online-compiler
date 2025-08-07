@@ -11,7 +11,7 @@ export class SignalRService {
     if (this.hubConnection) return Promise.resolve();
 
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('https://localhost:12345/hubs/resultHub')
+      .withUrl('http://localhost:12345/hubs/result')
       .withAutomaticReconnect()
       .build();
 
