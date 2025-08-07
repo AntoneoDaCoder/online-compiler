@@ -15,7 +15,7 @@ namespace Runners.Shared.Runners
         static ProcessStartInfo _compilePInfo = new ProcessStartInfo()
         {
             FileName = "swiftc",
-            Arguments = $"-o {_tmpSwiftBinaryPath} {_tmpSwiftFilePath}",
+            Arguments = $"-O -gnone -whole-module-optimization \"{_tmpSwiftFilePath}\" -o \"{_tmpSwiftBinaryPath}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false
@@ -75,28 +75,34 @@ namespace Runners.Shared.Runners
                 }
             }
         }
+        """
+        );
 
-        {{problemSolutionDto.Problem.AdditionalDefinitions}}
 
-        {{problemSolutionDto.Code}}
+            foreach (var definition in problemSolutionDto.Problem.AdditionalDefinitions)
+                sb.AppendLine(definition.Value);
+            sb.AppendLine(
+                $$"""
+                {{problemSolutionDto.Code}}
+                
 
-        func runWithTimeout(seconds: Double, task: @escaping () -> Void) -> Bool {
-            let group = DispatchGroup()
-            group.enter()
+                func runWithTimeout(seconds: Double, task: @escaping () -> Void) -> Bool {
+                let group = DispatchGroup()
+                group.enter()
 
-            DispatchQueue.global().async {
-                task()
-                group.leave()
+                DispatchQueue.global().async {
+                    task()
+                    group.leave()
+                }
+
+                let result = group.wait(timeout: .now() + seconds)
+                return result == .success
             }
 
-            let result = group.wait(timeout: .now() + seconds)
-            return result == .success
-        }
+            var hasFailedTests = false
 
-        var hasFailedTests = false
-
-        func runTests() {
-        """
+            func runTests() {
+            """
             );
 
             double timeoutSeconds = Math.Max(0.1, problemSolutionDto.MaxAllowedTimeInMilliseconds / 1000.0);
@@ -105,29 +111,29 @@ namespace Runners.Shared.Runners
             {
                 sb.AppendLine(
                     $$"""
-            let {{testCase.Name}}_success = runWithTimeout(seconds: {{timeoutSeconds}}) {
-                {{testCase.TestInitialization}}
+                        let {{testCase.Name}}_success = runWithTimeout(seconds: {{timeoutSeconds}}) {
+                        {{testCase.TestInitialization}}
 
-                {{testCase.InputExpression}}
+                        {{testCase.InputExpression}}
 
-                {{testCase.OutputExpression}}
-            }
+                        {{testCase.OutputExpression}}
+                    }
 
-            if !{{testCase.Name}}_success {
-                print("[TEST_TIMED_OUT] {{testCase.Name}} timed out after {{timeoutSeconds}}s")
-                exit(124)
-            }
-            """
+                    if !{{testCase.Name}}_success {
+                        print("[TEST_TIMED_OUT] {{testCase.Name}} timed out after {{timeoutSeconds}}s")
+                        exit(124)
+                    }
+                    """
                 );
             }
 
             sb.AppendLine(
-                """
-            if hasFailedTests {
-                exit(1)
+            """
+                if hasFailedTests {
+                    exit(1)
+                }
             }
-        }
-        """
+            """
             );
 
             sb.AppendLine("runTests()");

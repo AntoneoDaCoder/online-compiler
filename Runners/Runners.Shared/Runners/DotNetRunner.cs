@@ -86,9 +86,11 @@ namespace Runners.Shared.Runners
         {
             var sb = new StringBuilder(_boilerplateUsings);
 
+            foreach (var definition in problemSolutionDto.Problem.AdditionalDefinitions)
+                sb.AppendLine(definition.Value);
+
             sb.AppendLine(
                 $$"""
-            {{problemSolutionDto.Problem.AdditionalDefinitions}}
             {{problemSolutionDto.Code}}
             public class Program
             {

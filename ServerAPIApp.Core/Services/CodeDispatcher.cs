@@ -1,6 +1,7 @@
 ﻿using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.Repositories;
 using Shared.DTOs;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
 
 namespace ServerAPIApp.Core.Services
@@ -129,6 +130,9 @@ namespace ServerAPIApp.Core.Services
                         try
                         {
                             var problem = _repository.GetProblem(request.ProblemName);
+
+                            problem.AdditionalDefinitions = problem.AdditionalDefinitions.Where(ad => ad.Language == request.Language).ToList();
+                            problem.TestCases = problem.TestCases.Where(tc => tc.TestLanguage == request.Language).ToList();
 
                             var newSolution = new ProblemSolutionDto()
                             {

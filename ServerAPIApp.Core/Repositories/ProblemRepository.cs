@@ -15,20 +15,46 @@ namespace ServerAPIApp.Core.Repositories
         {
             var heavyTemplate = new Problem()
             {
-                AdditionalDefinitions =
-                """
-                    public class Item
+                Name = "FractionalKnapsack",
+                AdditionalDefinitions = new List<AdditionalDefinition>()
+                {
+                    new AdditionalDefinition()
                     {
-                        public int Value;
-                        public int Weight;
-                        public double Ratio => (double)Value / Weight;
+                        Language = "csharp",
+                        Value=
+                        """
+                            public class Item
+                            {
+                                public int Value;
+                                public int Weight;
+                                public double Ratio => (double)Value / Weight;
+                            }
+                        """,
+                    },
+                    new AdditionalDefinition()
+                    {
+                        Language = "swift",
+                        Value =
+                        """
+                            class Item {
+                                var value: Int
+                                var weight: Int
+                                var ratio: Double { return Double(value) / Double(weight) }
+
+                                init(value: Int, weight: Int) {
+                                self.value = value
+                                self.weight = weight
+                               }
+                            }
+                        """
                     }
-                """,
+                },
                 TestCases = new List<TestCase>()
                 {
                     new()
                     {
                         Name = "Test_SingleItem_FitsExactly",
+                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                 var items = new[] { new Item { Value = 60, Weight = 10 } };
@@ -40,6 +66,7 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_SingleItem_Partial",
+                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                var items = new[] { new Item { Value = 100, Weight = 20 } };
@@ -51,6 +78,7 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_MultipleItems_Mixed",
+                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                var items = new[]
@@ -67,6 +95,7 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_ZeroCapacity",
+                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                 var items = new[] { new Item { Value = 100, Weight = 1 } };
@@ -77,12 +106,14 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_EmptyItems",
+                        TestLanguage = "csharp",
                         InputExpression = "var result = new Solution().FractionalKnapsack(Array.Empty<Item>(), 50);",
                         OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(0).Within(1e-6));"
                     },
                     new()
                     {
                         Name = "Test_HeavyItems_ShouldChooseBestRatio",
+                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                var items = new[]
@@ -97,6 +128,7 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_Performance_WithLargeInput",
+                        TestLanguage = "csharp",
                         TestInitialization =
                         """
                                 var items = new Item[1000];
@@ -114,62 +146,10 @@ namespace ServerAPIApp.Core.Repositories
                         InputExpression = "var result = new Solution().FractionalKnapsack(items, capacity);",
                         OutputExpression = "NUnit.Framework.Assert.That(result, Is.GreaterThan(0));"
                     },
-                }
-            };
-
-            var lightTemplate = new Problem()
-            {
-                TestCases = new List<TestCase>()
-                {
-                    new()
-                    {
-                        Name="Test_SingleValue",
-                        TestInitialization =
-                        """
-                                var arr = new int[]{123456};
-                        """,
-                        InputExpression = "var result = new Solution().FindMinimum(arr);",
-                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(123456));"
-                    },
-                    new()
-                    {
-                        Name="Test_SeveralValues",
-                        TestInitialization =
-                        """
-                                var rnd = new Random();
-                                var arr = new int[rnd.Next(100,1000)];
-
-                                for(int i=0;i<arr.Length;i++)
-                                {
-                                    arr[i] = rnd.Next(-1000,1200120);
-                                }
-                        """,
-                        InputExpression = "var result = new Solution().FindMinimum(arr);",
-                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(arr.Min()));"
-                    },
-                }
-            };
-
-            var heavyTemplateSwift = new Problem()
-            {
-                AdditionalDefinitions =
-                """
-                class Item {
-                    var value: Int
-                    var weight: Int
-                    var ratio: Double { return Double(value) / Double(weight) }
-
-                    init(value: Int, weight: Int) {
-                        self.value = value
-                        self.weight = weight
-                    }
-                }
-                """,
-                TestCases = new List<TestCase>()
-                {
                 new()
                 {
                     Name = "Test_SingleItem_FitsExactly",
+                        TestLanguage = "swift",
                     TestInitialization =
                     """
                         let items = [Item(value: 60, weight: 10)]
@@ -181,6 +161,7 @@ namespace ServerAPIApp.Core.Repositories
                 new()
                 {
                     Name = "Test_SingleItem_Partial",
+                        TestLanguage = "swift",
                     TestInitialization =
                     """
                         let items = [Item(value: 100, weight: 20)]
@@ -192,6 +173,7 @@ namespace ServerAPIApp.Core.Repositories
                 new()
                 {
                     Name = "Test_MultipleItems_Mixed",
+                        TestLanguage = "swift",
                     TestInitialization =
                     """
                     let items = [
@@ -207,6 +189,7 @@ namespace ServerAPIApp.Core.Repositories
                 new()
                 {
                     Name = "Test_ZeroCapacity",
+                        TestLanguage = "swift",
                     TestInitialization =
                     """
                     let items = [Item(value: 100, weight: 1)]
@@ -217,6 +200,7 @@ namespace ServerAPIApp.Core.Repositories
                 new()
                 {
                     Name = "Test_EmptyItems",
+                        TestLanguage = "swift",
                     TestInitialization = """
                     let items: [Item] = []
                     """,
@@ -226,6 +210,7 @@ namespace ServerAPIApp.Core.Repositories
                 new()
                 {
                     Name = "Test_HeavyItems_ShouldChooseBestRatio",
+                        TestLanguage = "swift",
                     TestInitialization =
                     """
                     let items = [
@@ -239,6 +224,7 @@ namespace ServerAPIApp.Core.Repositories
                 new()
                 {
                     Name = "Test_Performance_WithLargeInput",
+                        TestLanguage = "swift",
                     TestInitialization =
                     """
                         var items = [Item]()
@@ -257,13 +243,43 @@ namespace ServerAPIApp.Core.Repositories
                 }
             };
 
-            var lightTemplateSwift = new Problem()
+            var lightTemplate = new Problem()
             {
+                Name = "ArrayMin",
                 TestCases = new List<TestCase>()
                 {
                     new()
                     {
                         Name="Test_SingleValue",
+                        TestLanguage = "csharp",
+                        TestInitialization =
+                        """
+                                var arr = new int[]{123456};
+                        """,
+                        InputExpression = "var result = new Solution().FindMinimum(arr);",
+                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(123456));"
+                    },
+                    new()
+                    {
+                        Name="Test_SeveralValues",
+                        TestLanguage = "csharp",
+                        TestInitialization =
+                        """
+                                var rnd = new Random();
+                                var arr = new int[rnd.Next(100,1000)];
+
+                                for(int i=0;i<arr.Length;i++)
+                                {
+                                    arr[i] = rnd.Next(-1000,1200120);
+                                }
+                        """,
+                        InputExpression = "var result = new Solution().FindMinimum(arr);",
+                        OutputExpression = "NUnit.Framework.Assert.That(result, Is.EqualTo(arr.Min()));"
+                    },
+                    new()
+                    {
+                        Name="Test_SingleValue",
+                        TestLanguage = "swift",
                         TestInitialization =
                         """
                                 let arr = [123456]
@@ -274,6 +290,7 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name="Test_SeveralValues",
+                        TestLanguage = "swift",
                         TestInitialization =
                         """
                               var rng = SystemRandomNumberGenerator()
@@ -286,38 +303,8 @@ namespace ServerAPIApp.Core.Repositories
                 }
             };
 
-
-            heavyTemplate.Name = "HeavyCorrectExample.cs";
-            _database["HeavyCorrectExample.cs"] = heavyTemplate;
-
-            heavyTemplate.Name = "TimeoutExample.cs";
-            _database["TimeoutExample.cs"] = heavyTemplate;
-
-            lightTemplate.Name = "LightCorrectExample.cs";
-            _database["LightCorrectExample.cs"] = lightTemplate;
-
-            lightTemplate.Name = "CompileErrorExample.cs";
-            _database["CompileErrorExample.cs"] = lightTemplate;
-
-            lightTemplate.Name = "CheatingExample.cs";
-            _database["CheatingExample.cs"] = lightTemplate;
-
-
-
-            heavyTemplateSwift.Name = "HeavyCorrectExample.swift";
-            _database["HeavyCorrectExample.swift"] = heavyTemplateSwift;
-
-            heavyTemplateSwift.Name = "TimeoutExample.swift";
-            _database["TimeoutExample.swift"] = heavyTemplateSwift;
-
-            lightTemplateSwift.Name = "LightCorrectExample.swift";
-            _database["LightCorrectExample.swift"] = lightTemplateSwift;
-
-            lightTemplateSwift.Name = "CompileErrorExample.swift";
-            _database["CompileErrorExample.swift"] = lightTemplateSwift;
-
-            lightTemplateSwift.Name = "CheatingExample.swift";
-            _database["CheatingExample.swift"] = lightTemplateSwift;
+            _database[heavyTemplate.Name] = heavyTemplate;
+            _database[lightTemplate.Name] = lightTemplate;
 
             var compileErrorProblem = new Problem
             {
@@ -396,6 +383,7 @@ namespace ServerAPIApp.Core.Repositories
             _database["ForbiddenExample.java"] = forbiddenProblem;
 
         }
+
 
         public Problem GetProblem(string name)
         {
