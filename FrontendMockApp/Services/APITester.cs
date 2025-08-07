@@ -281,6 +281,55 @@ namespace FrontendMockApp.Services
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
 
+                // java examples
+
+                var compileErrorJava = _testExamples["CompileError.java"];
+                requestDto = new CodeRequestDto()
+                {
+                    Code = compileErrorJava,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "CompileError.java",
+                    Language = "java"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+
+                var timeOutJava = _testExamples["TimeOut.java"];
+                requestDto = new CodeRequestDto()
+                {
+                    Code = timeOutJava,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "TimeOut.java",
+                    Language = "java"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                var siteJava = _testExamples["ForbiddenExample.java"];
+                requestDto = new CodeRequestDto()
+                {
+                    Code = siteJava,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "ForbiddenExample.java",
+                    Language = "java"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+                //var example = _testExamples.First();
+
 
 
                 heavyOk = _testExamples["HeavyCorrectExample.swift"];

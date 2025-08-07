@@ -26,13 +26,13 @@ class Program
             throw new DirectoryNotFoundException($"Folder not found: {examplesDir}");
         }
 
-        string[] filePaths = Directory.GetFiles(
-            examplesDir,
-            "*.*",
-            SearchOption.AllDirectories
-            ).Where(path => path.EndsWith(".cs") || path.EndsWith(".swift")).ToArray();
+        string[] csPaths = Directory.GetFiles(examplesDir, "*.cs", SearchOption.AllDirectories);
+        string[] javaPaths = Directory.GetFiles(examplesDir, "*.java", SearchOption.AllDirectories);
+        string[] swiftPaths = Directory.GetFiles(examplesDir, "*.swift", SearchOption.AllDirectories);
 
-        foreach (var filePath in filePaths)
+        string[] allPaths = javaPaths.Concat(csPaths).Concat(swiftPaths).ToArray();
+
+        foreach (var filePath in allPaths)
         {
             var fileName = Path.GetFileName(filePath);
             string code = File.ReadAllText(filePath);
