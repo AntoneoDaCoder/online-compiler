@@ -47,6 +47,25 @@ namespace ServerAPIApp.Core.Repositories
                                }
                             }
                         """
+                    },
+                    new AdditionalDefinition()
+                    {
+                        Language = "java",
+                        Value = """
+                        public static class Item {
+                            public int value;
+                            public int weight;
+                        
+                            public Item(int value, int weight) {
+                                this.value = value;
+                                this.weight = weight;
+                            }
+                        
+                            public double getRatio() {
+                                return (double) value / weight;
+                            }
+                        }
+                        """
                     }
                 },
                 TestCases = new List<TestCase>()
@@ -239,7 +258,20 @@ namespace ServerAPIApp.Core.Repositories
                     """,
                     InputExpression = "let result = Solution().fractionalKnapsack(items, capacity)",
                      OutputExpression = "SwiftTestGenerator.assertGreater(result, 0, testName: \"Test_Performance_WithLargeInput\")"
-                }
+                },
+                 new TestCase
+                    {
+                        Name = "testTimeOut",
+                        TestLanguage="java",
+                        TestInitialization = """
+                            Item[] items = new Item[30];
+                            for (int i = 0; i < items.length; i++) {
+                                items[i] = new Item(100, 1);
+                            }
+                        """,
+                        InputExpression = "double result = new Solution().fractionalKnapsack(items, 15);",
+                        OutputExpression = "assertTrue(result > 0);"
+                    }
                 }
             };
 
@@ -300,87 +332,64 @@ namespace ServerAPIApp.Core.Repositories
                         InputExpression = "let result = Solution().findMinimum(arr)",
                         OutputExpression = "SwiftTestGenerator.assertEqual(result, arr.min()!, testName: \"Test_SeveralValues\")"
                     },
+                    new()
+                    {
+                        Name="Test_SeveralValues",
+                        TestLanguage = "java",
+                        TestInitialization = 
+                        """
+                            Random rnd = new Random();
+                            int[] arr = new int[rnd.nextInt(900) + 100]; 
+
+                            for(int i = 0; i < arr.length; i++) {
+                                arr[i] = rnd.nextInt(1200120 + 1000) - 1000;
+                            }
+                        """,
+                        InputExpression="int result = new Solution().findMinimum(arr);",
+                        OutputExpression = "assertTrue(result == Arrays.stream(arr).min().getAsInt());"
+                    }
                 }
             };
 
             _database[heavyTemplate.Name] = heavyTemplate;
             _database[lightTemplate.Name] = lightTemplate;
 
-            var compileErrorProblem = new Problem
-            {
-                AdditionalDefinitions = "",
-                TestCases = new List<TestCase>
-                {
-                    new TestCase
-                    {
-                        Name = "testAdd",
-                        TestInitialization = "",
-                        InputExpression = "int result = Solution.add(2, 3);",
-                        OutputExpression = "assertEquals(5, result);"
-                    }
-                }
-            };
+            //var compileErrorProblem = new Problem
+            //{
+            //    Name = "Add",
+            //    TestCases = new List<TestCase>
+            //    {
+            //        new TestCase
+            //        {
+            //            Name = "testAdd",
+            //            TestLanguage = "java",
+            //            TestInitialization = "",
+            //            InputExpression = "int result = Solution.add(2, 3);",
+            //            OutputExpression = "assertEquals(5, result);"
+            //        }
+            //    }
+            //};
 
-            compileErrorProblem.Name = "CompileError.java";
-            _database["CompileError.java"] = compileErrorProblem;
+            //_database[compileErrorProblem.Name] = compileErrorProblem;
 
-            var commonTemplate = new Problem
-            {
-                AdditionalDefinitions = """
-                public static class Item {
-                    public int value;
-                    public int weight;
-
-                    public Item(int value, int weight) {
-                        this.value = value;
-                        this.weight = weight;
-                    }
-
-                    public double getRatio() {
-                        return (double) value / weight;
-                    }
-                }
-                """,
-                TestCases = new List<TestCase>
-                {
-                    new TestCase
-                    {
-                        Name = "testTimeOut",
-                        TestInitialization = """
-                            Item[] items = new Item[30];
-                            for (int i = 0; i < items.length; i++) {
-                                items[i] = new Item(100, 1);
-                            }
-                        """,
-                        InputExpression = "double result = new Solution().fractionalKnapsack(items, 15);",
-                        OutputExpression = "assertTrue(result > 0);"
-                    }
-                }
-            };
-
-            commonTemplate.Name = "TimeOut.java";
-            _database["TimeOut.java"] = commonTemplate;
-
-            var forbiddenProblem = new Problem
-            {
-                AdditionalDefinitions = "",
-                TestCases = new List<TestCase>
-                {
-                    new TestCase
-                    {
-                        Name = "testAdd",
-                        TestInitialization = "",
-                        InputExpression = """
-                        Solution.openSite(); 
-                        int result = 2+3;
-                        """,
-                        OutputExpression = "assertEquals(5, result);"
-                    }
-                }
-            };
-
-            forbiddenProblem.Name = "ForbiddenExample.java";
-            _database["ForbiddenExample.java"] = forbiddenProblem;
+            //var forbiddenProblem = new Problem
+            //{
+            //    Name = "NetworkUsage",
+            //    TestCases = new List<TestCase>
+            //    {
+            //        new TestCase
+            //        {
+            //            Name = "testAdd",
+            //            TestInitialization = "",
+            //            InputExpression = """
+            //            Solution.openSite(); 
+            //            int result = 2+3;
+            //            """,
+            //            OutputExpression = "assertEquals(5, result);"
+            //        }
+            //    }
+            //};
+            //_database[forbiddenProblem.Name] = forbiddenProblem;
 
         }
 
