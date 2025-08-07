@@ -26,14 +26,21 @@ class Program
             throw new DirectoryNotFoundException($"Folder not found: {examplesDir}");
         }
 
-        string[] filePaths = Directory.GetFiles(examplesDir, "*.cs", SearchOption.AllDirectories);
+        string[] filePaths = Directory.GetFiles(
+            examplesDir,
+            "*.*",
+            SearchOption.AllDirectories
+            ).Where(path => path.EndsWith(".cs") || path.EndsWith(".swift")).ToArray();
+
         foreach (var filePath in filePaths)
         {
             var fileName = Path.GetFileName(filePath);
             string code = File.ReadAllText(filePath);
 
-            string extracted = ExtractOuterWrapper(code);
-            examples[fileName] = extracted;
+            if (Path.GetExtension(filePath) == ".cs")
+                examples[fileName] = ExtractOuterWrapper(code);
+            else
+                examples[fileName] = code;
         }
 
         return examples;

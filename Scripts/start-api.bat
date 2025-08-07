@@ -8,8 +8,11 @@ docker build -t api-server:local -f ServerAPIApp/Dockerfile .
 minikube image load api-server:local
 
 echo Building and loading runner image
-docker build -t csharp-runner:local -f InMemoryRunner/Dockerfile .
+docker build -t csharp-runner:local -f Runners/DotNetRunner/Dockerfile .
 minikube image load csharp-runner:local
+
+REM docker build -t swift-runner:local -f Runners/SwiftRunner/Dockerfile .
+REM minikube image load swift-runner:local
 
 echo Deploying API to Kubernetes
 kubectl apply -f k8s/rbac.yaml

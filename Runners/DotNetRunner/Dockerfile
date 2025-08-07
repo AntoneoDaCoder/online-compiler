@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/runtime:9.0 AS base
+FROM mcr.microsoft.com/dotnet/runtime:9.0-alpine AS base
 WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
@@ -6,12 +6,13 @@ WORKDIR /src
 
 RUN useradd -u 1001 -m runneruser
 
-COPY ["InMemoryRunner/","InMemoryRunner/"]
+COPY ["Runners/DotNetRunner/","Runners/DotNetRunner/"]
+COPY ["Runners/Runners.Shared/","Runners/Runners.Shared/"]
 COPY ["Shared/","Shared/"]
 
-RUN dotnet restore "InMemoryRunner/InMemoryRunner.csproj"
+RUN dotnet restore "Runners/DotNetRunner/DotNetRunner.csproj"
 
-WORKDIR /src/InMemoryRunner
+WORKDIR /src/Runners/DotNetRunner
 RUN dotnet build -c Release -o /app/build
 
 FROM build AS publish
@@ -23,4 +24,4 @@ COPY --from=publish /app/publish .
 
 USER 1001
 
-ENTRYPOINT ["dotnet", "InMemoryRunner.dll"]
+ENTRYPOINT ["dotnet", "DotNetRunner.dll"]
