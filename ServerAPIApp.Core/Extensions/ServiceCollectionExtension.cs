@@ -65,22 +65,27 @@ namespace ServerAPIApp.Core.Extensions
                        sp.GetRequiredService<CallbackService>()
                    );
                }
+<<<<<<< HEAD
             );
             
+=======
+           );
+
+>>>>>>> develop
             services.AddSingleton<IKubernetesJobManager>
                 (sp =>
-                {
-                    var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+                  {
+                      var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
 
-                    return new KubernetesJobManager
-                    (
-                        "java",
-                        sp.GetRequiredService<IKubernetes>(),
-                        monitor,
-                        sp.GetRequiredService<CallbackService>()
-                    );
-                }
-            );
+                      return new KubernetesJobManager
+                      (
+                          "java",
+                          sp.GetRequiredService<IKubernetes>(),
+                          monitor,
+                          sp.GetRequiredService<CallbackService>()
+                      );
+                  }
+              );
 
             services.AddSingleton<IKubernetesJobManager>
                 (sp =>

@@ -30,9 +30,22 @@
                 <pre>{{ task?.exampleOutput }}</pre>
             </div>
             <div class="output">
-                <h4>Результат:</h4>
-                <pre>{{ output }}</pre>
-            </div>
+        <h4>Результат:</h4>
+
+
+        <div *ngIf="parsedResult; else rawOutput">
+          <p><strong>Latency:</strong> {{ parsedResult.latencyInSeconds.toFixed(2) }} сек.</p>
+          <p><strong>Console Output:</strong></p>
+          <pre>{{ parsedResult.consoleOutput }}</pre>
+          <p><strong>Exit Code:</strong> {{ parsedResult.exitCode }}</p>
+          <p><strong>Execution Status:</strong> {{ parsedResult.status }}</p>
+        </div>
+
+
+        <ng-template #rawOutput>
+          <pre>{{ output }}</pre>
+        </ng-template>
+      </div>
         </div>
     </div>
 </div>
