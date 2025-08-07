@@ -42,6 +42,13 @@ namespace Runners.Shared.Runners
             "nunitlite.dll",
             "nunit.framework.dll"
         };
+        static ProcessStartInfo _pInfo = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            Arguments = $"{_tmpDllPath}",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
 
         private static List<AssemblyMetadata> _metadataCache;
 
@@ -79,9 +86,11 @@ namespace Runners.Shared.Runners
         {
             var sb = new StringBuilder(_boilerplateUsings);
 
+            foreach (var definition in problemSolutionDto.Problem.AdditionalDefinitions)
+                sb.AppendLine(definition.Value);
+
             sb.AppendLine(
                 $$"""
-            {{problemSolutionDto.Problem.AdditionalDefinitions}}
             {{problemSolutionDto.Code}}
             public class Program
             {
@@ -134,7 +143,7 @@ namespace Runners.Shared.Runners
             return sb.ToString();
         }
 
-        public (bool Success, string CompilationErrors) CompileCode(string fullCode, out ProcessStartInfo? pInfo, CancellationToken cancellationToken)
+        public Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
         {
             var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
 
@@ -165,24 +174,12 @@ namespace Runners.Shared.Runners
                 ms.Seek(0, SeekOrigin.Begin);
 
                 File.WriteAllBytes(_tmpDllPath, ms.ToArray());
-
-                pInfo = new ProcessStartInfo
-                {
-                    FileName = "dotnet",
-                    Arguments = $"{_tmpDllPath}",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
-                };
-            }
-            else
-            {
-                pInfo = default;
             }
 
-            return (compilationResult.Success, compilationResultString);
+            return Task.FromResult((compilationResult.Success, compilationResultString));
         }
 
-        public async Task<CodeResponseDto> ExecuteCodeAsync(Guid requestId, DateTime requestDate, ProcessStartInfo pInfo, CancellationToken cancellationToken)
+        public async Task<CodeResponseDto> ExecuteCodeAsync(Guid requestId, DateTime requestDate, CancellationToken cancellationToken)
         {
             var result = new CodeResponseDto()
             {
@@ -196,7 +193,7 @@ namespace Runners.Shared.Runners
 
             using var proc = new Process
             {
-                StartInfo = pInfo,
+                StartInfo = _pInfo,
             };
 
             proc.Start();

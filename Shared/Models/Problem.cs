@@ -3,7 +3,7 @@
     public class Problem
     {
         public string Name { get; set; } = string.Empty;
-        public string AdditionalDefinitions { get; set; } = string.Empty;
-        public ICollection<TestCase> TestCases { get; set; }
+        public ICollection<AdditionalDefinition> AdditionalDefinitions { get; set; } = new List<AdditionalDefinition>();
+        public ICollection<TestCase> TestCases { get; set; } = new List<TestCase>();
     }
 }
