@@ -1,10 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule, Router } from '@angular/router'; // если используешь router
+import { ActivatedRoute, RouterModule, Router } from '@angular/router'; 
 import { Task } from '../../models/task.model';
 import { Language } from '../../models/language.model';
 import { CodeTemplate } from '../../models/codeTemplate.model';
+import { HttpClient } from '@angular/common/http';
+import { SignalRService } from '../../services/signalr.service'; 
+import { v4 as uuidv4 } from 'uuid';
 
 @Component({
   selector: 'app-task-detail',
@@ -74,7 +77,11 @@ public class Solution
     }
   ];
 
-  constructor(private route: ActivatedRoute, private router: Router) { }
+  constructor(
+    private route: ActivatedRoute, 
+    private router: Router,
+    private http: HttpClient,
+    private signalRService: SignalRService) { }
 
   ngOnInit() {
     const taskName = this.route.snapshot.paramMap.get('name');
@@ -105,13 +112,39 @@ public class Solution
     if (template) {
       this.code = template.body;
     } else {
-      this.code = ''; // Шаблон не найден — очистить редактор
+      this.code = ''; 
     }
   }
 
-  runCode() {
-    // Заглушка под запрос к серверу
-    this.output = 'Сервер вернул: OK';
+  async runCode() {
+    const requestId = uuidv4();
+
+    await this.signalRService.startConnection();
+    await this.signalRService.joinGroup(requestId);
+
+    this.signalRService.onMessage((message: string) => {
+      this.output = message;
+    });
+
+    const dto = {
+      requestId,
+      language: this.selectedLanguage.id,
+      problemName: this.task?.name ?? '',
+      code: this.code,
+      maxAllowedTimeInMilliseconds: 5000,
+      callbackUrl: '', 
+      requestSentAt: new Date()
+    };
+
+    this.http.post('https://localhost:12345/api/jobs/start', dto).subscribe({
+      next: () => {
+        this.output = 'Ожидаем ответ от сервера...';
+      },
+      error: (err) => {
+        console.error(err);
+        this.output = 'Ошибка при отправке запроса.';
+      }
+    });
   }
 
   goBack() {
