@@ -28,16 +28,19 @@ class Program
 
         string[] csPaths = Directory.GetFiles(examplesDir, "*.cs", SearchOption.AllDirectories);
         string[] javaPaths = Directory.GetFiles(examplesDir, "*.java", SearchOption.AllDirectories);
+        string[] swiftPaths = Directory.GetFiles(examplesDir, "*.swift", SearchOption.AllDirectories);
 
-        string[] allPaths = javaPaths.Concat(csPaths).ToArray();
+        string[] allPaths = javaPaths.Concat(csPaths).Concat(swiftPaths).ToArray();
 
         foreach (var filePath in allPaths)
         {
             var fileName = Path.GetFileName(filePath);
             string code = File.ReadAllText(filePath);
 
-            string extracted = ExtractOuterWrapper(code);
-            examples[fileName] = extracted;
+            if (Path.GetExtension(filePath) == ".cs")
+                examples[fileName] = ExtractOuterWrapper(code);
+            else
+                examples[fileName] = code;
         }
 
         return examples;

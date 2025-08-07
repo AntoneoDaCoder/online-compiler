@@ -1,0 +1,179 @@
+/* Общие шрифты и контейнер */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+.task-page {
+    max-width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    font-family: 'Inter', sans-serif;
+    color: #222;
+    overflow: auto;
+    user-select: none;
+}
+
+.header-bar {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    gap: 1rem;
+    background: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+    user-select: none;
+}
+
+.back-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #555;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s ease;
+}
+
+.back-btn:hover {
+    color: #111;
+}
+
+.run-btn {
+    background: #d9534f;
+    /* красный Bootstrap-ish */
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.3s ease;
+}
+
+.run-btn:hover {
+    background: #c9302c;
+}
+
+.language-select {
+    margin-left: auto;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.4rem;
+    border: 1px solid #ccc;
+    font-weight: 500;
+    font-size: 1rem;
+    background: white;
+    cursor: pointer;
+    user-select: none;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    height: calc(100% - 50px);
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.code-editor {
+    flex-basis: 70%;
+    resize: none;
+    padding: 1rem;
+    font-family: 'Fira Mono', monospace, monospace;
+    font-size: 1rem;
+    border-radius: 1rem;
+    border: 1px solid #ccc;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.05);
+    outline: none;
+    overflow: auto;
+    user-select: text;
+}
+
+.code-editor:focus {
+    border-color: #d9534f;
+    box-shadow: 0 0 8px rgba(217, 83, 79, 0.7);
+}
+
+.info-panel {
+    flex-basis: 30%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background: #fff;
+    border-radius: 1rem;
+    border: none;
+    box-shadow: none;
+}
+
+.task-info {
+    flex-basis: 70%;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    background: #fff;
+    border-radius: 1rem;
+    border: 1px solid #ccc;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.05);
+    padding: 1rem;
+    user-select: text;
+    min-height: 0;
+    /* важно для корректного flex overflow */
+}
+
+.output {
+    flex-basis: 30%;
+    margin-top: auto;
+    background: #fff;
+    border-radius: 0.8rem;
+    padding: 0.8rem;
+    border: 1px solid #ccc;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.05);
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 0.95rem;
+    color: #333;
+    user-select: text;
+}
+
+.task-info {
+    flex-basis: 60%;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.task-info h3 {
+    margin-top: 0;
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 0.5rem;
+    user-select: text;
+}
+
+.task-info p {
+    line-height: 1.4;
+    color: #555;
+    user-select: text;
+}
+
+.task-info pre {
+    background: #eee;
+    padding: 0.6rem;
+    border-radius: 0.5rem;
+    user-select: text;
+    font-family: monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+
+
+.output h4 {
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+}

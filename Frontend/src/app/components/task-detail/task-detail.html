@@ -1,0 +1,38 @@
+<div class="task-page">
+    <div class="header-bar">
+        <button class="back-btn" (click)="goBack()" aria-label="Назад">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </button>
+
+        <button class="run-btn" (click)="runCode()" aria-label="Запустить">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="margin-right: 6px;">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            Запустить
+        </button>
+
+        <select [(ngModel)]="selectedLanguage" (ngModelChange)="loadTemplate()" class="language-select">
+            <option *ngFor="let lang of languages" [ngValue]="lang">{{ lang.name }}</option>
+        </select>
+
+    </div>
+
+    <div class="main-content">
+        <textarea class="code-editor" [(ngModel)]="code" spellcheck="false"></textarea>
+
+        <div class="info-panel">
+            <div class="task-info">
+                <h3>{{ task?.name }}</h3>
+                <p>{{ task?.description }}</p>
+                <pre>{{ task?.exampleOutput }}</pre>
+            </div>
+            <div class="output">
+                <h4>Результат:</h4>
+                <pre>{{ output }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
