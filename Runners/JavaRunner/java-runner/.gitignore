@@ -1,0 +1,83 @@
+# Compiled class files
+*.class
+
+# Log file
+*.log
+
+# Package Files
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Maven target directory
+target/
+**/target/
+
+# Eclipse files
+.classpath
+.project
+.settings/
+
+# IntelliJ IDEA files
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# NetBeans files
+nbproject/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# VS Code files
+.vscode/
+
+# Mac OS files
+.DS_Store
+
+# Maven wrapper files (if not using the wrapper)
+.mvn/wrapper/maven-wrapper.jar
+
+# Dependency files (if not using Maven wrapper)
+.mvn/wrapper/maven-wrapper.properties
+
+# Local configuration files
+*.orig
+
+# Build output directories
+bin/
+build/
+out/
+
+# Unit test reports
+TEST*.xml
+
+# Dependency directories
+**/lib/
+**/libs/
+
+# Logs directory
+logs/
+
+# Temp files
+*.tmp
+
+# System Files
+*.swp
+*.swo
+
+# Environment files
+.env
+*.env
+
+# Crashlytics files
+crashlytics-build.properties
+fabric.properties
+
+# Maven Release Plugin
+release.properties

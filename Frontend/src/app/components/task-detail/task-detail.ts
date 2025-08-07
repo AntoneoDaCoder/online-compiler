@@ -1,0 +1,154 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterModule, Router } from '@angular/router'; 
+import { Task } from '../../models/task.model';
+import { Language } from '../../models/language.model';
+import { CodeTemplate } from '../../models/codeTemplate.model';
+import { HttpClient } from '@angular/common/http';
+import { SignalRService } from '../../services/signalr.service'; 
+import { v4 as uuidv4 } from 'uuid';
+
+@Component({
+  selector: 'app-task-detail',
+  templateUrl: './task-detail.html',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule],
+  styleUrls: ['./task-detail.css']
+})
+export class TaskDetailComponent implements OnInit {
+  task: Task | undefined;
+  languages: Language[] = [
+    { id: 'swift', name: 'Swift' },
+    { id: 'csharp', name: 'C#' }
+  ];
+  selectedLanguage = this.languages[0];
+  code: string = '';
+  output: string = '';
+
+  // Заглушки
+  templates: CodeTemplate[] = [
+    {
+      language: 'swift',
+      taskName: 'FractionalKnapsack',
+      body:
+`/*Additional definition for convenience
+
+class Item {
+  var value: Int
+  var weight: Int
+  var ratio: Double { return Double(value) / Double(weight) }
+
+  init(value: Int, weight: Int) {
+    self.value = value
+    self.weight = weight
+  }
+}
+  */
+
+  class Solution {
+    func fractionalKnapsack(_ items: [Item], _ capacity: Int) -> Double {
+      //your solution here
+    }
+}`
+    },
+    {
+      language: 'csharp',
+      taskName: 'FractionalKnapsack',
+      body: 
+`/*Additional definition for convenience
+
+public class Item
+{
+  public int Value;
+  public int Weight;
+  public double Ratio => (double)Value / Weight;
+}
+
+*/
+
+public class Solution
+{
+  public double FractionalKnapsack(Item[] items, int capacity)
+  {
+    //your solution here
+  }
+}`
+    }
+  ];
+
+  constructor(
+    private route: ActivatedRoute, 
+    private router: Router,
+    private http: HttpClient,
+    private signalRService: SignalRService) { }
+
+  ngOnInit() {
+    const taskName = this.route.snapshot.paramMap.get('name');
+    console.log('taskName from route:', taskName);
+
+    this.task = {
+      name: taskName || '',
+      description: 'Описание задачи...',
+      exampleOutput: 'Пример вывода...'
+    };
+
+    this.loadTemplate();
+  }
+
+
+
+  loadTemplate() {
+    if (!this.task || !this.task.name) {
+      this.code = '';
+      return;
+    }
+
+    const template = this.templates.find(t =>
+      t.taskName.toLowerCase() === this.task!.name.toLowerCase() &&
+      t.language.toLowerCase() === this.selectedLanguage.id.toLowerCase()
+    );
+
+    if (template) {
+      this.code = template.body;
+    } else {
+      this.code = ''; 
+    }
+  }
+
+  async runCode() {
+    const requestId = uuidv4();
+
+    await this.signalRService.startConnection();
+    await this.signalRService.joinGroup(requestId);
+
+    this.signalRService.onMessage((message: string) => {
+      this.output = message;
+    });
+
+    const dto = {
+      requestId,
+      language: this.selectedLanguage.id,
+      problemName: this.task?.name ?? '',
+      code: this.code,
+      maxAllowedTimeInMilliseconds: 5000,
+      callbackUrl: '', 
+      requestSentAt: new Date()
+    };
+
+    this.http.post('https://localhost:12345/api/jobs/start', dto).subscribe({
+      next: () => {
+        this.output = 'Ожидаем ответ от сервера...';
+      },
+      error: (err) => {
+        console.error(err);
+        this.output = 'Ошибка при отправке запроса.';
+      }
+    });
+  }
+
+  goBack() {
+    this.router.navigate(['/']);
+  }
+
+}

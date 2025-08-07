@@ -1,0 +1,37 @@
+/* task-list.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+.task-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 2rem;
+  justify-content: center;
+  font-family: 'Inter', sans-serif;
+  width:100%;
+}
+
+.task-card {
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  cursor: pointer;
+  width: 220px;
+  text-align: center;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.task-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+:host {
+  display: block;
+  width: 100%;
+}
+
