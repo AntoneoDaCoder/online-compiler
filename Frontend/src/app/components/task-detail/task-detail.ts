@@ -1,12 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule, Router } from '@angular/router'; 
+import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { Task } from '../../models/task.model';
 import { Language } from '../../models/language.model';
 import { CodeTemplate } from '../../models/codeTemplate.model';
 import { HttpClient } from '@angular/common/http';
-import { SignalRService } from '../../services/signalr.service'; 
+import { SignalRService } from '../../services/signalr.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Component({
@@ -20,19 +20,20 @@ export class TaskDetailComponent implements OnInit {
   task: Task | undefined;
   languages: Language[] = [
     { id: 'swift', name: 'Swift' },
-    { id: 'csharp', name: 'C#' }
+    { id: 'csharp', name: 'C#' },
+    { id: 'java', name: 'Java' }
   ];
   selectedLanguage = this.languages[0];
   code: string = '';
   output: string = '';
 
-  // Заглушки
+
   templates: CodeTemplate[] = [
     {
       language: 'swift',
       taskName: 'FractionalKnapsack',
       body:
-`/*Additional definition for convenience
+        `/*Additional definition for convenience
 
 class Item {
   var value: Int
@@ -55,8 +56,8 @@ class Item {
     {
       language: 'csharp',
       taskName: 'FractionalKnapsack',
-      body: 
-`/*Additional definition for convenience
+      body:
+        `/*Additional definition for convenience
 
 public class Item
 {
@@ -74,11 +75,37 @@ public class Solution
     //your solution here
   }
 }`
+    },
+    {
+      language:'java',
+      taskName:'FractionalKnapsack',
+      body:
+      `/*Additional definition for convenience
+public static class Item {
+  public int value;
+  public int weight;
+ 
+  public Item(int value, int weight) {
+      this.value = value;
+      this.weight = weight;
+    }
+ 
+    public double getRatio() {
+      return (double) value / weight;
+    }
+}
+*/
+
+public static class Solution {
+  public double fractionalKnapsack(Item[] items, int capacity) {
+      //your solution here
+  }
+}`
     }
   ];
 
   constructor(
-    private route: ActivatedRoute, 
+    private route: ActivatedRoute,
     private router: Router,
     private http: HttpClient,
     private signalRService: SignalRService) { }
@@ -112,7 +139,7 @@ public class Solution
     if (template) {
       this.code = template.body;
     } else {
-      this.code = ''; 
+      this.code = '';
     }
   }
 
@@ -132,7 +159,7 @@ public class Solution
       problemName: this.task?.name ?? '',
       code: this.code,
       maxAllowedTimeInMilliseconds: 5000,
-      callbackUrl: '', 
+      callbackUrl: '',
       requestSentAt: new Date()
     };
 
