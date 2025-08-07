@@ -11,8 +11,8 @@ echo Building and loading csharp runner image
 docker build -t csharp-runner:local -f Runners/DotNetRunner/Dockerfile .
 minikube image load csharp-runner:local
 
-REM docker build -t swift-runner:local -f Runners/SwiftRunner/Dockerfile .
-REM minikube image load swift-runner:local
+::docker build -t swift-runner:local -f Runners/SwiftRunner/Dockerfile .
+::minikube image load swift-runner:local
 
 
 
