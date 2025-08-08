@@ -31,6 +31,7 @@ kubectl apply -f k8s/api-deployment.yaml
 echo Waiting for pod to be ready...
 kubectl wait --for=condition=ready pod -l app=api-server --timeout=90s
 
+
 start "" cmd /c "kubectl port-forward service/api-server 12345:8080"
 
 echo API is ready to run code

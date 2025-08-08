@@ -280,6 +280,20 @@ namespace FrontendMockApp.Services
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
+                requestDto = new CodeRequestDto()
+                {
+                    Code = "SELECT Name FROM Customers WHERE Id > 0",
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "FirstSqlProblem",
+                    Language = "sql"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
 
                 //heavyOk = _testExamples["HeavyCorrectExample.swift"];
                 //heavyBad = _testExamples["TimeoutExample.swift"];

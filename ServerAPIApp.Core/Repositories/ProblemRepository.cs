@@ -55,12 +55,12 @@ namespace ServerAPIApp.Core.Repositories
                         public static class Item {
                             public int value;
                             public int weight;
-                        
+
                             public Item(int value, int weight) {
                                 this.value = value;
                                 this.weight = weight;
                             }
-                        
+
                             public double getRatio() {
                                 return (double) value / weight;
                             }
@@ -336,7 +336,7 @@ namespace ServerAPIApp.Core.Repositories
                     {
                         Name="Test_SeveralValues",
                         TestLanguage = "java",
-                        TestInitialization = 
+                        TestInitialization =
                         """
                             Random rnd = new Random();
                             int[] arr = new int[rnd.nextInt(900) + 100]; 
@@ -354,6 +354,32 @@ namespace ServerAPIApp.Core.Repositories
             _database[heavyTemplate.Name] = heavyTemplate;
             _database[lightTemplate.Name] = lightTemplate;
 
+            var sqlTemplate = new Problem
+            {
+                Name = "FirstSqlProblem",
+                AdditionalDefinitions = new List<AdditionalDefinition>
+                {
+                    new()
+                    {
+                        Language="sql",
+                        Value=@"CREATE TABLE Customers(Id INT, Name TEXT);
+                                INSERT INTO Customers VALUES (1, 'Alice'), (2, 'Bob');"
+                    }
+                },
+                TestCases = new List<TestCase>()
+                {
+                    new()
+                    {
+                        Name="Test_AliceExists",
+                        TestLanguage="sql",
+                        TestInitialization="",
+                        InputExpression="SELECT CASE WHEN EXISTS (SELECT 1 FROM (...) WHERE Name = 'Alice') THEN 1 ELSE 0 END",
+                        OutputExpression=""
+                    }
+                }
+            };
+
+            _database[sqlTemplate.Name] = sqlTemplate;
             //var compileErrorProblem = new Problem
             //{
             //    Name = "Add",

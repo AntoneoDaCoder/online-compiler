@@ -65,13 +65,8 @@ namespace ServerAPIApp.Core.Extensions
                        sp.GetRequiredService<CallbackService>()
                    );
                }
-<<<<<<< HEAD
-            );
-            
-=======
            );
 
->>>>>>> develop
             services.AddSingleton<IKubernetesJobManager>
                 (sp =>
                   {
