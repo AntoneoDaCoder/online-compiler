@@ -280,15 +280,15 @@ namespace FrontendMockApp.Services
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
-                // sql example
+                // sql examples
 
                 requestDto = new CodeRequestDto()
                 {
-                    Code = "SELECT Name FROM Customers WHERE Id > 0",
+                    Code = "SELECT DISTINCT c.Name FROM Customers c JOIN Orders o ON c.Id = o.CustomerId WHERE o.Amount > 100;",
                     MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "FirstSqlProblem",
+                    ProblemName = "CustomersWithExpensiveOrders",
                     Language = "sql"
                 };
 
@@ -296,7 +296,33 @@ namespace FrontendMockApp.Services
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
+                requestDto = new CodeRequestDto()
+                {
+                    Code = "SELECT cat.Name FROM Categories cat JOIN Products p ON cat.Id = p.CategoryId GROUP BY cat.Name HAVING SUM(p.Price) > 500;",
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "CategoriesWithHighTotalPrice",
+                    Language = "sql"
+                };
 
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = "SELECT s.Name FROM Students s JOIN Enrollments e ON s.Id = e.StudentId GROUP BY s.Name HAVING COUNT(DISTINCT e.CourseId) >= 2;",
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "StudentsWithMultipleCourses",
+                    Language = "sql"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
                 //heavyOk = _testExamples["HeavyCorrectExample.swift"];
                 //heavyBad = _testExamples["TimeoutExample.swift"];
                 //lightOk = _testExamples["LightCorrectExample.swift"];
@@ -350,23 +376,6 @@ namespace FrontendMockApp.Services
                 _stats.RequestsSent++;
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
-
-                // linq example
-                var linqExample = _testExamples["CorrectLinqExample.cs"];
-                requestDto = new CodeRequestDto()
-                {
-                    Code = linqExample,
-                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                    CallbackUrl = _callbackUrl,
-                    RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "CorrectLinqExample",
-                    Language = "csharp"
-                };
-
-                _stats.RequestsSent++;
-
-                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
-
 
                 //var example = _testExamples.First();
 

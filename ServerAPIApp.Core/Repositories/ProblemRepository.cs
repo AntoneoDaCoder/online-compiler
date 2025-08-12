@@ -356,80 +356,133 @@ namespace ServerAPIApp.Core.Repositories
 
             var sqlTemplate = new Problem
             {
-                Name = "FirstSqlProblem",
+                Name = "CustomersWithExpensiveOrders",
                 AdditionalDefinitions = new List<AdditionalDefinition>
                 {
                     new()
                     {
-                        Language="sql",
-                        Value=@"CREATE TABLE Customers(Id INT, Name TEXT);
-                                INSERT INTO Customers VALUES (1, 'Alice'), (2, 'Bob');"
+                        Language = "sql",
+                        Value = @"CREATE TABLE Customers(Id INT PRIMARY KEY, Name TEXT);
+                                  CREATE TABLE Orders(Id INT PRIMARY KEY, CustomerId INT, Amount REAL,
+                                                       FOREIGN KEY(CustomerId) REFERENCES Customers(Id));
+                                  INSERT INTO Customers VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
+                                  INSERT INTO Orders VALUES (1, 1, 150), (2, 1, 90), (3, 2, 200), (4, 3, 50);"
                     }
                 },
-                TestCases = new List<TestCase>()
+                TestCases = new List<TestCase>
                 {
                     new()
                     {
-                        Name="Test_AliceExists",
-                        TestLanguage="sql",
-                        TestInitialization="",
-                        InputExpression="SELECT CASE WHEN EXISTS (SELECT 1 FROM (...) WHERE Name = 'Alice') THEN 1 ELSE 0 END",
-                        OutputExpression=""
+                        Name = "Test_TimAndTom",
+                        TestLanguage = "sql",
+                        TestInitialization = "",
+                        InputExpression = @"
+                                            SELECT CASE 
+                                                WHEN 
+                                                    EXISTS (SELECT 1 FROM (...) WHERE Name = 'Tim')
+                                                    AND EXISTS (SELECT 1 FROM (...) WHERE Name = 'Tom')
+                                                THEN 1 ELSE 0 
+                                            END",
+                        OutputExpression = ""
                     }
                 }
             };
 
             _database[sqlTemplate.Name] = sqlTemplate;
 
-            var linqTemplate = new Problem
+            sqlTemplate = new Problem
             {
-                Name = "CorrectLinqExample",
+                Name = "CategoriesWithHighTotalPrice",
                 AdditionalDefinitions = new List<AdditionalDefinition>
                 {
                     new()
                     {
-                        Language="csharp",
-                        Value=@"public class Department
-                                {
-                                    public int Id { get; set; }
-                                    public string Name { get; set; }
-                                    public List<Employee> Employees { get; set; } = new();
-                                }
-
-                                public class Employee
-                                {
-                                    public int Id { get; set; }
-                                    public string Name { get; set; }
-                                    public int Age { get; set; }
-                                    public int DepartmentId { get; set; }
-                                    public Department Department { get; set; }
-                                }
-
-                                public class AppDbContext : DbContext
-                                {
-                                    public DbSet<Department> Departments { get; set; }
-                                    public DbSet<Employee> Employees { get; set; }
-
-                                    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-                                }"
+                        Language = "sql",
+                        Value = @"CREATE TABLE Categories(Id INT PRIMARY KEY, Name TEXT);
+                                  CREATE TABLE Products(Id INT PRIMARY KEY, CategoryId INT, Price REAL,
+                                                         FOREIGN KEY(CategoryId) REFERENCES Categories(Id));
+                                  INSERT INTO Categories VALUES (1, 'Electronics'), (2, 'Furniture'), (3, 'Clothes');
+                                  INSERT INTO Products VALUES (1, 1, 300), (2, 1, 250), (3, 2, 600), (4, 3, 100), (5, 3, 50);"
                     }
                 },
-                TestCases = new List<TestCase>()
+                TestCases = new List<TestCase>
                 {
                     new()
                     {
-                        Name="Test_ReturnsCorrectAmount",
-                        TestLanguage="csharp",
-                        TestInitialization="",
-                        InputExpression="var result = _service.GetEmployeesOlderThan30GroupedByDepartment();",
-                        OutputExpression="Assert.Equal(3, result.Count);"
+                        Name = "Test_ElectronicsExists",
+                        TestLanguage = "sql",
+                        TestInitialization = "",
+                        InputExpression = @"
+                                        SELECT CASE 
+                                            WHEN NOT EXISTS (
+                                                SELECT 'Electronics' AS Name
+                                                UNION ALL
+                                                SELECT 'Furniture'
+                                                EXCEPT
+                                                SELECT Name FROM (...)
+                                            )
+                                            AND NOT EXISTS (
+                                                SELECT Name FROM (...) 
+                                                EXCEPT
+                                                SELECT 'Electronics' UNION ALL SELECT 'Furniture'
+                                            )
+                                            THEN 1 ELSE 0 
+                                        END",
+                        OutputExpression = ""
                     }
                 }
             };
 
-            _database[linqTemplate.Name] = linqTemplate;
+            _database[sqlTemplate.Name] = sqlTemplate;
 
 
+            sqlTemplate = new Problem
+            {
+                Name = "StudentsWithMultipleCourses",
+                AdditionalDefinitions = new List<AdditionalDefinition>
+                {
+                    new()
+                    {
+                        Language = "sql",
+                        Value = @"CREATE TABLE Students(Id INT PRIMARY KEY, Name TEXT);
+                                  CREATE TABLE Courses(Id INT PRIMARY KEY, Title TEXT);
+                                  CREATE TABLE Enrollments(StudentId INT, CourseId INT,
+                                                           FOREIGN KEY(StudentId) REFERENCES Students(Id),
+                                                           FOREIGN KEY(CourseId) REFERENCES Courses(Id));
+                                  INSERT INTO Students VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
+                                  INSERT INTO Courses VALUES (1, 'Math'), (2, 'Physics'), (3, 'History');
+                                  INSERT INTO Enrollments VALUES (1, 1), (1, 2), (2, 2), (3, 1), (3, 3);"
+                    }
+                },
+                TestCases = new List<TestCase>
+                {
+                    new()
+                    {
+                        Name = "Test_TimExists",
+                        TestLanguage = "sql",
+                        TestInitialization = "",
+                        InputExpression = @"
+                                        SELECT CASE 
+                                            WHEN NOT EXISTS (
+                                                SELECT 'Tim' AS Name
+                                                UNION ALL
+                                                SELECT 'Don'
+                                                EXCEPT
+                                                SELECT Name FROM (...)
+                                            )
+                                            AND NOT EXISTS (
+                                                SELECT Name FROM (...) 
+                                                EXCEPT
+                                                SELECT 'Tim' UNION ALL SELECT 'Don'
+                                            )
+                                            THEN 1 ELSE 0 
+                                        END",
+                        OutputExpression = ""
+                    },
+                }
+            };
+
+            _database[sqlTemplate.Name] = sqlTemplate;
             //var compileErrorProblem = new Problem
             //{
             //    Name = "Add",

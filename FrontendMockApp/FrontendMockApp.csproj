@@ -28,5 +28,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Code Examples\SQL\" />
+  </ItemGroup>
 
 </Project>
