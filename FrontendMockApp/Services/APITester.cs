@@ -280,6 +280,8 @@ namespace FrontendMockApp.Services
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
+                // sql example
+
                 requestDto = new CodeRequestDto()
                 {
                     Code = "SELECT Name FROM Customers WHERE Id > 0",
@@ -326,7 +328,7 @@ namespace FrontendMockApp.Services
                     MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "TimeOut.java",
+                    ProblemName = "TimeOut",
                     Language = "java"
                 };
 
@@ -341,13 +343,31 @@ namespace FrontendMockApp.Services
                     MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "ForbiddenExample.java",
+                    ProblemName = "ForbiddenExample",
                     Language = "java"
                 };
 
                 _stats.RequestsSent++;
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                // linq example
+                var linqExample = _testExamples["CorrectLinqExample.cs"];
+                requestDto = new CodeRequestDto()
+                {
+                    Code = linqExample,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "CorrectLinqExample",
+                    Language = "csharp"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+
                 //var example = _testExamples.First();
 
 

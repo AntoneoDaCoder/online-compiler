@@ -380,6 +380,56 @@ namespace ServerAPIApp.Core.Repositories
             };
 
             _database[sqlTemplate.Name] = sqlTemplate;
+
+            var linqTemplate = new Problem
+            {
+                Name = "CorrectLinqExample",
+                AdditionalDefinitions = new List<AdditionalDefinition>
+                {
+                    new()
+                    {
+                        Language="csharp",
+                        Value=@"public class Department
+                                {
+                                    public int Id { get; set; }
+                                    public string Name { get; set; }
+                                    public List<Employee> Employees { get; set; } = new();
+                                }
+
+                                public class Employee
+                                {
+                                    public int Id { get; set; }
+                                    public string Name { get; set; }
+                                    public int Age { get; set; }
+                                    public int DepartmentId { get; set; }
+                                    public Department Department { get; set; }
+                                }
+
+                                public class AppDbContext : DbContext
+                                {
+                                    public DbSet<Department> Departments { get; set; }
+                                    public DbSet<Employee> Employees { get; set; }
+
+                                    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+                                }"
+                    }
+                },
+                TestCases = new List<TestCase>()
+                {
+                    new()
+                    {
+                        Name="Test_ReturnsCorrectAmount",
+                        TestLanguage="csharp",
+                        TestInitialization="",
+                        InputExpression="var result = _service.GetEmployeesOlderThan30GroupedByDepartment();",
+                        OutputExpression="Assert.Equal(3, result.Count);"
+                    }
+                }
+            };
+
+            _database[linqTemplate.Name] = linqTemplate;
+
+
             //var compileErrorProblem = new Problem
             //{
             //    Name = "Add",

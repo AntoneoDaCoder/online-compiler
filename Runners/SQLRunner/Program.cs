@@ -1,6 +1,5 @@
 ﻿using Runners.Shared;
 using Runners.Shared.Runners;
-using Runners.Shared.Runners.Sql;
 
 class Runner
 {

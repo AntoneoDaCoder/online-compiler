@@ -2,6 +2,7 @@
 using Shared.DTOs;
 using Shared.Enums;
 using Shared.Models;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Runners.Shared.Runners
@@ -13,7 +14,7 @@ namespace Runners.Shared.Runners
         private string _solutionCode;
         public SqlRunner()
         {
-            Console.WriteLine("[SQL Runner] Container built.");
+            Console.WriteLine("[SQL Runner] Runner started.");
         }
 
         public async Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
