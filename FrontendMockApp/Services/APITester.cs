@@ -296,7 +296,7 @@ namespace FrontendMockApp.Services
                     MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "CompileError.java",
+                    ProblemName = "CompileError",
                     Language = "java"
                 };
 
@@ -305,35 +305,35 @@ namespace FrontendMockApp.Services
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
 
-                var timeOutJava = _testExamples["TimeOut.java"];
-                requestDto = new CodeRequestDto()
-                {
-                    Code = timeOutJava,
-                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                    CallbackUrl = _callbackUrl,
-                    RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "TimeOut.java",
-                    Language = "java"
-                };
+                //var timeOutJava = _testExamples["TimeOut.java"];
+                //requestDto = new CodeRequestDto()
+                //{
+                //    Code = timeOutJava,
+                //    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                //    CallbackUrl = _callbackUrl,
+                //    RequestSentAt = DateTime.UtcNow,
+                //    ProblemName = "TimeOut.java",
+                //    Language = "java"
+                //};
 
-                _stats.RequestsSent++;
+                //_stats.RequestsSent++;
 
-                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+                //await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
-                var siteJava = _testExamples["ForbiddenExample.java"];
-                requestDto = new CodeRequestDto()
-                {
-                    Code = siteJava,
-                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
-                    CallbackUrl = _callbackUrl,
-                    RequestSentAt = DateTime.UtcNow,
-                    ProblemName = "ForbiddenExample.java",
-                    Language = "java"
-                };
+                //var siteJava = _testExamples["ForbiddenExample.java"];
+                //requestDto = new CodeRequestDto()
+                //{
+                //    Code = siteJava,
+                //    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                //    CallbackUrl = _callbackUrl,
+                //    RequestSentAt = DateTime.UtcNow,
+                //    ProblemName = "ForbiddenExample.java",
+                //    Language = "java"
+                //};
 
-                _stats.RequestsSent++;
+                //_stats.RequestsSent++;
 
-                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+                //await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
                 //var example = _testExamples.First();
 
 
