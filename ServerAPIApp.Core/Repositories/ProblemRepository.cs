@@ -354,23 +354,23 @@ namespace ServerAPIApp.Core.Repositories
             _database[heavyTemplate.Name] = heavyTemplate;
             _database[lightTemplate.Name] = lightTemplate;
 
-            //var compileErrorProblem = new Problem
-            //{
-            //    Name = "Add",
-            //    TestCases = new List<TestCase>
-            //    {
-            //        new TestCase
-            //        {
-            //            Name = "testAdd",
-            //            TestLanguage = "java",
-            //            TestInitialization = "",
-            //            InputExpression = "int result = Solution.add(2, 3);",
-            //            OutputExpression = "assertEquals(5, result);"
-            //        }
-            //    }
-            //};
+            var compileErrorProblem = new Problem
+            {
+                Name = "CompileError",
+                TestCases = new List<TestCase>
+                {
+                    new TestCase
+                    {
+                        Name = "testAdd",
+                        TestLanguage = "java",
+                        TestInitialization = "",
+                        InputExpression = "int result = Solution.add(2, 3);",
+                        OutputExpression = "assertEquals(5, result);"
+                    }
+                }
+            };
 
-            //_database[compileErrorProblem.Name] = compileErrorProblem;
+            _database[compileErrorProblem.Name] = compileErrorProblem;
 
             //var forbiddenProblem = new Problem
             //{

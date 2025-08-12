@@ -37,7 +37,7 @@ class Program
             var fileName = Path.GetFileName(filePath);
             string code = File.ReadAllText(filePath);
 
-            if (Path.GetExtension(filePath) == ".cs")
+            if (Path.GetExtension(filePath) == ".cs" || Path.GetExtension(filePath) == ".java")
                 examples[fileName] = ExtractOuterWrapper(code);
             else
                 examples[fileName] = code;

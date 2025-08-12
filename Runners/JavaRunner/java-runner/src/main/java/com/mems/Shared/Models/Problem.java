@@ -4,6 +4,6 @@ import java.util.Collection;
 
 public class Problem {
     public String name = "";
-    public String additionalDefinitions = "";
+    public Collection<AdditionalDefinition> additionalDefinitions;
     public Collection<TestCase> testCases;
 }
