@@ -1,7 +1,8 @@
 ﻿using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.Repositories;
 using Shared.DTOs;
-using System.Diagnostics.CodeAnalysis;
+using Shared.Models;
+using System.Text.Json;
 using System.Threading.Channels;
 
 namespace ServerAPIApp.Core.Services
@@ -129,15 +130,14 @@ namespace ServerAPIApp.Core.Services
                     {
                         try
                         {
-                            var problem = _repository.GetProblem(request.ProblemName);
+                            var fullProblem = _repository.GetProblem(request.ProblemName);
 
-                            problem.AdditionalDefinitions = problem.AdditionalDefinitions.Where(ad => ad.Language == request.Language).ToList();
-                            problem.TestCases = problem.TestCases.Where(tc => tc.TestLanguage == request.Language).ToList();
+                            var filteredProblem = new Problem(fullProblem, request.Language);
 
                             var newSolution = new ProblemSolutionDto()
                             {
                                 RequestId = request.RequestId,
-                                Problem = problem,
+                                Problem = filteredProblem,
                                 Code = request.Code,
                                 SentAt = request.RequestSentAt,
                                 MaxAllowedTimeInMilliseconds = request.MaxAllowedTimeInMilliseconds,
