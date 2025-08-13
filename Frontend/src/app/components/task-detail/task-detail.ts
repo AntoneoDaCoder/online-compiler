@@ -19,41 +19,45 @@ import { ExecutionResultDto } from '../../models/executionResultDto.model';
 })
 export class TaskDetailComponent implements OnInit {
   task: Task | undefined;
-  languages: Language[] = [
-    // { id: 'swift', name: 'Swift' },
+
+  allLanguages: Language[] = [
     { id: 'csharp', name: 'C#' },
-    { id: 'java', name: 'Java' }
+    { id: 'java', name: 'Java' },
+    { id: "sql", name: "SQL" },
+    //  { id: 'swift', name: 'Swift' }
   ];
+
+  languages: Language[] = [];
   selectedLanguage = this.languages[0];
   code: string = '';
   output: string = '';
   parsedResult: ExecutionResultDto | null = null;
 
   templates: CodeTemplate[] = [
-//     {
-//       language: 'swift',
-//       taskName: 'FractionalKnapsack',
-//       body:
-//         `/*Additional definition for convenience
+    //     {
+    //       language: 'swift',
+    //       taskName: 'FractionalKnapsack',
+    //       body:
+    //         `/*Additional definition for convenience
 
-// class Item {
-//   var value: Int
-//   var weight: Int
-//   var ratio: Double { return Double(value) / Double(weight) }
+    // class Item {
+    //   var value: Int
+    //   var weight: Int
+    //   var ratio: Double { return Double(value) / Double(weight) }
 
-//   init(value: Int, weight: Int) {
-//     self.value = value
-//     self.weight = weight
-//   }
-// }
-//   */
+    //   init(value: Int, weight: Int) {
+    //     self.value = value
+    //     self.weight = weight
+    //   }
+    // }
+    //   */
 
-//   class Solution {
-//     func fractionalKnapsack(_ items: [Item], _ capacity: Int) -> Double {
-//       //your solution here
-//     }
-// }`
-//     },
+    //   class Solution {
+    //     func fractionalKnapsack(_ items: [Item], _ capacity: Int) -> Double {
+    //       //your solution here
+    //     }
+    // }`
+    //     },
     {
       language: 'csharp',
       taskName: 'FractionalKnapsack',
@@ -78,10 +82,10 @@ public class Solution
 }`
     },
     {
-      language:'java',
-      taskName:'FractionalKnapsack',
+      language: 'java',
+      taskName: 'FractionalKnapsack',
       body:
-      `/*Additional definition for convenience
+        `/*Additional definition for convenience
 public static class Item {
   public int value;
   public int weight;
@@ -102,6 +106,34 @@ public static class Solution {
       //your solution here
   }
 }`
+    },
+    {
+      language:'csharp',
+      taskName:'ArrayMin',
+      body:
+`
+public class Solution
+{
+       public int FindMinimum(int[] arr)
+       {
+          //your solution
+       }
+}
+`
+    },
+    {
+      language:'java',
+      taskName:'ArrayMin',
+      body:
+`
+public static class Solution
+{
+      public int findMinimum(int[] arr)
+      {
+          //your solution
+      }
+}
+`
     }
   ];
 
@@ -112,17 +144,28 @@ public static class Solution {
     private signalRService: SignalRService) { }
 
   ngOnInit() {
-    const taskName = this.route.snapshot.paramMap.get('name');
-    console.log('taskName from route:', taskName);
+    // Пытаемся получить задачу из state
+    const navState = history.state as { task?: Task };
+    if (navState.task) {
+      this.task = navState.task;
+    } else {
+      // fallback, если зашли напрямую в URL
+      const taskName = this.route.snapshot.paramMap.get('name');
+      console.error('Нет данных задачи в state, нужно грузить с API по имени:', taskName);
+      return;
+    }
 
-    this.task = {
-      name: taskName || '',
-      description: 'Описание задачи...',
-      exampleOutput: 'Пример вывода...'
-    };
+    // фильтруем доступные языки
+    this.languages = this.allLanguages.filter(lang =>
+      this.task!.supportedLanguages.includes(lang.id)
+    );
+
+    // выбираем первый доступный
+    this.selectedLanguage = this.languages[0];
 
     this.loadTemplate();
   }
+
 
 
 
@@ -151,25 +194,25 @@ public static class Solution {
     await this.signalRService.joinGroup(requestId);
 
 
-this.signalRService.onMessage((message: any) => {
-  // Проверяем, если message — объект, просто присваиваем
-  if (typeof message === 'string') {
-    try {
-      const data = JSON.parse(message);
-      this.parsedResult = data.result;
-    } catch {
-      this.output = message;
-      this.parsedResult = null;
-    }
-  } else if (typeof message === 'object' && message !== null) {
-    // Если объект — присваиваем напрямую
-    this.parsedResult = message.result || message; // зависит от структуры
-    this.output = '';
-  } else {
-    this.output = String(message);
-    this.parsedResult = null;
-  }
-});
+    this.signalRService.onMessage((message: any) => {
+      // Проверяем, если message — объект, просто присваиваем
+      if (typeof message === 'string') {
+        try {
+          const data = JSON.parse(message);
+          this.parsedResult = data.result;
+        } catch {
+          this.output = message;
+          this.parsedResult = null;
+        }
+      } else if (typeof message === 'object' && message !== null) {
+        // Если объект — присваиваем напрямую
+        this.parsedResult = message.result || message; // зависит от структуры
+        this.output = '';
+      } else {
+        this.output = String(message);
+        this.parsedResult = null;
+      }
+    });
 
 
     const dto = {

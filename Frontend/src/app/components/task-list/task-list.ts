@@ -12,13 +12,17 @@ import { Task } from '../../models/task.model';
 })
 export class TaskListComponent {
   tasks: Task[] = [
-    { name: 'FractionalKnapsack', description: 'Desc 1', exampleOutput: 'Output 1' },
-    { name: 'Task 2', description: 'Desc 2', exampleOutput: 'Output 2' }
+    { name: 'FractionalKnapsack', description: 'Desc 1', exampleOutput: 'Output 1', supportedLanguages: ['csharp', 'java'] },
+    { name: 'ArrayMin', description: 'Desc 2', exampleOutput: 'Output 2', supportedLanguages: ['csharp', 'java'] },
+    { name: 'CustomersWithExpensiveOrders', description: 'Desc 3', exampleOutput: 'Output 3', supportedLanguages: ['sql'] },
+    { name: 'CategoriesWithHighTotalPrice', description: 'Desc 4', exampleOutput: 'Output 4', supportedLanguages: ['sql'] },
+    { name: 'StudentsWithMultipleCourses', description: 'Desc 5', exampleOutput: 'Output 5', supportedLanguages: ['sql'] }
   ];
 
   constructor(private router: Router) { }
 
   openTask(task: Task) {
-    this.router.navigate(['/task', task.name]);
+    this.router.navigate(['/task', task.name], { state: { task } });
   }
+
 }
