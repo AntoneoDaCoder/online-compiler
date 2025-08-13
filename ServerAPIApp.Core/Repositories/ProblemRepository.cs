@@ -373,15 +373,13 @@ namespace ServerAPIApp.Core.Repositories
                 {
                     new()
                     {
-                        Name = "Test_TimAndTom",
+                        Name = "Test_TimAndTom_ShouldFail",
                         TestLanguage = "sql",
                         TestInitialization = "",
                         InputExpression = @"
-                                            SELECT CASE 
-                                                WHEN 
-                                                    EXISTS (SELECT 1 FROM (...) WHERE Name = 'Tim')
-                                                    AND EXISTS (SELECT 1 FROM (...) WHERE Name = 'Tom')
-                                                THEN 1 ELSE 0 
+                                            SELECT CASE
+                                                WHEN (SELECT COUNT(*) FROM (...)) = 3
+                                                THEN 1 ELSE 0
                                             END",
                         OutputExpression = ""
                     }
@@ -413,21 +411,15 @@ namespace ServerAPIApp.Core.Repositories
                         TestLanguage = "sql",
                         TestInitialization = "",
                         InputExpression = @"
-                                        SELECT CASE 
-                                            WHEN NOT EXISTS (
-                                                SELECT 'Electronics' AS Name
-                                                UNION ALL
-                                                SELECT 'Furniture'
-                                                EXCEPT
-                                                SELECT Name FROM (...)
-                                            )
-                                            AND NOT EXISTS (
-                                                SELECT Name FROM (...) 
-                                                EXCEPT
-                                                SELECT 'Electronics' UNION ALL SELECT 'Furniture'
-                                            )
-                                            THEN 1 ELSE 0 
-                                        END",
+                                            SELECT CASE
+                                                WHEN
+                                                    (SELECT COUNT(*) FROM (...)
+                                                        WHERE Name IN ('Electronics', 'Furniture')
+                                                    ) = 2
+                                                AND
+                                                    (SELECT COUNT(*) FROM (...)) = 2
+                                                THEN 1 ELSE 0
+                                            END;",
                         OutputExpression = ""
                     }
                 }
@@ -458,25 +450,17 @@ namespace ServerAPIApp.Core.Repositories
                 {
                     new()
                     {
-                        Name = "Test_TimExists",
+                        Name = "Test_TimAndDonExist",
                         TestLanguage = "sql",
                         TestInitialization = "",
                         InputExpression = @"
-                                        SELECT CASE 
-                                            WHEN NOT EXISTS (
-                                                SELECT 'Tim' AS Name
-                                                UNION ALL
-                                                SELECT 'Don'
-                                                EXCEPT
-                                                SELECT Name FROM (...)
-                                            )
-                                            AND NOT EXISTS (
-                                                SELECT Name FROM (...) 
-                                                EXCEPT
-                                                SELECT 'Tim' UNION ALL SELECT 'Don'
-                                            )
-                                            THEN 1 ELSE 0 
-                                        END",
+                                            SELECT CASE
+                                                WHEN (SELECT COUNT(*) FROM (...)) = 2
+                                                 AND EXISTS (SELECT 1 FROM (...) WHERE Name='Tim')
+                                                 AND EXISTS (SELECT 1 FROM (...) WHERE Name='Don')
+                                                 AND NOT EXISTS (SELECT 1 FROM (...) WHERE Name='Tom')
+                                                THEN 1 ELSE 0
+                                            END",
                         OutputExpression = ""
                     },
                 }
