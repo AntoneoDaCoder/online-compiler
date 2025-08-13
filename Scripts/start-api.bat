@@ -15,10 +15,14 @@ minikube image load csharp-runner:local
 ::minikube image load swift-runner:local
 
 
-
 echo Building and loading java runner image
 docker build -t java-runner:local -f Runners/JavaRunner/Dockerfile Runners/JavaRunner/
 minikube image load java-runner:local
+
+
+echo Building and loading sql runner image
+docker build -t sql-runner:local -f Runners/SqlRunner/Dockerfile .
+minikube image load sql-runner:local
 
 
 echo Deploying API to Kubernetes
@@ -26,6 +30,7 @@ kubectl apply -f k8s/rbac.yaml
 kubectl apply -f k8s/api-deployment.yaml
 echo Waiting for pod to be ready...
 kubectl wait --for=condition=ready pod -l app=api-server --timeout=90s
+
 
 start "" cmd /c "kubectl port-forward service/api-server 12345:8080"
 
