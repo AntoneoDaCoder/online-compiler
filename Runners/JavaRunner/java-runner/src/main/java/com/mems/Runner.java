@@ -167,9 +167,7 @@ public class Runner
                 }
                 
                 response.result.consoleOutput = fullError;
-
-                notifyJobManager(response);
-
+                
                 return;
             }
             
