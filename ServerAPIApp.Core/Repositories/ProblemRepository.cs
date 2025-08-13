@@ -259,19 +259,104 @@ namespace ServerAPIApp.Core.Repositories
                     InputExpression = "let result = Solution().fractionalKnapsack(items, capacity)",
                      OutputExpression = "SwiftTestGenerator.assertGreater(result, 0, testName: \"Test_Performance_WithLargeInput\")"
                 },
-                 new TestCase
-                    {
-                        Name = "testTimeOut",
-                        TestLanguage="java",
-                        TestInitialization = """
-                            Item[] items = new Item[30];
+                new()
+                {
+                    Name = "Test_SingleItem_FitsExactly",
+                    TestLanguage = "java",
+                    TestInitialization =
+                    """
+                        Item[] items = { new Item(60, 10) };
+                        int capacity = 10;
+                    """,
+                    InputExpression = "double result = new Solution().fractionalKnapsack(items, capacity);",
+                    OutputExpression = "assertEquals(60.0, result, 1e-6);"
+                },
+                new()
+                {
+                    Name = "Test_SingleItem_Partial",
+                    TestLanguage = "java",
+                    TestInitialization =
+                    """
+                        Item[] items = { new Item(100, 20) };
+                        int capacity = 10;
+                    """,
+                    InputExpression = "double result = new Solution().fractionalKnapsack(items, capacity);",
+                    OutputExpression = "assertEquals(50.0, result, 1e-6);"
+                },
+                new()
+                {
+                    Name = "Test_MultipleItems_Mixed",
+                    TestLanguage = "java",
+                    TestInitialization =
+                    """
+                        Item[] items = {
+                            new Item(60, 10),
+                            new Item(100, 20),
+                            new Item(120, 30)
+                        };
+                        int capacity = 50;
+                    """,
+                    InputExpression = "double result = new Solution().fractionalKnapsack(items, capacity);",
+                    OutputExpression = "assertEquals(240.0, result, 1e-6);"
+                },
+                new()
+                {
+                    Name = "Test_ZeroCapacity",
+                    TestLanguage = "java",
+                    TestInitialization =
+                    """
+                        Item[] items = { new Item(100, 1) };
+                    """,
+                    InputExpression = "double result = new Solution().fractionalKnapsack(items, 0);",
+                    OutputExpression = "assertEquals(0.0, result, 1e-6);"
+                },
+                new()
+                {
+                    Name = "Test_EmptyItems",
+                    TestLanguage = "java",
+                    TestInitialization =
+                    """
+                        Item[] items = new Item[0];
+                    """,
+                    InputExpression = "double result = new Solution().fractionalKnapsack(items, 50);",
+                    OutputExpression = "assertEquals(0.0, result, 1e-6);"
+                },
+                new()
+                {
+                    Name = "Test_HeavyItems_ShouldChooseBestRatio",
+                    TestLanguage = "java",
+                    TestInitialization =
+                    """
+                        Item[] items = {
+                            new Item(100, 50), // ratio = 2.0
+                            new Item(60, 10)   // ratio = 6.0
+                        };
+                    """,
+                    InputExpression = "double result = new Solution().fractionalKnapsack(items, 20);",
+                    OutputExpression = "assertEquals(80.0, result, 1e-6);"
+                },
+                new()
+                {
+                    Name = "Test_Performance_WithLargeInput",
+                    TestLanguage = "java",
+                    TestInitialization =
+                    """
+                        Item[] items = new Item[1000];
+                        java.util.Random rnd = new java.util.Random(42);
                             for (int i = 0; i < items.length; i++) {
-                                items[i] = new Item(100, 1);
-                            }
+                            int value = rnd.nextInt(999) + 1;
+                            int weight = rnd.nextInt(99) + 1;
+                            items[i] = new Item(value, weight);
+                        }
+                        java.util.List<Item> list = java.util.Arrays.asList(items);
+                        java.util.Collections.shuffle(list, rnd);
+                        list.toArray(items);
+                        int capacity = 10000;
                         """,
-                        InputExpression = "double result = new Solution().fractionalKnapsack(items, 15);",
-                        OutputExpression = "assertTrue(result > 0);"
-                    }
+                    InputExpression = "double result = new Solution().fractionalKnapsack(items, capacity);",
+                    OutputExpression = "assertTrue(result > 0);"
+                },
+
                 }
             };
 
@@ -331,6 +416,17 @@ namespace ServerAPIApp.Core.Repositories
                         """,
                         InputExpression = "let result = Solution().findMinimum(arr)",
                         OutputExpression = "SwiftTestGenerator.assertEqual(result, arr.min()!, testName: \"Test_SeveralValues\")"
+                    },
+                    new()
+                    {
+                        Name = "Test_SingleValue",
+                        TestLanguage = "java",
+                        TestInitialization =
+                        """
+                            int[] arr = new int[]{123456};
+                        """,
+                        InputExpression = "int result = new Solution().findMinimum(arr);",
+                        OutputExpression = "assertEquals(123456, result);"
                     },
                     new()
                     {

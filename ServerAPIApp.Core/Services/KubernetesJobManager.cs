@@ -103,10 +103,6 @@ namespace ServerAPIApp.Core.Services
                 Console.WriteLine($"[KubernetesJobManager] Current state of pending callbacks:\r\n "
                     + JsonSerializer.Serialize(_resultCallbacks, new JsonSerializerOptions { WriteIndented = true }) + $", time:" + DateTime.UtcNow.ToString("o"));
 
-                var response = await _httpClient.PostAsJsonAsync($"http://{podIp}:5000/run", request, token);
-
-                response.EnsureSuccessStatusCode();
-
                 var patch = new V1Patch
                 (
                     new
@@ -129,6 +125,12 @@ namespace ServerAPIApp.Core.Services
                        namespaceParameter: _namespace,
                        cancellationToken: token);
 
+                Console.WriteLine($"[KubernetesJobManager] Marked pod [Name:{podName} as busy");
+
+                var response = await _httpClient.PostAsJsonAsync($"http://{podIp}:5000/run", request, token);
+
+                response.EnsureSuccessStatusCode();
+
                 Console.WriteLine($"[KubernetesJobManager] Successfully assigned request [Id:{request.RequestId}] to pod [Name:{podName}], time:" + DateTime.UtcNow.ToString("o"));
 
                 return true;
@@ -150,7 +152,7 @@ namespace ServerAPIApp.Core.Services
                     throw new InvalidOperationException($"Job [Id:{podResponse.RequestId}] doesn't exist, time:" + DateTime.UtcNow.ToString("o"));
                 }
 
-                await _callbackService.NotifyClientAsync(podResponse, requestData.CallbackUrl, cancellationToken);
+                _resultCallbacks.TryRemove(podResponse.RequestId, out _);
 
                 var patch = new V1Patch
                 (
@@ -174,7 +176,9 @@ namespace ServerAPIApp.Core.Services
                        namespaceParameter: _namespace,
                        cancellationToken: cancellationToken);
 
-                _resultCallbacks.TryRemove(podResponse.RequestId, out _);
+                Console.WriteLine($"[KubernetesJobManager] Marked pod [Name:{requestData.Name} as free");
+
+                await _callbackService.NotifyClientAsync(podResponse, requestData.CallbackUrl, cancellationToken);
             }
             catch (Exception ex)
             {
