@@ -483,23 +483,24 @@ namespace ServerAPIApp.Core.Repositories
             };
 
             _database[sqlTemplate.Name] = sqlTemplate;
-            //var compileErrorProblem = new Problem
-            //{
-            //    Name = "Add",
-            //    TestCases = new List<TestCase>
-            //    {
-            //        new TestCase
-            //        {
-            //            Name = "testAdd",
-            //            TestLanguage = "java",
-            //            TestInitialization = "",
-            //            InputExpression = "int result = Solution.add(2, 3);",
-            //            OutputExpression = "assertEquals(5, result);"
-            //        }
-            //    }
-            //};
 
-            //_database[compileErrorProblem.Name] = compileErrorProblem;
+            var compileErrorProblem = new Problem
+            {
+                Name = "CompileError",
+                TestCases = new List<TestCase>
+                {
+                    new TestCase
+                    {
+                        Name = "testAdd",
+                        TestLanguage = "java",
+                        TestInitialization = "",
+                        InputExpression = "int result = Solution.add(2, 3);",
+                        OutputExpression = "assertEquals(5, result);"
+                    }
+                }
+            };
+
+            _database[compileErrorProblem.Name] = compileErrorProblem;
 
             //var forbiddenProblem = new Problem
             //{

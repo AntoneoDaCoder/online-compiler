@@ -36,6 +36,7 @@ import com.mems.Shared.DTOs.ExecutionResultDto;
 import com.mems.Shared.DTOs.ProblemSolutionDto;
 import com.mems.Shared.Enums.ExecutionStatus;
 import com.mems.Shared.Enums.RequestStatus;
+import com.mems.Shared.Models.AdditionalDefinition;
 import com.mems.Shared.Models.TestCase;
 
 public class Runner 
@@ -269,7 +270,10 @@ public class Runner
     private static String wrapUserCode(ProblemSolutionDto request) {
         StringBuilder sb = new StringBuilder(BOILERPLATE_IMPORTS);
         sb.append("public class UserProgram {");
-        sb.append(request.problem.additionalDefinitions).append("\n");
+
+        for (AdditionalDefinition def : request.problem.additionalDefinitions) {
+            sb.append(def.value).append("\n");
+        }
         sb.append(request.code).append("\n");
         sb.append("""
             
