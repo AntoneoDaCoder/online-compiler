@@ -12,7 +12,7 @@ import { Task } from '../../models/task.model';
 })
 export class TaskListComponent {
   tasks: Task[] = [
-    { name: 'FractionalKnapsack', description: 'Desc 1', exampleOutput: 'Output 1', supportedLanguages: ['csharp', 'java'] },
+    { name: 'FractionalKnapsack', description: 'Desc 1', exampleOutput: 'Output 1', supportedLanguages: ['csharp', 'java','nodejs'] },
     { name: 'ArrayMin', description: 'Desc 2', exampleOutput: 'Output 2', supportedLanguages: ['csharp', 'java'] },
     { name: 'CustomersWithExpensiveOrders', description: 'Desc 3', exampleOutput: 'Output 3', supportedLanguages: ['sql'] },
     { name: 'CategoriesWithHighTotalPrice', description: 'Desc 4', exampleOutput: 'Output 4', supportedLanguages: ['sql'] },
