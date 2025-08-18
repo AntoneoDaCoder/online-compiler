@@ -34,7 +34,7 @@ namespace Runners.Shared.Runners
             "zlib", "stream", "crypto",
 
             // Прямой доступ к модулям и системным путям
-            "module", "os", "perf_hooks",
+            "os", "perf_hooks",
 
             // Внешние процессы через URL / IPC
             "inspector", "dns", "readline", "tty",
@@ -84,7 +84,7 @@ namespace Runners.Shared.Runners
           };
         })();
 
-        class Test {
+        class NodeTestGenerator {
           static assertEqual(lhs, rhs, testName) {
             if (lhs === rhs) {
               console.log(`[TEST_PASS]: ${testName}`);
@@ -242,11 +242,16 @@ namespace Runners.Shared.Runners
         {
             foreach (var pattern in _bannedModules)
             {
-                if (Regex.IsMatch(fullCode, pattern))
+                if (Regex.IsMatch(fullCode, $@"require\(['""]{pattern}['""]\)"))
+                {
+                    return Task.FromResult((false, $"Banned import detected: {pattern}"));
+                }
+                if (Regex.IsMatch(fullCode, $@"import\s+.*\s+from\s+['""]{pattern}['""]"))
                 {
                     return Task.FromResult((false, $"Banned import detected: {pattern}"));
                 }
             }
+
 
             File.WriteAllText(_tmpJsFilePath, fullCode);
 
@@ -257,7 +262,11 @@ namespace Runners.Shared.Runners
         {
             var mainBody = new StringBuilder(_jsTemplate);
 
-            mainBody = mainBody.Replace("{{USER_CODE}}", problemSolutionDto.Code);
+            var defsBuilder = new StringBuilder();
+            foreach (var definition in problemSolutionDto.Problem.AdditionalDefinitions)
+                defsBuilder.AppendLine(definition.Value);
+
+            mainBody = mainBody.Replace("{{USER_CODE}}", defsBuilder + problemSolutionDto.Code);
 
             var testBuilder = new StringBuilder();
 
