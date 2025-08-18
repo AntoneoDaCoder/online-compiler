@@ -1,4 +1,6 @@
 ﻿using Shared.DTOs;
+using Shared.Enums;
+using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -6,6 +8,15 @@ namespace Runners.Shared.Runners
 {
     public class NodeJsRunner : IRunner
     {
+        static ProcessStartInfo _pInfo = new ProcessStartInfo()
+        {
+            FileName = "node",
+            Arguments = "/tmp/UserProgram.js",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+
         readonly string[] _bannedModules = {
             // Файловая система
             "fs", "fs/promises", "path",
@@ -139,10 +150,92 @@ namespace Runners.Shared.Runners
         })();
         """;
 
+        const int _maxProcessLifetime = 25000;
+
+        bool _isDisposed;
 
         public async Task<CodeResponseDto> ExecuteCodeAsync(Guid requestId, DateTime requestDate, CancellationToken cancellationToken)
         {
+            var result = new CodeResponseDto()
+            {
+                RequestId = requestId,
+                Language = "nodejs",
+                Result = new ExecutionResultDto()
+                {
+                    RequestSentAt = requestDate,
+                }
+            };
 
+            using var proc = new Process() { StartInfo = _pInfo };
+            proc.Start();
+
+            if (!proc.WaitForExit(_maxProcessLifetime))
+            {
+                proc.Kill();
+                result.Result.Status = ExecutionStatus.TimedOut;
+                result.Result.ExitCode = 124;
+                result.Result.ConsoleOutput = "Execution timed out.";
+                return result;
+            }
+            result.Result.ExitCode = proc.ExitCode;
+
+            if (proc.ExitCode != 0)
+            {
+                result.Status = RequestStatus.Failed;
+                result.Result.Status = ExecutionStatus.RuntimeError;
+
+                string errorString = await proc.StandardError.ReadToEndAsync(cancellationToken);
+                string stdOut = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
+
+                if (stdOut.Contains("[TEST_TIMED_OUT]"))
+                {
+                    result.Result.Status = ExecutionStatus.TimedOut;
+                }
+                else if (stdOut.Contains("[TEST_FAIL]:"))
+                {
+                    result.Result.Status = ExecutionStatus.FailedToExecute;
+
+                    var failedTestNames = new StringBuilder();
+                    var lines = stdOut.Split('\n');
+
+                    foreach (var line in lines)
+                    {
+                        if (line.StartsWith("[TEST_FAIL]:"))
+                        {
+                            var testNameMatch = Regex.Match(line, @"\[TEST_FAIL\]:\s*(.*?)\s*—");
+
+                            if (testNameMatch.Success)
+                            {
+                                failedTestNames.AppendLine(testNameMatch.Groups[1].Value);
+                            }
+                        }
+                    }
+
+                    result.Result.ConsoleOutput = failedTestNames.ToString();
+                }
+
+                else
+                {
+                    result.Result.Status = ExecutionStatus.RuntimeError;
+
+                    result.Result.ConsoleOutput = !string.IsNullOrWhiteSpace(errorString)
+                                                  ? errorString
+                                                  : stdOut;
+                }
+
+                Console.WriteLine("[NodeRunner] Failed to execute, errors:" + result.Result.ConsoleOutput);
+            }
+            else
+            {
+                result.Status = RequestStatus.Succeeded;
+                result.Result.Status = ExecutionStatus.Succeded;
+
+                Console.WriteLine("[NodeRunner] Successfully executed");
+            }
+
+            File.Delete(_tmpJsFilePath);
+
+            return result;
         }
 
         public Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
@@ -182,6 +275,26 @@ namespace Runners.Shared.Runners
             mainBody = mainBody.Replace("{{TESTS}}", testBuilder.ToString());
 
             return mainBody.ToString();
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+            if (disposing)
+            {
+
+            }
+
+            _isDisposed = true;
         }
     }
 }
