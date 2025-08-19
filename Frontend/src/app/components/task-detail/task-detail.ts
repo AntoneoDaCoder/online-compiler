@@ -159,6 +159,18 @@ class Solution {
     }
 }
 `
+    },
+    {
+      language:'nodejs',
+      taskName:'ArrayMin',
+      body:
+`
+class Solution {
+      findMinimum(arr) {
+        //your solution here
+      }
+}
+`
     }
   ];
 
