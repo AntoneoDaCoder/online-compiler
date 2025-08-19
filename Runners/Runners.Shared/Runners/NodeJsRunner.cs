@@ -25,7 +25,7 @@ namespace Runners.Shared.Runners
             "net", "dgram", "tls", "http", "https", "http2",
 
             // Дочерние процессы и управление системой
-            "child_process", "worker_threads", "cluster", "repl",
+            "child_process", "cluster", "repl",
 
             // Модули исполнения и компиляции кода
             "vm", "eval", "async_hooks",
@@ -47,7 +47,7 @@ namespace Runners.Shared.Runners
 
         const string _jsTemplate =
         """
-        const bannedModules = [
+         const bannedModules = [
           // Файловая система
           'fs', 'fs/promises', 'path',
 
@@ -55,7 +55,7 @@ namespace Runners.Shared.Runners
           'net', 'dgram', 'tls', 'http', 'https', 'http2',
 
           // Дочерние процессы и управление системой
-          'child_process', 'worker_threads', 'cluster', 'repl',
+          'child_process', /* 'worker_threads', */ 'cluster', 'repl',
 
           // Модули исполнения и компиляции кода
           'vm', 'eval', 'async_hooks',
@@ -84,6 +84,8 @@ namespace Runners.Shared.Runners
           };
         })();
 
+        const { Worker } = require('worker_threads');
+
         class NodeTestGenerator {
           static assertEqual(lhs, rhs, testName) {
             if (lhs === rhs) {
@@ -93,7 +95,6 @@ namespace Runners.Shared.Runners
               hasFailedTests = true;
             }
           }
-
           static assertGreater(lhs, rhs, testName) {
             if (lhs > rhs) {
               console.log(`[TEST_PASS]: ${testName}`);
@@ -102,7 +103,6 @@ namespace Runners.Shared.Runners
               hasFailedTests = true;
             }
           }
-
           static assertApproxEqual(lhs, rhs, accuracy = 1e-6, testName) {
             if (Math.abs(lhs - rhs) <= accuracy) {
               console.log(`[TEST_PASS]: ${testName}`);
@@ -115,25 +115,94 @@ namespace Runners.Shared.Runners
 
         function runWithTimeout(ms, fn, testName) {
           return new Promise((resolve) => {
-            let finished = false;
-            const timer = setTimeout(() => {
-              if (!finished) {
-                console.log(`[TEST_TIMED_OUT] ${testName} timed out after ${ms}ms`);
-                process.exit(124);
+            // код теста как строка
+            const fnSource = `(${fn.toString()})();`;
+
+            // Собираем код воркера: свой банлист, перехват require, локальный тест-раннер и ВСТАВКА пользовательского кода
+            const workerCode = `
+              const bannedModules = ${JSON.stringify(bannedModules)};
+              (function () {
+                const Module = require('module');
+                const originalRequire = Module.prototype.require;
+                Module.prototype.require = function (moduleName) {
+                  if (bannedModules.includes(moduleName)) {
+                    throw new Error('[SECURITY] Importing module "' + moduleName + '" is not allowed.');
+                  }
+                  return originalRequire.apply(this, arguments);
+                };
+              })();
+
+              const { parentPort } = require('worker_threads');
+
+              let _hasFailed = false;
+              class NodeTestGenerator {
+                static assertEqual(lhs, rhs, testName) {
+                  if (lhs === rhs) {
+                    console.log('[TEST_PASS]: ' + testName);
+                  } else {
+                    console.log('[TEST_FAIL]: ' + testName + ' — expected ' + rhs + ', got ' + lhs);
+                    _hasFailed = true;
+                  }
+                }
+                static assertGreater(lhs, rhs, testName) {
+                  if (lhs > rhs) {
+                    console.log('[TEST_PASS]: ' + testName);
+                  } else {
+                    console.log('[TEST_FAIL]: ' + testName + ' — ' + rhs + ' is not greater than ' + lhs);
+                    _hasFailed = true;
+                  }
+                }
+                static assertApproxEqual(lhs, rhs, accuracy = 1e-6, testName) {
+                  if (Math.abs(lhs - rhs) <= accuracy) {
+                    console.log('[TEST_PASS]: ' + testName);
+                  } else {
+                    console.log('[TEST_FAIL]: ' + testName + ' — expected approx ' + rhs + ', got ' + lhs);
+                    _hasFailed = true;
+                  }
+                }
               }
+
+              // ВСТАВКА пользовательского кода, чтобы в воркере были Solution/Item/и т.д.
+              {{USER_CODE}}
+
+              (async () => {
+                try {
+                  ${fnSource}
+                  parentPort.postMessage({ status: 'done', failed: _hasFailed });
+                } catch (err) {
+                  parentPort.postMessage({ status: 'error', error: err && err.message ? err.message : String(err) });
+                }
+              })();
+            `;
+
+            const worker = new Worker(workerCode, { eval: true });
+
+            const timer = setTimeout(() => {
+              console.log(`[TEST_TIMED_OUT] ${testName} timed out after ${ms}ms`);
+              // важно: помечаем провал в ГЛАВНОМ потоке, чтобы exitCode стал != 0
+              hasFailedTests = true;
+              worker.terminate();
+              resolve();
             }, ms);
 
-            try {
-              Promise.resolve(fn()).finally(() => {
-                finished = true;
-                clearTimeout(timer);
-                resolve();
-              });
-            } catch (err) {
-              finished = true;
+            worker.on('message', (msg) => {
               clearTimeout(timer);
-              throw err;
-            }
+              if (msg.status === 'done') {
+                if (msg.failed) hasFailedTests = true;
+                resolve();
+              } else if (msg.status === 'error') {
+                console.log(`[TEST_FAIL]: ${testName} — Runtime error: ${msg.error}`);
+                hasFailedTests = true;
+                resolve();
+              }
+            });
+
+            worker.on('error', (err) => {
+              clearTimeout(timer);
+              console.log(`[TEST_FAIL]: ${testName} — Worker error: ${err && err.message ? err.message : String(err)}`);
+              hasFailedTests = true;
+              resolve();
+            });
           });
         }
 
@@ -148,6 +217,7 @@ namespace Runners.Shared.Runners
             process.exitCode = 1;
           }
         })();
+        
         """;
 
         const int _maxProcessLifetime = 25000;
