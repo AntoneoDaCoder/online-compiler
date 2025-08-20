@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqlRunner", "Runners\SQLRun
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SwiftRunner", "Runners\SwiftRunner\SwiftRunner.csproj", "{B0C9B807-9F71-4FEF-99B5-6FC08BCA94D5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeJsRunner", "Runners\NodeJsRunner\NodeJsRunner.csproj", "{2D2C3804-628C-48A1-B9FB-31AE6B5BE886}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -59,6 +61,10 @@ Global
 		{B0C9B807-9F71-4FEF-99B5-6FC08BCA94D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B0C9B807-9F71-4FEF-99B5-6FC08BCA94D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B0C9B807-9F71-4FEF-99B5-6FC08BCA94D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D2C3804-628C-48A1-B9FB-31AE6B5BE886}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D2C3804-628C-48A1-B9FB-31AE6B5BE886}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D2C3804-628C-48A1-B9FB-31AE6B5BE886}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D2C3804-628C-48A1-B9FB-31AE6B5BE886}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,6 +73,7 @@ Global
 		{A62064AA-E964-5859-6162-C066EDCBF016} = {36D591C7-65C7-A0D1-1CBC-10CDE441BDC8}
 		{50614DB4-0809-4CB5-A050-99A497CCB5C8} = {36D591C7-65C7-A0D1-1CBC-10CDE441BDC8}
 		{B0C9B807-9F71-4FEF-99B5-6FC08BCA94D5} = {36D591C7-65C7-A0D1-1CBC-10CDE441BDC8}
+		{2D2C3804-628C-48A1-B9FB-31AE6B5BE886} = {36D591C7-65C7-A0D1-1CBC-10CDE441BDC8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5444202F-5EBE-44BC-89E6-A0828D3A82BB}

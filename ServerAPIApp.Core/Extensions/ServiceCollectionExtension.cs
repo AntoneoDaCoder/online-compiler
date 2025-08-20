@@ -21,6 +21,8 @@ namespace ServerAPIApp.Core.Extensions
 
             services.Configure<LanguageConfig>("sql", conf.GetSection("Languages:sql"));
 
+            services.Configure<LanguageConfig>("nodejs", conf.GetSection("Languages:nodejs"));
+
             return services;
         }
 
@@ -95,6 +97,21 @@ namespace ServerAPIApp.Core.Extensions
                         sp.GetRequiredService<CallbackService>()
                     );
                 }
+            );
+
+            services.AddSingleton<IKubernetesJobManager>
+            (sp =>
+            {
+                var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+
+                return new KubernetesJobManager
+                (
+                "nodejs",
+                sp.GetRequiredService<IKubernetes>(),
+                monitor,
+                sp.GetRequiredService<CallbackService>()
+                );
+            }
             );
 
             services.AddHostedService<ManagerAdapter>();

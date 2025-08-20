@@ -66,6 +66,22 @@ namespace ServerAPIApp.Core.Repositories
                             }
                         }
                         """
+                    },
+                    new AdditionalDefinition()
+                    {
+                        Language="nodejs",
+                        Value=
+                        """
+                        class Item {
+                            constructor(value, weight) {
+                                this.value = value;
+                                this.weight = weight;
+                            }
+                            get ratio() {
+                                return this.value / this.weight;
+                            }
+                        }   
+                        """
                     }
                 },
                 TestCases = new List<TestCase>()
@@ -356,7 +372,104 @@ namespace ServerAPIApp.Core.Repositories
                     InputExpression = "double result = new Solution().fractionalKnapsack(items, capacity);",
                     OutputExpression = "assertTrue(result > 0);"
                 },
+                  new()
+                    {
+                        Name = "Test_SingleItem_FitsExactly",
+                        TestLanguage = "nodejs",
+                        TestInitialization =
+                        """
+                                const items = [ new Item(60, 10) ];
+                                const capacity = 10;
+                        """,
+                        InputExpression = "const result = new Solution().fractionalKnapsack(items, capacity);",
+                        OutputExpression = "NodeTestGenerator.assertApproxEqual(result, 60.0, 1e-6, \"Test_SingleItem_FitsExactly\");"
+                    },
+                    new()
+                    {
+                        Name = "Test_SingleItem_Partial",
+                        TestLanguage = "nodejs",
+                        TestInitialization =
+                        """
+                               const items = [ new Item(100, 20) ];
+                               const capacity = 10;
+                        """,
+                        InputExpression = "const result = new Solution().fractionalKnapsack(items, capacity);",
+                        OutputExpression = "NodeTestGenerator.assertApproxEqual(result, 50.0, 1e-6, \"Test_SingleItem_Partial\");"
+                    },
+                    new()
+                    {
+                        Name = "Test_MultipleItems_Mixed",
+                        TestLanguage = "nodejs",
+                        TestInitialization =
+                        """
+                               const items = [
+                            new Item(60, 10),
+                            new Item(100, 20),
+                            new Item(120, 30)
+                        ];
+                               const capacity = 50;
+                        """,
+                        InputExpression = "const result = new Solution().fractionalKnapsack(items, capacity);",
+                        OutputExpression = "NodeTestGenerator.assertApproxEqual(result, 240.0, 1e-6, \"Test_MultipleItems_Mixed\");"
+                    },
+                    new()
+                    {
+                        Name = "Test_ZeroCapacity",
+                        TestLanguage = "nodejs",
+                        TestInitialization =
+                        """
+                                const items = [ new Item(100, 1) ];
+                        """,
+                        InputExpression = "const result = new Solution().fractionalKnapsack(items, 0);",
+                        OutputExpression = "NodeTestGenerator.assertApproxEqual(result, 0, 1e-6, \"Test_ZeroCapacity\");"
+                    },
+                    new()
+                    {
+                        Name = "Test_EmptyItems",
+                        TestLanguage = "nodejs",
+                        TestInitialization =
+                        """
+                                const items = [];
+                        """,
+                        InputExpression = "const result = new Solution().fractionalKnapsack(items, 50);",
+                        OutputExpression = "NodeTestGenerator.assertApproxEqual(result, 0, 1e-6, \"Test_EmptyItems\");"
+                    },
+                    new()
+                    {
+                        Name = "Test_HeavyItems_ShouldChooseBestRatio",
+                        TestLanguage = "nodejs",
+                        TestInitialization =
+                        """
+                               const items = [
+                            new Item(100, 50), // ratio = 2.0
+                            new Item(60, 10)   // ratio = 6.0
+                        ];
+                        const capacity = 20;
+                        """,
+                        InputExpression = "const result = new Solution().fractionalKnapsack(items, capacity);",
+                        OutputExpression = "NodeTestGenerator.assertApproxEqual(result, 80.0, 1e-6, \"Test_HeavyItems_ShouldChooseBestRatio\");"
+                    },
+                    new()
+                    {
+                        Name = "Test_Performance_WithLargeInput",
+                        TestLanguage = "nodejs",
+                        TestInitialization =
+                        """
+                               const items = [];
+                        const rnd = () => Math.floor(Math.random() * 1000) + 1;
+                        for (let i = 0; i < 1000; i++) {
+                            const value = rnd();
+                            const weight = Math.floor(Math.random() * 99) + 1;
+                            items.push(new Item(value, weight));
+                        }
+                        // тасуем массив
+                        items.sort(() => Math.random() - 0.5);
 
+                        const capacity = 10000;
+                        """,
+                        InputExpression = "const result = new Solution().fractionalKnapsack(items, capacity);",
+                        OutputExpression = "NodeTestGenerator.assertGreater(result, 0, \"Test_Performance_WithLargeInput\");"
+                    },
                 }
             };
 
