@@ -11,11 +11,13 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
-    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.25")
     implementation("junit:junit:4.13.2")
+    implementation(kotlin("stdlib"))
     implementation("org.hamcrest:hamcrest-core:1.3")
+    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.23")
+    implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:1.9.23")
 }
+
 
 application {
     mainClass.set("MainKt")
