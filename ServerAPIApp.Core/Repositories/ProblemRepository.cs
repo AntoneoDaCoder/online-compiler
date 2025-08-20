@@ -556,6 +556,29 @@ namespace ServerAPIApp.Core.Repositories
                         """,
                         InputExpression="int result = new Solution().findMinimum(arr);",
                         OutputExpression = "assertTrue(result == Arrays.stream(arr).min().getAsInt());"
+                    },
+                       new()
+                    {
+                        Name="Test_SingleValue",
+                        TestLanguage = "nodejs",
+                        TestInitialization =
+                        """
+                            const arr = [123456];
+                        """,
+                        InputExpression = "const result = new Solution().findMinimum(arr);",
+                        OutputExpression = "NodeTestGenerator.assertEqual(result, 123456, 'Test_SingleValue');"
+                    },
+                    new()
+                    {
+                        Name="Test_SeveralValues",
+                        TestLanguage = "nodejs",
+                        TestInitialization =
+                        """
+                            const size = Math.floor(Math.random() * 900) + 100;
+                            const arr = Array.from({ length: size }, () => Math.floor(Math.random() * (1200120 + 1000)) - 1000);
+                        """,
+                        InputExpression = "const result = new Solution().findMinimum(arr);",
+                        OutputExpression = "NodeTestGenerator.assertEqual(result, Math.min(...arr), 'Test_SeveralValues');"
                     }
                 }
             };
