@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "1.9.23"
     application
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 group = "org.example"
@@ -11,21 +12,32 @@ repositories {
 }
 
 dependencies {
-    implementation("junit:junit:4.13.2")
+    // сам раннер
     implementation(kotlin("stdlib"))
-    implementation("org.hamcrest:hamcrest-core:1.3")
     implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.23")
-    implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:1.9.23")
+
+    // JUnit нужен В РАНТАЙМЕ раннера (мы дергаем JUnitCore из кода)
+    implementation("junit:junit:4.13.2")
+    implementation("org.hamcrest:hamcrest-core:1.3")
 }
 
-
 application {
+    // поменяй, если у тебя другой main
     mainClass.set("MainKt")
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
 kotlin {
-    jvmToolchain(20)
+    // таргет под JVM 17/21 — на докер образ бери тот же
+    jvmToolchain(17)
+}
+
+// удобная жирная сборка со всеми зависимостями
+tasks.withType<Jar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.shadowJar {
+    archiveBaseName.set("runner")
+    archiveClassifier.set("")
+    archiveVersion.set("")
 }
