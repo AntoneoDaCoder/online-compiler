@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm") version "1.9.23"
     application
     id("com.github.johnrengelman.shadow") version "8.1.1"
+    kotlin("plugin.serialization") version "1.9.23"
 }
 
 group = "org.example"
@@ -19,6 +20,20 @@ dependencies {
     // JUnit нужен В РАНТАЙМЕ раннера (мы дергаем JUnitCore из кода)
     implementation("junit:junit:4.13.2")
     implementation("org.hamcrest:hamcrest-core:1.3")
+
+    implementation("io.ktor:ktor-server-cio:2.3.12")
+    implementation("io.ktor:ktor-server-content-negotiation:2.3.12")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+
+    implementation("io.ktor:ktor-client-core:2.3.12")
+    implementation("io.ktor:ktor-client-cio:2.3.12")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+
+
+    // Coroutines & Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 }
 
 application {

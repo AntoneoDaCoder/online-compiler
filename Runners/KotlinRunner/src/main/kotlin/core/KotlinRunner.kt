@@ -174,7 +174,7 @@ class KotlinRunner {
         val (exitCode, output) = runTestsInMemory(classes, solution.maxAllowedTimeInMilliseconds)
         val (status, reqStatus) = when {
             exitCode == 124 -> ExecutionStatus.TimedOut to RequestStatus.Failed
-            exitCode == 0   -> ExecutionStatus.Succeded to RequestStatus.Succeeded
+            exitCode == 0   -> ExecutionStatus.Succeeded to RequestStatus.Succeeded
             else            -> ExecutionStatus.RuntimeError to RequestStatus.Failed
         }
 
