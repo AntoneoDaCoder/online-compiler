@@ -582,27 +582,81 @@ namespace ServerAPIApp.Core.Repositories
 
             _database[compileErrorProblem.Name] = compileErrorProblem;
 
-            //var forbiddenProblem = new Problem
-            //{
-            //    Name = "NetworkUsage",
-            //    TestCases = new List<TestCase>
-            //    {
-            //        new TestCase
-            //        {
-            //            Name = "testAdd",
-            //            TestInitialization = "",
-            //            InputExpression = """
-            //            Solution.openSite(); 
-            //            int result = 2+3;
-            //            """,
-            //            OutputExpression = "assertEquals(5, result);"
-            //        }
-            //    }
-            //};
-            //_database[forbiddenProblem.Name] = forbiddenProblem;
+            var linqTemplate = new Problem()
+            {
+                AdditionalDefinitions = new List<AdditionalDefinition> 
+                {
+                    new()
+                    {
+                        Language="csharp",
+                        Value=@"public class Department
+                                {
+                                    public int Id { get; set; }
+                                    public string Name { get; set; }
+                                    public List<Employee> Employees { get; set; } = new();
+                                }
+
+                                public class Employee
+                                {
+                                    public int Id { get; set; }
+                                    public string Name { get; set; }
+                                    public int Age { get; set; }
+                                    public int DepartmentId { get; set; }
+                                    public Department Department { get; set; }
+                                }
+
+                                public class AppDbContext : DbContext
+                                {
+                                    public DbSet<Department> Departments { get; set; }
+                                    public DbSet<Employee> Employees { get; set; }
+
+                                    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+                                    protected override void OnModelCreating(ModelBuilder modelBuilder)
+                                    {
+                                        modelBuilder.Entity<Employee>()
+                                            .HasOne(o => o.Department)
+                                            .WithMany(c => c.Employees)
+                                            .HasForeignKey(o => o.DepartmentId);
+                                    }
+                                }"
+                        }
+                },
+                Name = "SimpleLinq",
+                TestCases = new List<TestCase>
+                {
+                    new TestCase
+                    {
+                        Name = "CheckResultDictionaryContent",
+                        TestLanguage = "csharp",
+                        TestInitialization = @"using var context = TestInfrastructure.CreateContext();
+                                               if (!context.Departments.Any())
+                                               {
+                                                   context.Departments.AddRange(
+                                                       new Department { Id = 1, Name = ""IT"" },
+                                                       new Department { Id = 2, Name = ""HR"" }
+                                                   );
+                                                   context.Employees.AddRange(
+                                                       new Employee { Id = 1, Name = ""Emp1"", Age = 35, DepartmentId = 1 },
+                                                       new Employee { Id = 2, Name = ""Emp2"", Age = 40, DepartmentId = 1 },
+                                                       new Employee { Id = 3, Name = ""Emp3"", Age = 28, DepartmentId = 2 },
+                                                       new Employee { Id = 4, Name = ""Emp4"", Age = 32, DepartmentId = 2 }
+                                                   );
+                                                   context.SaveChanges();
+                                                }
+                                               var solution = new Solution();
+                                               var result = solution.GetEmployeesOlderThan30GroupedByDepartment(context);",
+                        InputExpression = "",
+                        OutputExpression = @"NUnit.Framework.Assert.That(result.Count(), Is.EqualTo(2));
+                                            NUnit.Framework.Assert.That(result.Keys, Is.EquivalentTo(new[] { ""IT"", ""HR"" }));
+                                            NUnit.Framework.Assert.That(result[""IT""], Is.EquivalentTo(new[] { ""Emp1"", ""Emp2"" }));"
+                    }
+                }
+            };
+
+            _database[linqTemplate.Name] = linqTemplate;
 
         }
-
 
         public Problem GetProblem(string name)
         {

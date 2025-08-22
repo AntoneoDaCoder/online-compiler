@@ -346,6 +346,22 @@ namespace FrontendMockApp.Services
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
+                // LINQ examples
+                var linqSimpleExample = _testExamples["SimpleExample.cs"];
+                requestDto = new CodeRequestDto()
+                {
+                    Code = linqSimpleExample,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "SimpleLinq",
+                    Language = "csharp"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
 
                 //var timeOutJava = _testExamples["TimeOut.java"];
                 //requestDto = new CodeRequestDto()

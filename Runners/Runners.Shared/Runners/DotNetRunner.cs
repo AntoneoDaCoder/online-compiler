@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
 using NUnitLite;
 using Shared.DTOs;
@@ -25,6 +26,7 @@ namespace Runners.Shared.Runners
                 using System.Threading.Tasks;
                 using NUnit.Framework;
                 using NUnitLite;
+                using Microsoft.EntityFrameworkCore;
                 """;
         const string _runtimeConfig = """
                 {
@@ -40,7 +42,8 @@ namespace Runners.Shared.Runners
 
         static string[] _dllsToCopy = new[] {
             "nunitlite.dll",
-            "nunit.framework.dll"
+            "nunit.framework.dll",
+            "Microsoft.EntityFrameworkCore.dll",
         };
         static ProcessStartInfo _pInfo = new ProcessStartInfo
         {
@@ -56,30 +59,68 @@ namespace Runners.Shared.Runners
 
         static DotNetRunner()
         {
-            _metadataCache = new List<AssemblyMetadata>
+            _metadataCache = new List<AssemblyMetadata>();
+
+            var systemAssemblies = new[]
             {
-                AssemblyMetadata.CreateFromFile(typeof(object).Assembly.Location),
-                AssemblyMetadata.CreateFromFile(typeof(Console).Assembly.Location),
-                AssemblyMetadata.CreateFromFile(typeof(Enumerable).Assembly.Location),
-                AssemblyMetadata.CreateFromFile(typeof(List<>).Assembly.Location),
-                AssemblyMetadata.CreateFromFile(Assembly.Load("System.Runtime").Location),
-                AssemblyMetadata.CreateFromFile(typeof(Task).Assembly.Location),
-                AssemblyMetadata.CreateFromFile(typeof(Assert).Assembly.Location),
-                AssemblyMetadata.CreateFromFile(typeof(AutoRun).Assembly.Location)
+                typeof(object).Assembly.Location,
+                typeof(Console).Assembly.Location,
+                typeof(Enumerable).Assembly.Location,
+                typeof(List<>).Assembly.Location,
+                Assembly.Load("System.Runtime").Location,
+                typeof(Task).Assembly.Location,
+                typeof(Assert).Assembly.Location,
+                typeof(AutoRun).Assembly.Location,
+                typeof(DbContext).Assembly.Location,
+                typeof(DbContextOptionsBuilder).Assembly.Location,
             };
+
+            foreach (var dll in systemAssemblies)
+            {
+                _metadataCache.Add(AssemblyMetadata.CreateFromFile(dll));
+            }
+
+            var appDlls = Directory.GetFiles("/app", "*.dll");
+
+            foreach (var dll in appDlls)
+            {
+                try
+                {
+                    _metadataCache.Add(AssemblyMetadata.CreateFromFile(dll));
+
+                    var dest = Path.Combine("/tmp", Path.GetFileName(dll));
+                    File.Copy(dll, dest, overwrite: true);
+
+                    Console.WriteLine($"Loaded & copied: {Path.GetFileName(dll)}");
+                }
+                catch
+                {
+                    Console.WriteLine($"Skipped: {Path.GetFileName(dll)}");
+                }
+            }
+
+            var extraAssemblies = new[]
+            {
+                "System.Data.Common.dll",
+                "System.Linq.Expressions.dll",
+                "System.ComponentModel.TypeConverter.dll",
+                "System.Collections.dll",
+            };
+
+            string runtimeDir = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
+            foreach (var dllName in extraAssemblies)
+            {
+                var dllPath = Path.Combine(runtimeDir, dllName);
+                if (File.Exists(dllPath))
+                {
+                    _metadataCache.Add(AssemblyMetadata.CreateFromFile(dllPath));
+                }
+            }
         }
 
         public DotNetRunner()
         {
             File.WriteAllText(_tmpRuntimeConfigPath, _runtimeConfig);
-
-            foreach (var dll in _dllsToCopy)
-            {
-                var source = Path.Combine("/app", dll);
-                var dest = Path.Combine("/tmp", dll);
-                if (File.Exists(source))
-                    File.Copy(source, dest, overwrite: true);
-            }
         }
 
         public string WrapCode(ProblemSolutionDto problemSolutionDto)
@@ -87,8 +128,31 @@ namespace Runners.Shared.Runners
             var sb = new StringBuilder(_boilerplateUsings);
 
             foreach (var definition in problemSolutionDto.Problem.AdditionalDefinitions)
+            {
                 sb.AppendLine(definition.Value);
 
+                if (definition.Value.Contains("DbContext"))
+                {
+                    sb.AppendLine(@"public static class TestInfrastructure
+                                {
+                                    public static AppDbContext CreateContext()
+                                    {
+                                       var options = new DbContextOptionsBuilder<AppDbContext>()
+                                            .UseInMemoryDatabase(""TestDb"")
+                                            .Options;
+
+                                        var context = new AppDbContext(options);
+                                        context.Database.EnsureDeleted();
+                                        context.Database.EnsureCreated();
+
+                                        return context;
+                                    }
+                                }"
+                    );
+                }
+            }
+                
+            
             sb.AppendLine(
                 $$"""
             {{problemSolutionDto.Code}}
