@@ -3,7 +3,9 @@ package dto
 import enums.ExecutionStatus
 import java.time.Duration
 import java.time.LocalDateTime
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class ExecutionResultDto(
     val status: ExecutionStatus,
     val exitCode: Int,

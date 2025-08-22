@@ -1,8 +1,10 @@
 package enums
+import kotlinx.serialization.Serializable
 
+@Serializable
 enum class ExecutionStatus(val code: Int) {
     NoStatus(0),
-    Succeded(1),
+    Succeeded(1),
     CompileError(2),
     RuntimeError(3),
     TimedOut(4),

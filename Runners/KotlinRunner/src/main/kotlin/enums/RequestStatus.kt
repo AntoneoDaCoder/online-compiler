@@ -1,5 +1,7 @@
 package enums
+import kotlinx.serialization.Serializable
 
+@Serializable
 enum class RequestStatus (val code:Int){
     NoStatus (0),
     Acknowledged(1),
