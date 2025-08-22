@@ -11,6 +11,7 @@ echo Building and loading csharp runner image
 docker build -t csharp-runner:local -f Runners/DotNetRunner/Dockerfile .
 minikube image load csharp-runner:local
 
+:: echo Building and loading swift runner image
 :: docker build -t swift-runner:local -f Runners/SwiftRunner/Dockerfile .
 :: minikube image load swift-runner:local
 
@@ -18,10 +19,13 @@ echo Building and loading java runner image
 docker build -t java-runner:local -f Runners/JavaRunner/Dockerfile Runners/JavaRunner/
 minikube image load java-runner:local
 
-
 echo Building and loading sql runner image
 docker build -t sql-runner:local -f Runners/SqlRunner/Dockerfile .
 minikube image load sql-runner:local
+
+echo Building and loading nodejs runner image
+docker build -t nodejs-runner:local -f Runners/NodeJsRunner/Dockerfile .
+minikube image load nodejs-runner:local
 
 
 echo Deploying API to Kubernetes

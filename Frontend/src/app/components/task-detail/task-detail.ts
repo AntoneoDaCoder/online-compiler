@@ -24,6 +24,7 @@ export class TaskDetailComponent implements OnInit {
     { id: 'csharp', name: 'C#' },
     { id: 'java', name: 'Java' },
     { id: "sql", name: "SQL" },
+    { id: 'nodejs', name: 'NodeJS' }
     //  { id: 'swift', name: 'Swift' }
   ];
 
@@ -108,10 +109,10 @@ public static class Solution {
 }`
     },
     {
-      language:'csharp',
-      taskName:'ArrayMin',
+      language: 'csharp',
+      taskName: 'ArrayMin',
       body:
-`
+        `
 public class Solution
 {
        public int FindMinimum(int[] arr)
@@ -122,15 +123,51 @@ public class Solution
 `
     },
     {
-      language:'java',
-      taskName:'ArrayMin',
+      language: 'java',
+      taskName: 'ArrayMin',
       body:
-`
+        `
 public static class Solution
 {
       public int findMinimum(int[] arr)
       {
           //your solution
+      }
+}
+`
+    },
+    {
+      language: 'nodejs',
+      taskName: 'FractionalKnapsack',
+      body:
+`
+/* Additional definition for convenience
+class Item {
+    constructor(value, weight) {
+        this.value = value;
+        this.weight = weight;
+    }
+    get ratio() {
+        return this.value / this.weight;
+    }
+}   
+*/
+
+class Solution {
+    fractionalKnapsack(items, capacity) {
+        //your solution here
+    }
+}
+`
+    },
+    {
+      language:'nodejs',
+      taskName:'ArrayMin',
+      body:
+`
+class Solution {
+      findMinimum(arr) {
+        //your solution here
       }
 }
 `
