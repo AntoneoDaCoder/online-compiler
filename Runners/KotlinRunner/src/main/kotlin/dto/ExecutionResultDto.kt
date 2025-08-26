@@ -3,19 +3,22 @@ package dto
 import enums.ExecutionStatus
 import java.time.Duration
 import java.time.LocalDateTime
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Contextual
 
 @Serializable
 data class ExecutionResultDto(
+    @SerialName("Status")
     val status: ExecutionStatus,
-    val exitCode: Int,
-    val consoleOutput: String?,
+    @SerialName("ExitCode")
+    val exitCode: Int = 0,
+    @SerialName("ConsoleOutput")
+    val consoleOutput: String = "",
     @Contextual
-    val requestSentAt: LocalDateTime,
+    @SerialName("RequestSentAt")
+    val requestSentAt: java.time.LocalDateTime,
     @Contextual
-    val responseSentAt: LocalDateTime
-) {
-    val latencyInSeconds: Double
-        get() = Duration.between(requestSentAt, responseSentAt).toMillis() / 1000.0
-}
+    @SerialName("ResponseSentAt")
+    val responseSentAt: java.time.LocalDateTime
+)

@@ -298,7 +298,7 @@ namespace Runners.Shared.Runners
             else
             {
                 result.Status = RequestStatus.Succeeded;
-                result.Result.Status = ExecutionStatus.Succeded;
+                result.Result.Status = ExecutionStatus.Succeeded;
 
                 Console.WriteLine("[NodeRunner] Successfully executed");
             }

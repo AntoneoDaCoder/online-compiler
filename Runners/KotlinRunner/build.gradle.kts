@@ -16,14 +16,18 @@ dependencies {
     // сам раннер
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.23")
+    implementation("org.slf4j:slf4j-simple:2.0.12")
 
     // JUnit нужен В РАНТАЙМЕ раннера (мы дергаем JUnitCore из кода)
     implementation("junit:junit:4.13.2")
     implementation("org.hamcrest:hamcrest-core:1.3")
 
+
     implementation("io.ktor:ktor-server-cio:2.3.12")
     implementation("io.ktor:ktor-server-content-negotiation:2.3.12")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+    implementation("io.ktor:ktor-server-call-logging:2.3.12")
+    implementation("io.ktor:ktor-server-status-pages:2.3.12")
 
     implementation("io.ktor:ktor-client-core:2.3.12")
     implementation("io.ktor:ktor-client-cio:2.3.12")
