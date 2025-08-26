@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using Npgsql;
 using Shared.DTOs;
 using Shared.Enums;
 using Shared.Models;
@@ -6,37 +6,37 @@ using System.Text;
 
 namespace Runners.Shared.Runners
 {
-    public class SqlRunner : IRunner
+    public class PostgresqlRunner : IRunner
     {
-        private readonly string _connectionString = "Data Source=shared;Mode=Memory;Cache=Shared";
+        private readonly string _connectionString = "Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=postgresdb;Username=postgresadmin;Password=admin123";
         private Problem _problem;
         private string _solutionCode;
-        public SqlRunner()
+        public PostgresqlRunner()
         {
-            Console.WriteLine("[SQL Runner] Runner started.");
+            Console.WriteLine("[PostgreSQL Runner] Runner started.");
         }
 
         public async Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
         {
             try
             {
-                using var connection = new SqliteConnection(_connectionString);
+                await using var connection = new NpgsqlConnection(_connectionString);
                 await connection.OpenAsync(cancellationToken);
 
-                using var transaction = connection.BeginTransaction();
+                await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-                using var cmd = connection.CreateCommand();
+                await using var cmd = connection.CreateCommand();
                 cmd.CommandText = fullCode;
 
                 await cmd.ExecuteNonQueryAsync(cancellationToken);
 
-                transaction.Rollback();
+                await transaction.RollbackAsync(cancellationToken);
 
                 return (true, string.Empty);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[SQL Runner] Exception while compiling:"+ ex.Message);
+                Console.WriteLine("[PostgreSQL Runner] Exception while compiling:" + ex.Message);
 
                 return (false, ex.Message);
             }
@@ -52,22 +52,23 @@ namespace Runners.Shared.Runners
             var result = new CodeResponseDto()
             {
                 RequestId = requestId,
-                Language = "sql",
+                Language = "postgresql",
                 Result = new ExecutionResultDto()
                 {
                     RequestSentAt = requestDate,
                 }
             };
 
-            using var connection = new SqliteConnection(_connectionString);
+            await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
-            using var transaction = connection.BeginTransaction();
+
+            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
             try
             {
                 foreach (var def in _problem.AdditionalDefinitions)
                 {
-                    if (def.Language?.ToLower() == "sql" && !string.IsNullOrWhiteSpace(def.Value))
+                    if (def.Language?.ToLower() == "postgresql" && !string.IsNullOrWhiteSpace(def.Value))
                     {
                         using var cmdSeed = connection.CreateCommand();
                         cmdSeed.CommandText = def.Value;
@@ -91,7 +92,7 @@ namespace Runners.Shared.Runners
 
                     bool passed = int.TryParse(scalarResult?.ToString(), out var code) && code == 1;
 
-                    Console.WriteLine("[SQL Runner] Test " + test.Name + ":" + passed);
+                    Console.WriteLine("[PostgreSQL Runner] Test " + test.Name + ":" + passed);
 
                     if (!passed)
                     {
@@ -126,7 +127,7 @@ namespace Runners.Shared.Runners
 
         public string WrapCode(ProblemSolutionDto problemSolutionDto)
         {
-            Console.WriteLine("[SQL Runner] Start wrapping code.");
+            Console.WriteLine("[PostgreSQL Runner] Start wrapping code.");
 
             _problem = problemSolutionDto.Problem;
             _solutionCode = problemSolutionDto.Code;
@@ -136,7 +137,7 @@ namespace Runners.Shared.Runners
             // Seeding
             foreach (var def in problemSolutionDto.Problem.AdditionalDefinitions)
             {
-                if (def.Language?.ToLower() == "sql" && !string.IsNullOrWhiteSpace(def.Value))
+                if (def.Language?.ToLower() == "postgresql" && !string.IsNullOrWhiteSpace(def.Value))
                 {
                     sb.AppendLine(def.Value);
                 }
@@ -151,7 +152,7 @@ namespace Runners.Shared.Runners
             // Tests
             foreach (var testCase in problemSolutionDto.Problem.TestCases)
             {
-                if (testCase.TestLanguage?.ToLower() == "sql" && !string.IsNullOrWhiteSpace(testCase.InputExpression))
+                if (testCase.TestLanguage?.ToLower() == "postgresql" && !string.IsNullOrWhiteSpace(testCase.InputExpression))
                 {
                     var testSql = testCase.InputExpression.Replace("(...)", "user_result");
 
@@ -162,7 +163,7 @@ namespace Runners.Shared.Runners
 
             var finalSql = sb.ToString();
 
-            Console.WriteLine("[SQL Runner] Final sql:" + finalSql);
+            Console.WriteLine("[PostgreSQL Runner] Final sql:" + finalSql);
 
             return finalSql;
         }

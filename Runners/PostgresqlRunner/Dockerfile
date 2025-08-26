@@ -6,13 +6,13 @@ WORKDIR /src
 
 RUN useradd -u 1001 -m runneruser
 
-COPY ["Runners/SqlRunner/","Runners/SqlRunner/"]
+COPY ["Runners/PostgresqlRunner/","Runners/PostgresqlRunner/"]
 COPY ["Runners/Runners.Shared/","Runners/Runners.Shared/"]
 COPY ["Shared/","Shared/"]
 
-RUN dotnet restore "Runners/SqlRunner/SqlRunner.csproj"
+RUN dotnet restore "Runners/PostgresqlRunner/PostgresqlRunner.csproj"
 
-WORKDIR /src/Runners/SqlRunner
+WORKDIR /src/Runners/PostgresqlRunner
 RUN dotnet build -c Release -o /app/build
 
 FROM build AS publish
@@ -24,4 +24,4 @@ COPY --from=publish /app/publish .
 
 USER 1001
 
-ENTRYPOINT ["dotnet", "SqlRunner.dll"]
+ENTRYPOINT ["dotnet", "PostgresqlRunner.dll"]

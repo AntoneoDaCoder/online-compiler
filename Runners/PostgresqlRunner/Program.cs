@@ -12,7 +12,7 @@ class Runner
             cts.Cancel();
         };
 
-        using (var runner = new RunnerBase(new SqlRunner()))
+        using (var runner = new RunnerBase(new PostgresqlRunner()))
         {
             await runner.ListenAsync(cts.Token);
         }
