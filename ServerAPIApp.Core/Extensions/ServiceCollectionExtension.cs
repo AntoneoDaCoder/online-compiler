@@ -23,6 +23,8 @@ namespace ServerAPIApp.Core.Extensions
 
             services.Configure<LanguageConfig>("nodejs", conf.GetSection("Languages:nodejs"));
 
+            services.Configure<LanguageConfig>("kotlin", conf.GetSection("Languages:kotlin"));
+
             return services;
         }
 
@@ -113,6 +115,21 @@ namespace ServerAPIApp.Core.Extensions
                 );
             }
             );
+
+            services.AddSingleton<IKubernetesJobManager>
+         (sp =>
+         {
+             var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+
+             return new KubernetesJobManager
+             (
+             "kotlin",
+             sp.GetRequiredService<IKubernetes>(),
+             monitor,
+             sp.GetRequiredService<CallbackService>()
+             );
+         }
+         );
 
             services.AddHostedService<ManagerAdapter>();
 
