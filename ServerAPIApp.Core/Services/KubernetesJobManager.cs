@@ -59,6 +59,8 @@ namespace ServerAPIApp.Core.Services
 
             await EnsureNamespaceExistsAsync(_cts.Token);
 
+            await EnsureNetworkPolicyExistsAsync(_cts.Token);
+
             await EnsureResourceQuotaExistsAsync(_cts.Token);
 
             await EnsureDeploymentExistsAsync(_cts.Token);
@@ -228,6 +230,103 @@ namespace ServerAPIApp.Core.Services
                 await _client.CoreV1.CreateNamespaceAsync(ns, cancellationToken: token);
             }
         }
+
+        private async Task EnsureNetworkPolicyExistsAsync(CancellationToken token)
+        {
+            try
+            {
+                await _client.NetworkingV1.ReadNamespacedNetworkPolicyAsync(
+                    name: $"{Language}-runner-egress-policy",
+                    namespaceParameter: _namespace,
+                    cancellationToken: token);
+            }
+            catch
+            {
+                var policy = new V1NetworkPolicy
+                {
+                    Metadata = new V1ObjectMeta
+                    {
+                        Name = $"{Language}-runner-egress-policy",
+                        NamespaceProperty = _namespace
+                    },
+                    Spec = new V1NetworkPolicySpec
+                    {
+                        PodSelector = new V1LabelSelector
+                        {
+                            MatchLabels = new Dictionary<string, string>
+                    {
+                        { "app", _appLabel }
+                    }
+                        },
+                        PolicyTypes = new List<string> { "Egress" },
+                        Egress = new List<V1NetworkPolicyEgressRule>
+                {
+                    new V1NetworkPolicyEgressRule
+                    {
+                        To = new List<V1NetworkPolicyPeer>
+                        {
+                            new V1NetworkPolicyPeer
+                            {
+                                NamespaceSelector = new V1LabelSelector
+                                {
+                                    MatchLabels = new Dictionary<string, string>
+                                    {
+                                        { "kubernetes.io/metadata.name", "kube-system" }
+                                    }
+                                },
+                                PodSelector = new V1LabelSelector
+                                {
+                                    MatchLabels = new Dictionary<string, string>
+                                    {
+                                        { "k8s-app", "kube-dns" }
+                                    }
+                                }
+                            }
+                        },
+                        Ports = new List<V1NetworkPolicyPort>
+                        {
+                            new V1NetworkPolicyPort { Port = 53, Protocol = "UDP" },
+                            new V1NetworkPolicyPort { Port = 53, Protocol = "TCP" }
+                        }
+                    },
+                    new V1NetworkPolicyEgressRule
+                    {
+                        To = new List<V1NetworkPolicyPeer>
+                        {
+                            new V1NetworkPolicyPeer
+                            {
+                                NamespaceSelector = new V1LabelSelector
+                                {
+                                    MatchLabels = new Dictionary<string, string>
+                                    {
+                                        { "kubernetes.io/metadata.name", "default" }
+                                    }
+                                },
+                                PodSelector = new V1LabelSelector
+                                {
+                                    MatchLabels = new Dictionary<string, string>
+                                    {
+                                        { "app", "api-server" }
+                                    }
+                                }
+                            }
+                        },
+                        Ports = new List<V1NetworkPolicyPort>
+                        {
+                            new V1NetworkPolicyPort { Port = 8080, Protocol = "TCP" }
+                        }
+                    }
+                }
+                    }
+                };
+
+                await _client.NetworkingV1.CreateNamespacedNetworkPolicyAsync(
+                    body: policy,
+                    namespaceParameter: _namespace,
+                    cancellationToken: token);
+            }
+        }
+
 
         private async Task EnsureResourceQuotaExistsAsync(CancellationToken token)
         {
