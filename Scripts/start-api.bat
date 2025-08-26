@@ -27,6 +27,10 @@ echo Building and loading nodejs runner image
 docker build -t nodejs-runner:local -f Runners/NodeJsRunner/Dockerfile .
 minikube image load nodejs-runner:local
 
+echo Building and loading kotlin runner image
+docker build -t kotlin-runner:local -f Runners/KotlinRunner/Dockerfile .
+minikube image load kotlin-runner:local
+
 
 echo Deploying API to Kubernetes
 kubectl apply -f k8s/rbac.yaml
