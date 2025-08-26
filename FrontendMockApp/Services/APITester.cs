@@ -280,7 +280,7 @@ namespace FrontendMockApp.Services
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
-                // sql examples
+                // postgresql examples
 
                 requestDto = new CodeRequestDto()
                 {
@@ -289,7 +289,7 @@ namespace FrontendMockApp.Services
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "CustomersWithExpensiveOrders",
-                    Language = "sql"
+                    Language = "postgresql"
                 };
 
                 _stats.RequestsSent++;
@@ -303,7 +303,7 @@ namespace FrontendMockApp.Services
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "CategoriesWithHighTotalPrice",
-                    Language = "sql"
+                    Language = "postgresql"
                 };
 
                 _stats.RequestsSent++;
@@ -317,7 +317,7 @@ namespace FrontendMockApp.Services
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "StudentsWithMultipleCourses",
-                    Language = "sql"
+                    Language = "postgresql"
                 };
 
                 _stats.RequestsSent++;
