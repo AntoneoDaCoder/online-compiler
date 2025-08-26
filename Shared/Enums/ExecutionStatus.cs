@@ -3,7 +3,7 @@
     public enum ExecutionStatus
     {
         NoStatus = 0,
-        Succeded = 1,
+        Succeeded = 1,
         CompileError = 2,
         RuntimeError = 3,
         TimedOut = 4,
