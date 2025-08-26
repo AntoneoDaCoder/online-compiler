@@ -82,7 +82,18 @@ namespace ServerAPIApp.Core.Repositories
                             }
                         }   
                         """
-                    }
+                    },
+                    new AdditionalDefinition()
+                    {
+                        Language = "kotlin",
+                        Value =
+                        """
+                            data class Item(val value: Int, val weight: Int) {
+                            val ratio: Double
+                                get() = value.toDouble() / weight
+                            }
+                        """
+                    },
                 },
                 TestCases = new List<TestCase>()
                 {
@@ -470,8 +481,103 @@ namespace ServerAPIApp.Core.Repositories
                         InputExpression = "const result = new Solution().fractionalKnapsack(items, capacity);",
                         OutputExpression = "NodeTestGenerator.assertGreater(result, 0, \"Test_Performance_WithLargeInput\");"
                     },
-                }
-            };
+					new()
+				    {
+	                    Name = "Test_SingleItem_FitsExactly",
+	                    TestLanguage = "kotlin",
+	                    TestInitialization =
+                        """
+                            val items = arrayOf(Item(60, 10))
+                            val capacity = 10
+                        """,
+	                    InputExpression = "val result = Solution().fractionalKnapsack(items, capacity)",
+	                    OutputExpression = "assertEquals(60.0, result, 1e-6)"
+                    },
+                    new()
+                    {
+	                    Name = "Test_SingleItem_Partial",
+	                    TestLanguage = "kotlin",
+	                    TestInitialization =
+                        """
+	                        val items = arrayOf(Item(100, 20))
+	                        val capacity = 10
+	                    """,
+	                    InputExpression = "val result = Solution().fractionalKnapsack(items, capacity)",
+	                    OutputExpression = "assertEquals(50.0, result, 1e-6)"
+                    },
+                    new()
+                    {
+	                    Name = "Test_MultipleItems_Mixed",
+	                    TestLanguage = "kotlin",
+	                    TestInitialization =
+                        """
+	                     val items = arrayOf(
+	                    	                    Item(60, 10),
+	                    	                    Item(100, 20),
+	                    	                    Item(120, 30)
+	                                        )
+	                                        val capacity = 50
+	                    """,
+	                    InputExpression = "val result = Solution().fractionalKnapsack(items, capacity)",
+	                    OutputExpression = "assertEquals(240.0, result, 1e-6)"
+                    },
+                    new()
+                    {
+	                    Name = "Test_ZeroCapacity",
+	                    TestLanguage = "kotlin",
+	                    TestInitialization =
+                        """
+	                        val items = arrayOf(Item(100, 1))
+	                    """,
+	                    InputExpression = "val result = Solution().fractionalKnapsack(items, 0)",
+	                    OutputExpression = "assertEquals(0.0, result, 1e-6)"
+                    },
+                    new()
+                    {
+	                    Name = "Test_EmptyItems",
+	                    TestLanguage = "kotlin",
+	                    TestInitialization =
+                        """
+	                        val items = emptyArray<Item>()
+	                    """,
+	                    InputExpression = "val result = Solution().fractionalKnapsack(items, 50)",
+	                    OutputExpression = "assertEquals(0.0, result, 1e-6)"
+                    },
+                    new()
+                    {
+	                    Name = "Test_HeavyItems_ShouldChooseBestRatio",
+	                    TestLanguage = "kotlin",
+	                    TestInitialization =
+                        """
+	                                        val items = arrayOf(
+	                    	                    Item(100, 50),
+	                    	                    Item(60, 10)
+	                                        )
+	                                        val capacity = 20
+	                    """,
+	                    InputExpression = "val result = Solution().fractionalKnapsack(items, capacity)",
+	                    OutputExpression = "assertEquals(80.0, result, 1e-6)"
+                    },
+                     new()
+                     {
+	                    Name = "Test_Performance_WithLargeInput",
+	                    TestLanguage = "kotlin",
+	                    TestInitialization =
+                        """
+	                                            val rnd = java.util.Random(42)
+	                                            val items = Array(1000) {
+	                    	                    val value = rnd.nextInt(999) + 1
+	                    	                    val weight = rnd.nextInt(99) + 1
+	                    	                    Item(value, weight)
+	                                        }
+	                                        items.shuffle()
+	                                        val capacity = 10000
+	                    """,
+	                    InputExpression = "val result = Solution().fractionalKnapsack(items, capacity)",
+	                    OutputExpression = "assertTrue(result > 0)"
+                    }
+				}
+			};
 
             var lightTemplate = new Problem()
             {
