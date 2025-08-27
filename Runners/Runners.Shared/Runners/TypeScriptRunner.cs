@@ -33,28 +33,20 @@ namespace Runners.Shared.Runners
         };
 
         readonly string[] _bannedModules = {
-            // Файловая система
             "fs", "fs/promises", "path",
 
-            // Сетевые модули
             "net", "dgram", "tls", "http", "https", "http2",
 
-            // Дочерние процессы и управление системой
             "child_process", "cluster", "repl",
 
-            // Модули исполнения и компиляции кода
             "vm", "eval", "async_hooks",
 
-            // Архивы и бинарные потоки (могут читать из FS/сети)
             "zlib", "stream", "crypto",
 
-            // Прямой доступ к модулям и системным путям
             "os", "perf_hooks",
 
-            // Внешние процессы через URL / IPC
             "inspector", "dns", "readline", "tty",
 
-            // Другие опасные / обходные
             "events", "util", "buffer", "console"
         };
 
@@ -129,8 +121,6 @@ namespace Runners.Shared.Runners
 
         public async Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
         {
-            Console.WriteLine("CompileCodeAsync");
-
             foreach (var pattern in _bannedModules)
             {
                 if (Regex.IsMatch(fullCode, $@"require\(['""]{pattern}['""]\)"))
@@ -161,10 +151,6 @@ namespace Runners.Shared.Runners
             var compilationErrors = await process.StandardError.ReadToEndAsync(cancellationToken);
             var compilationOutput = await process.StandardOutput.ReadToEndAsync(cancellationToken);
 
-            Console.WriteLine(process.ExitCode);
-            Console.WriteLine(compilationOutput);
-            Console.WriteLine(compilationErrors);
-
             if (process.ExitCode != 0)
             {
                 File.Delete(_tmpTsFilePath);
@@ -179,8 +165,6 @@ namespace Runners.Shared.Runners
 
         public async Task<CodeResponseDto> ExecuteCodeAsync(Guid requestId, DateTime requestDate, CancellationToken cancellationToken)
         {
-            Console.WriteLine("ExecuteCodeAsync");
-
             var result = new CodeResponseDto()
             {
                 RequestId = requestId,
@@ -309,19 +293,11 @@ namespace Runners.Shared.Runners
 
             if (disposing)
             {
-                try
-                {
+                if (File.Exists(_tmpTsFilePath))
                     File.Delete(_tmpTsFilePath);
+
+                if (File.Exists(_tmpJsFilePath))
                     File.Delete(_tmpJsFilePath);
-                }
-                catch (IOException ex)
-                {
-                    Console.WriteLine($"[Cleanup Warning] IO error: {ex.Message}");
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    Console.WriteLine($"[Cleanup Warning] Access denied: {ex.Message}");
-                }
             }
 
             _isDisposed = true;

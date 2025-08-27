@@ -92,11 +92,9 @@ namespace Runners.Shared
             }
         }
 
-
         private async Task ExecuteUserCodeAsync(ProblemSolutionDto request, CancellationToken cancellationToken)
         {
             var wrappedCode = _runner.WrapCode(request);
-
 
             Console.WriteLine("[Runner] Compiling code");
 
