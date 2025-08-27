@@ -313,7 +313,6 @@ namespace Runners.Shared.Runners
                             + (!string.IsNullOrWhiteSpace(errorString) ? errorString : "");
                     }
                 }
-
                 else
                 {
                     result.Status = RequestStatus.Succeeded;
@@ -348,7 +347,6 @@ namespace Runners.Shared.Runners
                     return Task.FromResult((false, $"Banned import detected: {pattern}"));
                 }
             }
-
 
             File.WriteAllText(_tmpJsFilePath, fullCode);
 

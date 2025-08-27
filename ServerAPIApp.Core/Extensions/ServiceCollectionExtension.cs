@@ -1,11 +1,11 @@
 ﻿using k8s;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.Configs;
 using ServerAPIApp.Core.Repositories;
 using ServerAPIApp.Core.Services;
-using ServerAPIApp.Core.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace ServerAPIApp.Core.Extensions
 {
@@ -19,11 +19,13 @@ namespace ServerAPIApp.Core.Extensions
 
             services.Configure<LanguageConfig>("java", conf.GetSection("Languages:java"));
 
-            services.Configure<LanguageConfig>("sql", conf.GetSection("Languages:sql"));
+            services.Configure<LanguageConfig>("postgresql", conf.GetSection("Languages:postgresql"));
 
             services.Configure<LanguageConfig>("nodejs", conf.GetSection("Languages:nodejs"));
 
             services.Configure<LanguageConfig>("kotlin", conf.GetSection("Languages:kotlin"));
+
+            services.Configure<LanguageConfig>("typescript", conf.GetSection("Languages:typescript"));
 
             return services;
         }
@@ -93,7 +95,7 @@ namespace ServerAPIApp.Core.Extensions
 
                     return new KubernetesJobManager
                     (
-                        "sql",
+                        "postgresql",
                         sp.GetRequiredService<IKubernetes>(),
                         monitor,
                         sp.GetRequiredService<CallbackService>()
@@ -108,10 +110,10 @@ namespace ServerAPIApp.Core.Extensions
 
                 return new KubernetesJobManager
                 (
-                "nodejs",
-                sp.GetRequiredService<IKubernetes>(),
-                monitor,
-                sp.GetRequiredService<CallbackService>()
+                    "nodejs",
+                    sp.GetRequiredService<IKubernetes>(),
+                    monitor,
+                    sp.GetRequiredService<CallbackService>()
                 );
             }
             );
@@ -130,6 +132,20 @@ namespace ServerAPIApp.Core.Extensions
              );
          }
          );
+
+            services.AddSingleton<IKubernetesJobManager>
+            (sp =>
+            {
+                var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+                return new KubernetesJobManager
+                (
+                    "typescript",
+                    sp.GetRequiredService<IKubernetes>(),
+                    monitor,
+                    sp.GetRequiredService<CallbackService>()
+                );
+            }
+            );
 
             services.AddHostedService<ManagerAdapter>();
 

@@ -6,22 +6,26 @@ WORKDIR /src
 
 RUN useradd -u 1001 -m runneruser
 
-COPY ["Runners/SqlRunner/","Runners/SqlRunner/"]
+COPY ["Runners/TypeScriptRunner/","Runners/TypeScriptRunner/"]
 COPY ["Runners/Runners.Shared/","Runners/Runners.Shared/"]
 COPY ["Shared/","Shared/"]
 
-RUN dotnet restore "Runners/SqlRunner/SqlRunner.csproj"
+RUN dotnet restore "Runners/TypeScriptRunner/TypeScriptRunner.csproj"
 
-WORKDIR /src/Runners/SqlRunner
+WORKDIR /src/Runners/TypeScriptRunner
 RUN dotnet build -c Release -o /app/build
 
 FROM build AS publish
 RUN dotnet publish -c Release -o /app/publish
 
 FROM base AS final
+
+RUN apk add --no-cache nodejs npm
+RUN npm install -g typescript
+
 WORKDIR /app
 COPY --from=publish /app/publish .
 
 USER 1001
 
-ENTRYPOINT ["dotnet", "SqlRunner.dll"]
+ENTRYPOINT ["dotnet", "TypeScriptRunner.dll"]

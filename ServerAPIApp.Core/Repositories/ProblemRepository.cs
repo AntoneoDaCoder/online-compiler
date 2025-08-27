@@ -685,7 +685,54 @@ namespace ServerAPIApp.Core.Repositories
                         """,
                         InputExpression = "const result = new Solution().findMinimum(arr);",
                         OutputExpression = "NodeTestGenerator.assertEqual(result, Math.min(...arr), 'Test_SeveralValues');"
-                    }
+                    },
+                    new()
+                    {
+                        Name="Test_MixedValues",
+                        TestLanguage = "typescript",
+                        TestInitialization =
+                        """
+                            const arr: number[] = [10, -5, 0, 100, -20, 50];
+                        """,
+                        InputExpression = "const result = new Solution().findMinimum(arr);",
+                        OutputExpression = "NodeTestGenerator.assertEqual(result, -20, 'Test_MixedValues');"
+                    },
+                    new()
+                    {
+                        Name="Test_SingleValue",
+                        TestLanguage = "typescript",
+                        TestInitialization =
+                        """
+                            const arr: number[] = [123456];
+                        """,
+                        InputExpression = "const result = new Solution().findMinimum(arr);",
+                        OutputExpression = "NodeTestGenerator.assertEqual(result, 123456, 'Test_SingleValue');"
+                    },
+                    new()
+                    {
+                        Name="Test_SeveralValues",
+                        TestLanguage = "typescript",
+                        TestInitialization =
+                        """
+                            const size: number = Math.floor(Math.random() * 900) + 100;
+                            const arr: number[] = Array.from({ length: size }, () => 
+                                Math.floor(Math.random() * (1200120 + 1000)) - 1000
+                            );
+                        """,
+                        InputExpression = "const result = new Solution().findMinimum(arr);",
+                        OutputExpression = "NodeTestGenerator.assertEqual(result, Math.min(...arr), 'Test_SeveralValues');"
+                    },
+                    new()
+                    {
+                        Name="Test_NegativeValues",
+                        TestLanguage = "typescript",
+                        TestInitialization =
+                        """
+                            const arr: number[] = [-5, -10, -3, -8, -1];
+                        """,
+                        InputExpression = "const result = new Solution().findMinimum(arr);",
+                        OutputExpression = "NodeTestGenerator.assertEqual(result, -10, 'Test_NegativeValues');"
+                    },
                 }
             };
 
@@ -699,9 +746,9 @@ namespace ServerAPIApp.Core.Repositories
                 {
                     new()
                     {
-                        Language = "sql",
-                        Value = @"CREATE TABLE Customers(Id INT PRIMARY KEY, Name TEXT);
-                                  CREATE TABLE Orders(Id INT PRIMARY KEY, CustomerId INT, Amount REAL,
+                        Language = "postgresql",
+                        Value = @"CREATE TEMP TABLE Customers(Id INT PRIMARY KEY, Name TEXT);
+                                  CREATE TEMP TABLE Orders(Id INT PRIMARY KEY, CustomerId INT, Amount REAL,
                                                        FOREIGN KEY(CustomerId) REFERENCES Customers(Id));
                                   INSERT INTO Customers VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
                                   INSERT INTO Orders VALUES (1, 1, 150), (2, 1, 90), (3, 2, 200), (4, 3, 50);"
@@ -712,7 +759,7 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_TimAndTom_ShouldFail",
-                        TestLanguage = "sql",
+                        TestLanguage = "postgresql",
                         TestInitialization = "",
                         InputExpression = @"
                                             SELECT CASE
@@ -733,9 +780,9 @@ namespace ServerAPIApp.Core.Repositories
                 {
                     new()
                     {
-                        Language = "sql",
-                        Value = @"CREATE TABLE Categories(Id INT PRIMARY KEY, Name TEXT);
-                                  CREATE TABLE Products(Id INT PRIMARY KEY, CategoryId INT, Price REAL,
+                        Language = "postgresql",
+                        Value = @"CREATE TEMP TABLE Categories(Id INT PRIMARY KEY, Name TEXT);
+                                  CREATE TEMP TABLE Products(Id INT PRIMARY KEY, CategoryId INT, Price REAL,
                                                          FOREIGN KEY(CategoryId) REFERENCES Categories(Id));
                                   INSERT INTO Categories VALUES (1, 'Electronics'), (2, 'Furniture'), (3, 'Clothes');
                                   INSERT INTO Products VALUES (1, 1, 300), (2, 1, 250), (3, 2, 600), (4, 3, 100), (5, 3, 50);"
@@ -746,7 +793,7 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_ElectronicsExists",
-                        TestLanguage = "sql",
+                        TestLanguage = "postgresql",
                         TestInitialization = "",
                         InputExpression = @"
                                             SELECT CASE
@@ -773,10 +820,10 @@ namespace ServerAPIApp.Core.Repositories
                 {
                     new()
                     {
-                        Language = "sql",
-                        Value = @"CREATE TABLE Students(Id INT PRIMARY KEY, Name TEXT);
-                                  CREATE TABLE Courses(Id INT PRIMARY KEY, Title TEXT);
-                                  CREATE TABLE Enrollments(StudentId INT, CourseId INT,
+                        Language = "postgresql",
+                        Value = @"CREATE TEMP TABLE Students(Id INT PRIMARY KEY, Name TEXT);
+                                  CREATE TEMP TABLE Courses(Id INT PRIMARY KEY, Title TEXT);
+                                  CREATE TEMP TABLE Enrollments(StudentId INT, CourseId INT,
                                                            FOREIGN KEY(StudentId) REFERENCES Students(Id),
                                                            FOREIGN KEY(CourseId) REFERENCES Courses(Id));
                                   INSERT INTO Students VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
@@ -789,7 +836,7 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Name = "Test_TimAndDonExist",
-                        TestLanguage = "sql",
+                        TestLanguage = "postgresql",
                         TestInitialization = "",
                         InputExpression = @"
                                             SELECT CASE

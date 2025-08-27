@@ -1,7 +1,7 @@
 ﻿using Runners.Shared;
 using Runners.Shared.Runners;
 
-class Runner
+public class Runner
 {
     public static async Task<int> Main()
     {
@@ -12,7 +12,7 @@ class Runner
             cts.Cancel();
         };
 
-        using (var runner = new RunnerBase(new SqlRunner()))
+        using (var runner = new RunnerBase(new TypeScriptRunner()))
         {
             await runner.ListenAsync(cts.Token);
         }
