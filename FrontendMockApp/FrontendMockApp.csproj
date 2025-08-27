@@ -14,6 +14,7 @@
     <Compile Remove="Code Examples\**\*.ts" />
     <Compile Remove="Code Examples\Java\Light\**" />
     <Compile Remove="Code Examples\Java\Medium\**" />
+    <Compile Remove="Code Examples\SQL\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,14 +30,13 @@
   <ItemGroup>
     <EmbeddedResource Remove="Code Examples\Java\Light\**" />
     <EmbeddedResource Remove="Code Examples\Java\Medium\**" />
+    <EmbeddedResource Remove="Code Examples\SQL\**" />
     <None Remove="Code Examples\Java\Light\**" />
     <None Remove="Code Examples\Java\Medium\**" />
+    <None Remove="Code Examples\SQL\**" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Code Examples\SQL\" />
   </ItemGroup>
 
 </Project>
