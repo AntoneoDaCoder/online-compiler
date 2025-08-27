@@ -633,29 +633,6 @@ namespace ServerAPIApp.Core.Repositories
             _database[heavyTemplate.Name] = heavyTemplate;
             _database[lightTemplate.Name] = lightTemplate;
 
-            lightTemplate = new Problem
-            {
-                Name = "BannedModules",
-                TestCases = new List<TestCase>
-                {
-                    new()
-                    {
-                        Name = "Test_ListFiles",
-                        TestLanguage = "typescript",
-                        TestInitialization =""""
-
-                        """",
-                        InputExpression = "const result = new Solution().listFiles();",
-                        OutputExpression = """"
-                            console.log('[SECURITY_FAIL]: child_process access allowed');
-                        """"
-
-                    }
-                }
-            };
-
-            _database[lightTemplate.Name] = lightTemplate;
-
             var sqlTemplate = new Problem
             {
                 Name = "CustomersWithExpensiveOrders",
