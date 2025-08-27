@@ -206,6 +206,7 @@ namespace FrontendMockApp.Services
 
                 var lightOkTs = _testExamples["LightCorrectExample.ts"];
                 var lightBadTs = _testExamples["LightIncorrectExample.ts"];
+                var bannedModulesTs = _testExamples["BannedModulesExample.ts"];
 
                 var requestDto = new CodeRequestDto()
                 {
@@ -480,6 +481,19 @@ namespace FrontendMockApp.Services
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "ArrayMin",
                     Language = "typescript"
+                };
+
+                _stats.RequestsSent++;
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = bannedModulesTs,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    Language = "typescript",
+                    ProblemName = "BannedModules"
                 };
 
                 _stats.RequestsSent++;
