@@ -23,9 +23,10 @@ export class TaskDetailComponent implements OnInit {
   allLanguages: Language[] = [
     { id: 'csharp', name: 'C#' },
     { id: 'java', name: 'Java' },
-    { id: "sql", name: "SQL" },
+    { id: "postgresql", name: "PostgreSQL" },
     { id: 'nodejs', name: 'NodeJS' },
-    { id: 'kotlin', name: 'Kotlin' }
+    { id: 'kotlin', name: 'Kotlin' },
+    {id:'typescript',name:'TypeScript'}
     //  { id: 'swift', name: 'Swift' }
   ];
 
@@ -158,6 +159,18 @@ public static class Solution
       {
           //your solution
       }
+}
+`
+    },
+    {
+      language:'typescript',
+      taskName:'ArrayMin',
+      body:
+`
+class Solution {
+      findMinimum(arr: number[]): number {
+      //your solution here
+    }
 }
 `
     },
