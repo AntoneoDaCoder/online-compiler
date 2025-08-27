@@ -14,12 +14,19 @@ rules:
 - apiGroups: [""]
   resources: ["namespaces"]
   verbs: ["create", "get"]
-- apiGroups: [""]
+
+- apiGroups: [""] 
   resources: ["resourcequotas", "pods", "pods/status"]
   verbs: ["create", "get", "list", "watch", "update", "patch"]
+
 - apiGroups: ["apps"]
   resources: ["deployments"]
   verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies"]
+  verbs: ["create", "get", "list"]
+
 
 ---
 

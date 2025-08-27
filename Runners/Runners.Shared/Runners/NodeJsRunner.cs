@@ -254,50 +254,77 @@ namespace Runners.Shared.Runners
                 result.Status = RequestStatus.Failed;
                 result.Result.Status = ExecutionStatus.RuntimeError;
 
-                string errorString = await proc.StandardError.ReadToEndAsync(cancellationToken);
                 string stdOut = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
+                string errorString = await proc.StandardError.ReadToEndAsync(cancellationToken);
 
-                if (stdOut.Contains("[TEST_TIMED_OUT]"))
+                result.Result.ExitCode = proc.ExitCode;
+
+                if (proc.ExitCode != 0)
                 {
-                    result.Result.Status = ExecutionStatus.TimedOut;
-                }
-                else if (stdOut.Contains("[TEST_FAIL]:"))
-                {
-                    result.Result.Status = ExecutionStatus.FailedToExecute;
+                    result.Status = RequestStatus.Failed;
 
-                    var failedTestNames = new StringBuilder();
-                    var lines = stdOut.Split('\n');
-
-                    foreach (var line in lines)
+                    if (stdOut.Contains("[TEST_TIMED_OUT]"))
                     {
-                        if (line.StartsWith("[TEST_FAIL]:"))
-                        {
-                            var testNameMatch = Regex.Match(line, @"\[TEST_FAIL\]:\s*(.*?)\s*—");
+                        result.Result.Status = ExecutionStatus.TimedOut;
 
-                            if (testNameMatch.Success)
+                        var failedTestNames = new StringBuilder();
+                        var lines = stdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+                        foreach (var line in lines)
+                        {
+                            if (line.StartsWith("[TEST_TIMED_OUT]"))
                             {
-                                failedTestNames.AppendLine(testNameMatch.Groups[1].Value);
+                                var testNameMatch = Regex.Match(line, @"\[TEST_TIMED_OUT\]\s*(.*?)\s*timed out");
+                                if (testNameMatch.Success)
+                                    failedTestNames.AppendLine($"{testNameMatch.Groups[1].Value.Trim()} (timed out)");
                             }
                         }
-                    }
 
-                    result.Result.ConsoleOutput = failedTestNames.ToString();
+                        result.Result.ConsoleOutput = failedTestNames.Length > 0
+                            ? failedTestNames.ToString()
+                            : stdOut;
+                    }
+                    else if (stdOut.Contains("[TEST_FAIL]:"))
+                    {
+                        result.Result.Status = ExecutionStatus.FailedToExecute;
+
+                        var failedTestNames = new StringBuilder();
+                        var lines = stdOut.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+                        foreach (var line in lines)
+                        {
+                            if (line.StartsWith("[TEST_FAIL]:"))
+                            {
+                                var testNameMatch = Regex.Match(line, @"\[TEST_FAIL\]:\s*(.*?)\s*(?:—|$)");
+                                if (testNameMatch.Success)
+                                    failedTestNames.AppendLine(testNameMatch.Groups[1].Value.Trim());
+                            }
+                        }
+
+                        result.Result.ConsoleOutput = failedTestNames.Length > 0
+                            ? failedTestNames.ToString()
+                            : stdOut;
+                    }
+                    else
+                    {
+                        result.Result.Status = ExecutionStatus.RuntimeError;
+                        result.Result.ConsoleOutput =
+                            (!string.IsNullOrWhiteSpace(stdOut) ? stdOut + Environment.NewLine : "")
+                            + (!string.IsNullOrWhiteSpace(errorString) ? errorString : "");
+                    }
                 }
                 else
                 {
-                    result.Result.Status = ExecutionStatus.RuntimeError;
-
-                    result.Result.ConsoleOutput = !string.IsNullOrWhiteSpace(errorString)
-                                                  ? errorString
-                                                  : stdOut;
+                    result.Status = RequestStatus.Succeeded;
+                    result.Result.Status = ExecutionStatus.Succeeded;
+                    result.Result.ConsoleOutput = stdOut;
                 }
 
-                Console.WriteLine("[NodeRunner] Failed to execute, errors:" + result.Result.ConsoleOutput);
             }
             else
             {
                 result.Status = RequestStatus.Succeeded;
-                result.Result.Status = ExecutionStatus.Succeded;
+                result.Result.Status = ExecutionStatus.Succeeded;
 
                 Console.WriteLine("[NodeRunner] Successfully executed");
             }
