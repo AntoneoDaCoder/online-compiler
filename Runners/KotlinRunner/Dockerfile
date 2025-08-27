@@ -8,7 +8,7 @@ COPY Runners/KotlinRunner/gradlew ./
 COPY Runners/KotlinRunner/gradle ./gradle
 COPY Runners/KotlinRunner/src ./src
 
-RUN ./gradlew shadowJar --no-daemon
+RUN gradle shadowJar --no-daemon
 
 FROM eclipse-temurin:20-jre-alpine
 
