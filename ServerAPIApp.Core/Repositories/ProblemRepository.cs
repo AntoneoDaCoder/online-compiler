@@ -579,7 +579,54 @@ namespace ServerAPIApp.Core.Repositories
                         """,
                         InputExpression = "const result = new Solution().findMinimum(arr);",
                         OutputExpression = "NodeTestGenerator.assertEqual(result, Math.min(...arr), 'Test_SeveralValues');"
-                    }
+                    },
+                    new()
+                    {
+                        Name="Test_MixedValues",
+                        TestLanguage = "typescript",
+                        TestInitialization =
+                        """
+                            const arr: number[] = [10, -5, 0, 100, -20, 50];
+                        """,
+                        InputExpression = "const result = new Solution().findMinimum(arr);",
+                        OutputExpression = "NodeTestGenerator.assertEqual(result, -20, 'Test_MixedValues');"
+                    },
+                    new()
+                    {
+                        Name="Test_SingleValue",
+                        TestLanguage = "typescript",
+                        TestInitialization =
+                        """
+                            const arr: number[] = [123456];
+                        """,
+                        InputExpression = "const result = new Solution().findMinimum(arr);",
+                        OutputExpression = "NodeTestGenerator.assertEqual(result, 123456, 'Test_SingleValue');"
+                    },
+                    new()
+                    {
+                        Name="Test_SeveralValues",
+                        TestLanguage = "typescript",
+                        TestInitialization =
+                        """
+                            const size: number = Math.floor(Math.random() * 900) + 100;
+                            const arr: number[] = Array.from({ length: size }, () => 
+                                Math.floor(Math.random() * (1200120 + 1000)) - 1000
+                            );
+                        """,
+                        InputExpression = "const result = new Solution().findMinimum(arr);",
+                        OutputExpression = "NodeTestGenerator.assertEqual(result, Math.min(...arr), 'Test_SeveralValues');"
+                    },
+                    new()
+                    {
+                        Name="Test_NegativeValues",
+                        TestLanguage = "typescript",
+                        TestInitialization =
+                        """
+                            const arr: number[] = [-5, -10, -3, -8, -1];
+                        """,
+                        InputExpression = "const result = new Solution().findMinimum(arr);",
+                        OutputExpression = "NodeTestGenerator.assertEqual(result, -10, 'Test_NegativeValues');"
+                    },
                 }
             };
 

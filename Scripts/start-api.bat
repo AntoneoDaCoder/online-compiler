@@ -27,6 +27,11 @@ echo Building and loading nodejs runner image
 docker build -t nodejs-runner:local -f Runners/NodeJsRunner/Dockerfile .
 minikube image load nodejs-runner:local
 
+
+echo Building and loading typescript runner image
+docker build -t typescript-runner:local -f Runners/TypeScriptRunner/Dockerfile .
+minikube image load typescript-runner:local
+
 :: --- PostgreSQL setup ---
 echo Creating namespace for PostgreSQL
 kubectl create ns postgresql
@@ -51,7 +56,6 @@ kubectl apply -f k8s/rbac.yaml
 kubectl apply -f k8s/api-deployment.yaml
 echo Waiting for pod to be ready...
 kubectl wait --for=condition=ready pod -l app=api-server --timeout=90s
-
 
 start "" cmd /c "kubectl port-forward service/api-server 12345:8080"
 

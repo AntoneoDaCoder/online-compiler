@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <Compile Remove="Code Examples\**\*.cs" />
+    <Compile Remove="Code Examples\**\*.ts" />
     <Compile Remove="Code Examples\Java\Light\**" />
     <Compile Remove="Code Examples\Java\Medium\**" />
     <Compile Remove="Code Examples\SQL\**" />
@@ -18,8 +19,14 @@
 
   <ItemGroup>
     <None Include="Code Examples\**\*.cs" />
+    <None Include="Code Examples\**\*.ts" />
   </ItemGroup>
-
+	
+	<ItemGroup>
+		<TypeScriptCompile Remove="Code Examples\**\*.ts" />
+		<None Include="Code Examples\**\*.ts" />
+	</ItemGroup>
+	
   <ItemGroup>
     <EmbeddedResource Remove="Code Examples\Java\Light\**" />
     <EmbeddedResource Remove="Code Examples\Java\Medium\**" />

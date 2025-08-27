@@ -283,7 +283,6 @@ namespace Runners.Shared.Runners
 
                     result.Result.ConsoleOutput = failedTestNames.ToString();
                 }
-
                 else
                 {
                     result.Result.Status = ExecutionStatus.RuntimeError;
@@ -321,7 +320,6 @@ namespace Runners.Shared.Runners
                     return Task.FromResult((false, $"Banned import detected: {pattern}"));
                 }
             }
-
 
             File.WriteAllText(_tmpJsFilePath, fullCode);
 
