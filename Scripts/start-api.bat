@@ -23,6 +23,10 @@ echo Building and loading postgresql runner image
 docker build -t postgresql-runner:local -f Runners/PostgresqlRunner/Dockerfile .
 minikube image load postgresql-runner:local
 
+echo Building and loading mssql runner image
+docker build -t mssql-runner:local -f Runners/MsSqlRunner/Dockerfile .
+minikube image load mssql-runner:local
+
 echo Building and loading nodejs runner image
 docker build -t nodejs-runner:local -f Runners/NodeJsRunner/Dockerfile .
 minikube image load nodejs-runner:local
@@ -44,6 +48,22 @@ kubectl -n postgresql apply -f k8s/postgres-statefulset.yaml
 
 echo Waiting for PostgreSQL pod to be ready...
 kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=120s
+
+:: --- MSSQL setup ---
+echo Creating namespace for MSSQL
+kubectl create ns mssql
+
+echo Creating secret for MSSQL
+kubectl -n mssql create secret generic mssql ^
+  --from-literal=SA_PASSWORD=Admin123! ^
+  --from-literal=ACCEPT_EULA=Y ^
+  --from-literal=MSSQL_PID=Developer
+
+echo Deploying MSSQL StatefulSet
+kubectl -n mssql apply -f k8s/mssql-statefulset.yaml
+
+echo Waiting for MSSQL pod to be ready...
+kubectl -n mssql wait --for=condition=ready pod -l app=mssql-server --timeout=120s
 
 
 echo Deploying API to Kubernetes
