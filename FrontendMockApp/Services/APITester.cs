@@ -323,6 +323,50 @@ namespace FrontendMockApp.Services
                 _stats.RequestsSent++;
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                // mssql examples
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = "SELECT DISTINCT c.Name FROM #Customers c JOIN #Orders o ON c.Id = o.CustomerId WHERE o.Amount > 100;",
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "CustomersWithExpensiveOrders",
+                    Language = "mssql"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = "SELECT cat.Name FROM #Categories cat JOIN #Products p ON cat.Id = p.CategoryId GROUP BY cat.Name HAVING SUM(p.Price) > 500;",
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "CategoriesWithHighTotalPrice",
+                    Language = "mssql"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = "SELECT s.Name FROM #Students s JOIN #Enrollments e ON s.Id = e.StudentId GROUP BY s.Name HAVING COUNT(DISTINCT e.CourseId) >= 2;",
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "StudentsWithMultipleCourses",
+                    Language = "mssql"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
                 //heavyOk = _testExamples["HeavyCorrectExample.swift"];
                 //heavyBad = _testExamples["TimeoutExample.swift"];
                 //lightOk = _testExamples["LightCorrectExample.swift"];
