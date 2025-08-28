@@ -204,6 +204,10 @@ namespace FrontendMockApp.Services
                 var lightBad = _testExamples["CompileErrorExample.cs"];
                 var lightCheating = _testExamples["CheatingExample.cs"];
 
+                var lightOkTs = _testExamples["LightCorrectExample.ts"];
+                var lightBadTs = _testExamples["LightIncorrectExample.ts"];
+                var bannedModulesTs = _testExamples["LightBannedModulesExample.ts"];
+
                 var requestDto = new CodeRequestDto()
                 {
                     Code = heavyOk,
@@ -497,6 +501,47 @@ namespace FrontendMockApp.Services
 
 
                 //await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                // ts examples
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = lightOkTs,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "ArrayMin",
+                    Language = "typescript"
+                };
+
+                _stats.RequestsSent++;
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = lightBadTs,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "ArrayMin",
+                    Language = "typescript"
+                };
+
+                _stats.RequestsSent++;
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = bannedModulesTs,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "ArrayMin",
+                    Language = "typescript"
+                };
+
+                _stats.RequestsSent++;
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
             }
         }
 

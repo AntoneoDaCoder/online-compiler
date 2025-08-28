@@ -1,0 +1,62 @@
+plugins {
+    kotlin("jvm") version "1.9.23"
+    application
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+    kotlin("plugin.serialization") version "1.9.23"
+}
+
+group = "org.example"
+version = "1.0-SNAPSHOT"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // сам раннер
+    implementation(kotlin("stdlib"))
+    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.23")
+    implementation("org.slf4j:slf4j-simple:2.0.12")
+
+    // JUnit нужен В РАНТАЙМЕ раннера (мы дергаем JUnitCore из кода)
+    implementation("junit:junit:4.13.2")
+    implementation("org.hamcrest:hamcrest-core:1.3")
+
+
+    implementation("io.ktor:ktor-server-cio:2.3.12")
+    implementation("io.ktor:ktor-server-content-negotiation:2.3.12")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+    implementation("io.ktor:ktor-server-call-logging:2.3.12")
+    implementation("io.ktor:ktor-server-status-pages:2.3.12")
+
+    implementation("io.ktor:ktor-client-core:2.3.12")
+    implementation("io.ktor:ktor-client-cio:2.3.12")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+
+
+    // Coroutines & Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+}
+
+application {
+    // поменяй, если у тебя другой main
+    mainClass.set("MainKt")
+}
+
+kotlin {
+    // таргет под JVM 17/21 — на докер образ бери тот же
+    jvmToolchain(17)
+}
+
+// удобная жирная сборка со всеми зависимостями
+tasks.withType<Jar> {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.shadowJar {
+    archiveBaseName.set("runner")
+    archiveClassifier.set("")
+    archiveVersion.set("")
+}

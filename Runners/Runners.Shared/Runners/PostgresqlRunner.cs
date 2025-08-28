@@ -109,7 +109,7 @@ namespace Runners.Shared.Runners
                 await transaction.CommitAsync(cancellationToken);
 
                 result.Status = RequestStatus.Succeeded;
-                result.Result.Status = ExecutionStatus.Succeded;
+                result.Result.Status = ExecutionStatus.Succeeded;
 
                 return result;
             }
