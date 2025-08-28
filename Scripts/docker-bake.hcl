@@ -15,8 +15,8 @@ target "csharp" {
 }
 
 target "java" {
-  dockerfile = "Runners/JavaRunner/Dockerfile"
-  context    = "."
+  dockerfile = "Dockerfile"
+  context    = "Runners/JavaRunner/"
   tags       = ["java-runner:local"]
 }
 
