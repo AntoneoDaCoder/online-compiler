@@ -6,9 +6,9 @@ WORKDIR /src
 
 RUN useradd -u 1001 -m runneruser
 
-COPY ["Runners/DotNetRunner/","Runners/DotNetRunner/"]
-COPY ["Runners/Runners.Shared/","Runners/Runners.Shared/"]
-COPY ["Shared/","Shared/"]
+COPY . "Runners/DotNetRunner/"
+COPY --from=runners-shared / "Runners/Runners.Shared/"
+COPY --from=shared / "Shared/"
 
 RUN dotnet restore "Runners/DotNetRunner/DotNetRunner.csproj"
 

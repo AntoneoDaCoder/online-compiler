@@ -3,15 +3,23 @@ group "default" {
 }
 
 target "api" {
-  dockerfile = "ServerAPIApp/Dockerfile"
-  context    = "."
+  dockerfile = "Dockerfile"
+  context    = "ServerAPIApp/"
   tags       = ["api-server:local"]
+  contexts = {
+    shared = "Shared/",
+    server-core = "ServerAPIApp.Core/"
+  }
 }
 
 target "csharp" {
-  dockerfile = "Runners/DotNetRunner/Dockerfile"
-  context    = "."
+  dockerfile = "Dockerfile"
+  context    = "Runners/DotNetRunner/"
   tags       = ["csharp-runner:local"]
+  contexts = {
+    shared = "Shared/",
+    runners-shared = "Runners/Runners.Shared/"
+  }
 }
 
 target "java" {
@@ -21,31 +29,43 @@ target "java" {
 }
 
 /* target "swift" {
-  dockerfile = "Runners/SwiftRunner/Dockerfile"
-  context    = "."
+  dockerfile = "Dockerfile"
+  context    = "Runners/SwiftRunner/"
   tags       = ["swift-runner:local"]
 } */
 
 target "postgresql" {
-  dockerfile = "Runners/PostgresqlRunner/Dockerfile"
-  context    = "."
+  dockerfile = "Dockerfile"
+  context    = "Runners/PostgresqlRunner/"
   tags       = ["postgresql-runner:local"]
+  contexts = {
+    shared = "Shared/",
+    runners-shared = "Runners/Runners.Shared/"
+  }
 }
 
 target "nodejs" {
-  dockerfile = "Runners/NodeJsRunner/Dockerfile"
-  context    = "."
+  dockerfile = "Dockerfile"
+  context    = "Runners/NodeJsRunner/"
   tags       = ["nodejs-runner:local"]
+  contexts = {
+    shared = "Shared/",
+    runners-shared = "Runners/Runners.Shared/"
+  }
 }
 
 target "kotlin" {
-  dockerfile = "Runners/KotlinRunner/Dockerfile"
-  context    = "."
+  dockerfile = "Dockerfile"
+  context    = "Runners/KotlinRunner/"
   tags       = ["kotlin-runner:local"]
 }
 
 target "typescript" {
-  dockerfile = "Runners/TypeScriptRunner/Dockerfile"
-  context    = "."
+  dockerfile = "Dockerfile"
+  context    = "Runners/TypeScriptRunner/"
   tags       = ["typescript-runner:local"]
+  contexts = {
+    shared = "Shared/",
+    runners-shared = "Runners/Runners.Shared/"
+  }
 }

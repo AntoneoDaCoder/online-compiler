@@ -6,9 +6,9 @@ WORKDIR /src
 
 RUN useradd -u 1001 -m runneruser
 
-COPY ["Runners/PostgresqlRunner/","Runners/PostgresqlRunner/"]
-COPY ["Runners/Runners.Shared/","Runners/Runners.Shared/"]
-COPY ["Shared/","Shared/"]
+COPY . "Runners/PostgresqlRunner/"
+COPY --from=runners-shared / "Runners/Runners.Shared/"
+COPY --from=shared / "Shared/"
 
 RUN dotnet restore "Runners/PostgresqlRunner/PostgresqlRunner.csproj"
 
