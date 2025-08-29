@@ -29,7 +29,12 @@ $RunnerMap = @{
 
 Write-Host "${Y}[rebuild] Capturing image IDs before build...${N}"
 $Before = @{}
-foreach ($img in $Images) { $Before[$img] = Get-ImageId $img }
+foreach ($img in $Images)
+{
+    $Id = Get-ImageId $img 
+    $Before[$img] = $Id
+    Write-Host "Tag: {$img}, SHA: {$Id}"
+}
 
 # building images via bake
 Write-Host "${Y}[rebuild] Running bake (parallel)...${N}"
@@ -40,7 +45,12 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "${Y}[rebuild] Capturing image IDs after build...${N}"
 $After = @{}
-foreach ($img in $Images) { $After[$img] = Get-ImageId $img }
+foreach ($img in $Images)
+{
+    $Id = Get-ImageId $img 
+    $After[$img] = $Id
+    Write-Host "Tag: {$img}, SHA: {$Id}"
+}
 
 # Trying to find changed images
 $Changed = @()
