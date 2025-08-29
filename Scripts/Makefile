@@ -28,14 +28,14 @@ bake:
 	@echo [93mStarting parallel builds via Docker Bake...[0m
 	@bake_wrapper.bat
 	@echo [93mLoading images into minikube...[0m
-	minikube -p minikube image load api-server:local
-	minikube -p minikube image load csharp-runner:local
-	minikube -p minikube image load java-runner:local
-	minikube -p minikube image load postgresql-runner:local
-	minikube -p minikube image load nodejs-runner:local
-	minikube -p minikube image load kotlin-runner:local
-	minikube -p minikube image load typescript-runner:local
-#   minikube -p minikube image load swift-runner:local 
+	@minikube -p minikube image load api-server:local
+	@minikube -p minikube image load csharp-runner:local
+	@minikube -p minikube image load java-runner:local
+	@minikube -p minikube image load postgresql-runner:local
+	@minikube -p minikube image load nodejs-runner:local
+	@minikube -p minikube image load kotlin-runner:local
+	@minikube -p minikube image load typescript-runner:local
+#   @minikube -p minikube image load swift-runner:local 
 	@echo [92mAll images have been loaded[0m
 
 	@echo [92mBuilds finished[0m

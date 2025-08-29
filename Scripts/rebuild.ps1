@@ -1,6 +1,11 @@
 $ErrorActionPreference = 'Stop'
 
-$Y = "`e[93m"; $G = "`e[92m"; $R = "`e[91m"; $N = "`e[0m"
+$esc = [char]27
+$Y = "${esc}[93m"
+$G = "${esc}[92m"
+$R = "${esc}[91m"
+$N = "${esc}[0m"
+
 
 # Our tag list (the one that bake builds)
 $Images = @(
@@ -8,6 +13,7 @@ $Images = @(
   'csharp-runner:local',
   'java-runner:local',
   'postgresql-runner:local',
+  #'swift-runner:local',
   'nodejs-runner:local',
   'kotlin-runner:local',
   'typescript-runner:local'
@@ -25,6 +31,7 @@ $RunnerMap = @{
   'nodejs-runner:local'     = @{ ns='nodejs-runners-namespace';     dep='nodejs-runners-deployment' }
   'kotlin-runner:local'     = @{ ns='kotlin-runners-namespace';     dep='kotlin-runners-deployment' }
   'typescript-runner:local' = @{ ns='typescript-runners-namespace'; dep='typescript-runners-deployment' }
+  #'swift-runner:local' = @{ ns='swift-runners-namespace'; dep='swift-runners-deployment'}
 }
 
 Write-Host "${Y}[rebuild] Capturing image IDs before build...${N}"
@@ -102,8 +109,10 @@ $ChangedRunners = $Changed | Where-Object { $_ -ne 'api-server:local' }
 
 if ($NeedApiRestart) {
   Write-Host "${Y}[rebuild] Restarting API deployment...${N}"
-  kubectl rollout restart deployment api-server
-  kubectl rollout status  deployment api-server --timeout=120s
+  kubectl scale deployment api-server --replicas=0
+  kubectl rollout status deployment api-server --timeout=60s
+  kubectl scale deployment api-server --replicas=1
+  kubectl rollout status deployment api-server --timeout=180s
   Restart-PortForward
 }
 
@@ -112,8 +121,10 @@ foreach ($img in $ChangedRunners) {
   $ns  = $RunnerMap[$img].ns
   $dep = $RunnerMap[$img].dep
   Write-Host "${Y}[rebuild] Restarting runner deployment ($img) in ns '$ns'...${N}"
-  kubectl -n $ns rollout restart deployment $dep
-  kubectl -n $ns rollout status  deployment $dep --timeout=180s
+  kubectl -n $ns scale deployment $dep --replicas=0
+  kubectl -n $ns rollout status deployment $dep --timeout=60s
+  kubectl -n $ns scale deployment $dep --replicas=1
+  kubectl -n $ns rollout status deployment $dep --timeout=180s
 }
 
 # if nothing has changed print api status anyway
