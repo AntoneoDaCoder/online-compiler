@@ -10,11 +10,13 @@ rebuild:
 	@powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File ./rebuild.ps1
 
 down:
-	cd $(ROOT_DIR) && \
-	kubectl delete -f k8s/api-deployment.yaml && \
-    kubectl -n postgresql delete -f k8s/postgres-statefulset.yaml && \
-	kubectl delete ns postgresql || true
+	@echo [93mStopping minikube....[0m
 	@minikube stop
+
+	@echo [93mClearing current minikube cluster....[0m
+	@minikube delete
+
+	@echo [92mAPI has been stopped[0m
 
 # --- Поднять Minikube ---
 minikube-start:
