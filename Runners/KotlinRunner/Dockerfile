@@ -2,11 +2,11 @@ FROM gradle:8.7.0-jdk17-alpine AS build
 
 WORKDIR /app/Runners/KotlinRunner
 
-COPY Runners/KotlinRunner/build.gradle.kts ./
-COPY Runners/KotlinRunner/settings.gradle.kts ./
-COPY Runners/KotlinRunner/gradlew ./
-COPY Runners/KotlinRunner/gradle ./gradle
-COPY Runners/KotlinRunner/src ./src
+COPY ./build.gradle.kts ./
+COPY ./settings.gradle.kts ./
+COPY ./gradlew ./
+COPY ./gradle ./gradle
+COPY ./src ./src
 
 RUN gradle shadowJar --no-daemon
 
