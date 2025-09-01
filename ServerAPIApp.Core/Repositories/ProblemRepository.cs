@@ -752,6 +752,18 @@ namespace ServerAPIApp.Core.Repositories
                                                        FOREIGN KEY(CustomerId) REFERENCES Customers(Id));
                                   INSERT INTO Customers VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
                                   INSERT INTO Orders VALUES (1, 1, 150), (2, 1, 90), (3, 2, 200), (4, 3, 50);"
+                    },
+                    new()
+                    {
+                        Language = "mssql",
+                        Value = @"
+                            CREATE TABLE #Customers(Id INT PRIMARY KEY, Name NVARCHAR(100));
+                            CREATE TABLE #Orders(Id INT PRIMARY KEY, CustomerId INT, Amount FLOAT,
+                                FOREIGN KEY(CustomerId) REFERENCES #Customers(Id)
+                            );
+                            INSERT INTO #Customers VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
+                            INSERT INTO #Orders VALUES (1, 1, 150), (2, 1, 90), (3, 2, 200), (4, 3, 50);
+                        "
                     }
                 },
                 TestCases = new List<TestCase>
@@ -766,6 +778,18 @@ namespace ServerAPIApp.Core.Repositories
                                                 WHEN (SELECT COUNT(*) FROM (...)) = 3
                                                 THEN 1 ELSE 0
                                             END",
+                        OutputExpression = ""
+                    },
+                    new()
+                    {
+                        Name = "Test_TimAndTom_ShouldFail",
+                        TestLanguage = "mssql",
+                        TestInitialization = "",
+                        InputExpression = @"
+                            SELECT CASE
+                                WHEN (SELECT COUNT(*) FROM (...)) = 3
+                                THEN 1 ELSE 0
+                            END",
                         OutputExpression = ""
                     }
                 }
@@ -786,6 +810,18 @@ namespace ServerAPIApp.Core.Repositories
                                                          FOREIGN KEY(CategoryId) REFERENCES Categories(Id));
                                   INSERT INTO Categories VALUES (1, 'Electronics'), (2, 'Furniture'), (3, 'Clothes');
                                   INSERT INTO Products VALUES (1, 1, 300), (2, 1, 250), (3, 2, 600), (4, 3, 100), (5, 3, 50);"
+                    },
+                    new()
+                    {
+                        Language = "mssql",
+                        Value = @"
+                            CREATE TABLE #Categories(Id INT PRIMARY KEY, Name NVARCHAR(100));
+                            CREATE TABLE #Products(Id INT PRIMARY KEY, CategoryId INT, Price FLOAT,
+                                FOREIGN KEY(CategoryId) REFERENCES #Categories(Id)
+                            );
+                            INSERT INTO #Categories VALUES (1, 'Electronics'), (2, 'Furniture'), (3, 'Clothes');
+                            INSERT INTO #Products VALUES (1, 1, 300), (2, 1, 250), (3, 2, 600), (4, 3, 100), (5, 3, 50);
+                        "
                     }
                 },
                 TestCases = new List<TestCase>
@@ -805,6 +841,23 @@ namespace ServerAPIApp.Core.Repositories
                                                     (SELECT COUNT(*) FROM (...)) = 2
                                                 THEN 1 ELSE 0
                                             END;",
+                        OutputExpression = ""
+                    },
+                    new()
+                    {
+                        Name = "Test_ElectronicsExists",
+                        TestLanguage = "mssql",
+                        TestInitialization = "",
+                        InputExpression = @"
+                            SELECT CASE
+                                WHEN
+                                    (SELECT COUNT(*) FROM (...)
+                                        WHERE Name IN ('Electronics', 'Furniture')
+                                    ) = 2
+                                AND
+                                    (SELECT COUNT(*) FROM (...)) = 2
+                                THEN 1 ELSE 0
+                            END;",
                         OutputExpression = ""
                     }
                 }
@@ -829,6 +882,24 @@ namespace ServerAPIApp.Core.Repositories
                                   INSERT INTO Students VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
                                   INSERT INTO Courses VALUES (1, 'Math'), (2, 'Physics'), (3, 'History');
                                   INSERT INTO Enrollments VALUES (1, 1), (1, 2), (2, 2), (3, 1), (3, 3);"
+                    },
+                    new()
+                    {
+                        Language = "mssql",
+                        Value = @"
+                            CREATE TABLE #Students(Id INT PRIMARY KEY, Name NVARCHAR(100));
+                            CREATE TABLE #Courses(Id INT PRIMARY KEY, Title NVARCHAR(100));
+                            CREATE TABLE #Enrollments(
+                                StudentId INT,
+                                CourseId INT,
+                                FOREIGN KEY(StudentId) REFERENCES #Students(Id),
+                                FOREIGN KEY(CourseId) REFERENCES #Courses(Id)
+                            );
+
+                            INSERT INTO #Students VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
+                            INSERT INTO #Courses VALUES (1, 'Math'), (2, 'Physics'), (3, 'History');
+                            INSERT INTO #Enrollments VALUES (1, 1), (1, 2), (2, 2), (3, 1), (3, 3);
+                        "
                     }
                 },
                 TestCases = new List<TestCase>
@@ -848,6 +919,21 @@ namespace ServerAPIApp.Core.Repositories
                                             END",
                         OutputExpression = ""
                     },
+                    new()
+                    {
+                        Name = "Test_TimAndDonExist",
+                        TestLanguage = "mssql",
+                        TestInitialization = "",
+                        InputExpression = @"
+                            SELECT CASE
+                                WHEN (SELECT COUNT(*) FROM (...)) = 2
+                                 AND EXISTS (SELECT 1 FROM (...) WHERE Name='Tim')
+                                 AND EXISTS (SELECT 1 FROM (...) WHERE Name='Don')
+                                 AND NOT EXISTS (SELECT 1 FROM (...) WHERE Name='Tom')
+                                THEN 1 ELSE 0
+                            END",
+                        OutputExpression = ""
+                    }
                 }
             };
 

@@ -24,6 +24,7 @@ export class TaskDetailComponent implements OnInit {
     { id: 'csharp', name: 'C#' },
     { id: 'java', name: 'Java' },
     { id: "postgresql", name: "PostgreSQL" },
+    { id: "mssql", name: "MSSQL" },
     { id: 'nodejs', name: 'NodeJS' },
     { id: 'kotlin', name: 'Kotlin' },
     {id:'typescript',name:'TypeScript'}
