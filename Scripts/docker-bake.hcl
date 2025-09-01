@@ -1,5 +1,5 @@
 group "default" {
-  targets = ["api", "csharp", "java", "postgresql",/* "swift", */ "nodejs", "kotlin", "typescript"]
+  targets = ["api", "csharp", "java", "postgresql",/* "swift", */ "mssql","nodejs", "kotlin", "typescript"]
 }
 
 target "api" {
@@ -16,6 +16,16 @@ target "csharp" {
   dockerfile = "Dockerfile"
   context    = "Runners/DotNetRunner/"
   tags       = ["csharp-runner:local"]
+  contexts = {
+    shared = "Shared/",
+    runners-shared = "Runners/Runners.Shared/"
+  }
+}
+
+target  "mssql"{
+  dockerfile = "Dockerfile"
+  context = "Runners/MsSqlRunner/"
+  tags = ["mssql-runner:local"]
   contexts = {
     shared = "Shared/",
     runners-shared = "Runners/Runners.Shared/"
