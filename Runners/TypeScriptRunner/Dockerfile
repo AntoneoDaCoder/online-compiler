@@ -6,9 +6,9 @@ WORKDIR /src
 
 RUN useradd -u 1001 -m runneruser
 
-COPY ["Runners/TypeScriptRunner/","Runners/TypeScriptRunner/"]
-COPY ["Runners/Runners.Shared/","Runners/Runners.Shared/"]
-COPY ["Shared/","Shared/"]
+COPY . "Runners/TypeScriptRunner/"
+COPY --from=runners-shared / "Runners/Runners.Shared/"
+COPY --from=shared / "Shared/"
 
 RUN dotnet restore "Runners/TypeScriptRunner/TypeScriptRunner.csproj"
 

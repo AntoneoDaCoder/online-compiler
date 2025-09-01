@@ -4,9 +4,9 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-COPY ["ServerAPIApp.Core/", "ServerAPIApp.Core/"]
-COPY ["ServerAPIApp/", "ServerAPIApp/"]
-COPY ["Shared/", "Shared/"]
+COPY --from=server-core / "ServerAPIApp.Core/"
+COPY . "ServerAPIApp/"
+COPY --from=shared / "Shared/"
 
 RUN dotnet restore "ServerAPIApp/ServerAPIApp.csproj"
 

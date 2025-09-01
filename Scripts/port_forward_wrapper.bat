@@ -1,0 +1,1 @@
+@start "" cmd /c "kubectl port-forward service/api-server 12345:8080"
