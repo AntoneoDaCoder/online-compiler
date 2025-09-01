@@ -21,6 +21,8 @@ namespace ServerAPIApp.Core.Extensions
 
             services.Configure<LanguageConfig>("postgresql", conf.GetSection("Languages:postgresql"));
 
+            services.Configure<LanguageConfig>("mssql", conf.GetSection("Languages:mssql"));
+
             services.Configure<LanguageConfig>("nodejs", conf.GetSection("Languages:nodejs"));
 
             services.Configure<LanguageConfig>("kotlin", conf.GetSection("Languages:kotlin"));
@@ -96,6 +98,21 @@ namespace ServerAPIApp.Core.Extensions
                     return new KubernetesJobManager
                     (
                         "postgresql",
+                        sp.GetRequiredService<IKubernetes>(),
+                        monitor,
+                        sp.GetRequiredService<CallbackService>()
+                    );
+                }
+            );
+
+            services.AddSingleton<IKubernetesJobManager>
+                (sp =>
+                {
+                    var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+
+                    return new KubernetesJobManager
+                    (
+                        "mssql",
                         sp.GetRequiredService<IKubernetes>(),
                         monitor,
                         sp.GetRequiredService<CallbackService>()

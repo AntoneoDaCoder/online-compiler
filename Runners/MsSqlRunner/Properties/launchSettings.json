@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "MsSqlRunner": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
