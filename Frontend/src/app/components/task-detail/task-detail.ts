@@ -23,8 +23,11 @@ export class TaskDetailComponent implements OnInit {
   allLanguages: Language[] = [
     { id: 'csharp', name: 'C#' },
     { id: 'java', name: 'Java' },
-    { id: "sql", name: "SQL" },
-    { id: 'nodejs', name: 'NodeJS' }
+    { id: "postgresql", name: "PostgreSQL" },
+    { id: "mssql", name: "MSSQL" },
+    { id: 'nodejs', name: 'NodeJS' },
+    { id: 'kotlin', name: 'Kotlin' },
+    {id:'typescript',name:'TypeScript'}
     //  { id: 'swift', name: 'Swift' }
   ];
 
@@ -109,6 +112,30 @@ public static class Solution {
 }`
     },
     {
+      language:'kotlin',
+      taskName:'FractionalKnapsack',
+      body:
+`
+/* Additional definition for convenience
+
+data class Item(
+    val value: Int,
+    val weight: Int
+) {
+    val ratio: Double
+        get() = value.toDouble() / weight
+}
+
+*/
+
+class Solution {
+    fun fractionalKnapsack(items: Array<Item>, capacity: Int): Double {
+        // your solution here
+    }
+}
+`
+    },
+    {
       language: 'csharp',
       taskName: 'ArrayMin',
       body:
@@ -137,10 +164,22 @@ public static class Solution
 `
     },
     {
+      language:'typescript',
+      taskName:'ArrayMin',
+      body:
+`
+class Solution {
+      findMinimum(arr: number[]): number {
+      //your solution here
+    }
+}
+`
+    },
+    {
       language: 'nodejs',
       taskName: 'FractionalKnapsack',
       body:
-`
+        `
 /* Additional definition for convenience
 class Item {
     constructor(value, weight) {
@@ -161,10 +200,10 @@ class Solution {
 `
     },
     {
-      language:'nodejs',
-      taskName:'ArrayMin',
+      language: 'nodejs',
+      taskName: 'ArrayMin',
       body:
-`
+        `
 class Solution {
       findMinimum(arr) {
         //your solution here

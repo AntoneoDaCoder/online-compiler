@@ -19,13 +19,60 @@ echo Building and loading java runner image
 docker build -t java-runner:local -f Runners/JavaRunner/Dockerfile Runners/JavaRunner/
 minikube image load java-runner:local
 
-echo Building and loading sql runner image
-docker build -t sql-runner:local -f Runners/SqlRunner/Dockerfile .
-minikube image load sql-runner:local
+echo Building and loading postgresql runner image
+docker build -t postgresql-runner:local -f Runners/PostgresqlRunner/Dockerfile .
+minikube image load postgresql-runner:local
+
+echo Building and loading mssql runner image
+docker build -t mssql-runner:local -f Runners/MsSqlRunner/Dockerfile .
+minikube image load mssql-runner:local
 
 echo Building and loading nodejs runner image
 docker build -t nodejs-runner:local -f Runners/NodeJsRunner/Dockerfile .
 minikube image load nodejs-runner:local
+
+echo Building and loading kotlin runner image
+docker build -t kotlin-runner:local -f Runners/KotlinRunner/Dockerfile .
+minikube image load kotlin-runner:local
+
+
+echo Building and loading typescript runner image
+docker build -t typescript-runner:local -f Runners/TypeScriptRunner/Dockerfile .
+minikube image load typescript-runner:local
+
+:: --- PostgreSQL setup ---
+echo Creating namespace for PostgreSQL
+kubectl create ns postgresql
+
+echo Creating secret for PostgreSQL
+kubectl -n postgresql create secret generic postgresql ^
+  --from-literal=POSTGRES_USER=postgresadmin ^
+  --from-literal=POSTGRES_PASSWORD=admin123 ^
+  --from-literal=POSTGRES_DB=postgresdb ^
+  --from-literal=REPLICATION_USER=replicationuser ^
+  --from-literal=REPLICATION_PASSWORD=replicationPassword
+
+echo Deploying PostgreSQL StatefulSet
+kubectl -n postgresql apply -f k8s/postgres-statefulset.yaml
+
+echo Waiting for PostgreSQL pod to be ready...
+kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=120s
+
+:: --- MSSQL setup ---
+echo Creating namespace for MSSQL
+kubectl create ns mssql
+
+echo Creating secret for MSSQL
+kubectl -n mssql create secret generic mssql ^
+  --from-literal=SA_PASSWORD=Admin123! ^
+  --from-literal=ACCEPT_EULA=Y ^
+  --from-literal=MSSQL_PID=Developer
+
+echo Deploying MSSQL StatefulSet
+kubectl -n mssql apply -f k8s/mssql-statefulset.yaml
+
+echo Waiting for MSSQL pod to be ready...
+kubectl -n mssql wait --for=condition=ready pod -l app=mssql-server --timeout=120s
 
 
 echo Deploying API to Kubernetes
@@ -33,7 +80,6 @@ kubectl apply -f k8s/rbac.yaml
 kubectl apply -f k8s/api-deployment.yaml
 echo Waiting for pod to be ready...
 kubectl wait --for=condition=ready pod -l app=api-server --timeout=90s
-
 
 start "" cmd /c "kubectl port-forward service/api-server 12345:8080"
 

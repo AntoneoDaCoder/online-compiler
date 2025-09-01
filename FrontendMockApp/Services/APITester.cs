@@ -204,6 +204,10 @@ namespace FrontendMockApp.Services
                 var lightBad = _testExamples["CompileErrorExample.cs"];
                 var lightCheating = _testExamples["CheatingExample.cs"];
 
+                var lightOkTs = _testExamples["LightCorrectExample.ts"];
+                var lightBadTs = _testExamples["LightIncorrectExample.ts"];
+                var bannedModulesTs = _testExamples["LightBannedModulesExample.ts"];
+
                 var requestDto = new CodeRequestDto()
                 {
                     Code = heavyOk,
@@ -280,7 +284,7 @@ namespace FrontendMockApp.Services
 
                 await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
 
-                // sql examples
+                // postgresql examples
 
                 requestDto = new CodeRequestDto()
                 {
@@ -289,7 +293,7 @@ namespace FrontendMockApp.Services
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "CustomersWithExpensiveOrders",
-                    Language = "sql"
+                    Language = "postgresql"
                 };
 
                 _stats.RequestsSent++;
@@ -303,7 +307,7 @@ namespace FrontendMockApp.Services
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "CategoriesWithHighTotalPrice",
-                    Language = "sql"
+                    Language = "postgresql"
                 };
 
                 _stats.RequestsSent++;
@@ -317,7 +321,51 @@ namespace FrontendMockApp.Services
                     CallbackUrl = _callbackUrl,
                     RequestSentAt = DateTime.UtcNow,
                     ProblemName = "StudentsWithMultipleCourses",
-                    Language = "sql"
+                    Language = "postgresql"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                // mssql examples
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = "SELECT DISTINCT c.Name FROM #Customers c JOIN #Orders o ON c.Id = o.CustomerId WHERE o.Amount > 100;",
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "CustomersWithExpensiveOrders",
+                    Language = "mssql"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = "SELECT cat.Name FROM #Categories cat JOIN #Products p ON cat.Id = p.CategoryId GROUP BY cat.Name HAVING SUM(p.Price) > 500;",
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "CategoriesWithHighTotalPrice",
+                    Language = "mssql"
+                };
+
+                _stats.RequestsSent++;
+
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = "SELECT s.Name FROM #Students s JOIN #Enrollments e ON s.Id = e.StudentId GROUP BY s.Name HAVING COUNT(DISTINCT e.CourseId) >= 2;",
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "StudentsWithMultipleCourses",
+                    Language = "mssql"
                 };
 
                 _stats.RequestsSent++;
@@ -469,6 +517,47 @@ namespace FrontendMockApp.Services
 
 
                 //await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                // ts examples
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = lightOkTs,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "ArrayMin",
+                    Language = "typescript"
+                };
+
+                _stats.RequestsSent++;
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = lightBadTs,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "ArrayMin",
+                    Language = "typescript"
+                };
+
+                _stats.RequestsSent++;
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
+
+                requestDto = new CodeRequestDto()
+                {
+                    Code = bannedModulesTs,
+                    MaxAllowedTimeInMilliseconds = _maxTimeoutInMilliseconds,
+                    CallbackUrl = _callbackUrl,
+                    RequestSentAt = DateTime.UtcNow,
+                    ProblemName = "ArrayMin",
+                    Language = "typescript"
+                };
+
+                _stats.RequestsSent++;
+                await _producer.PostSingleExecutionRequestAsync(requestDto, cancellationToken);
             }
         }
 
