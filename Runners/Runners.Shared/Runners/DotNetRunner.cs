@@ -133,21 +133,28 @@ namespace Runners.Shared.Runners
 
                 if (definition.Value.Contains("DbContext"))
                 {
-                    sb.AppendLine(@"public static class TestInfrastructure
-                                {
-                                    public static AppDbContext CreateContext()
-                                    {
-                                       var options = new DbContextOptionsBuilder<AppDbContext>()
-                                            .UseInMemoryDatabase(""TestDb"")
-                                            .Options;
+                    sb.AppendLine(@"    public static class TestInfrastructure
+                                        {
+                                            public static string Schema = ""linq_schema"";
 
-                                        var context = new AppDbContext(options);
-                                        context.Database.EnsureDeleted();
-                                        context.Database.EnsureCreated();
+                                            public static AppDbContext CreateContext()
+                                            {
+                                                var connectionString = ""Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=postgresdb;Username=postgresadmin;Password=admin123"";
 
-                                        return context;
-                                    }
-                                }"
+                                                var options = new DbContextOptionsBuilder<AppDbContext>()
+                                                            .UseNpgsql(connectionString, o => o.MigrationsHistoryTable(""__EFMigrationsHistory"", Schema))
+                                                            .Options;
+
+                                                var context = new AppDbContext(options);
+
+                                                context.Database.ExecuteSql($""CREATE SCHEMA IF NOT EXISTS \""{Schema}\"""");
+
+                                                context.Database.EnsureDeleted();
+                                                context.Database.EnsureCreated();
+
+                                                return context;
+                                            }
+                                        }"
                     );
                 }
             }

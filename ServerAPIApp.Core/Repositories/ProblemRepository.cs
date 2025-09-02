@@ -989,6 +989,8 @@ namespace ServerAPIApp.Core.Repositories
 
                                     protected override void OnModelCreating(ModelBuilder modelBuilder)
                                     {
+                                        modelBuilder.HasDefaultSchema(TestInfrastructure.Schema);
+
                                         modelBuilder.Entity<Employee>()
                                             .HasOne(o => o.Department)
                                             .WithMany(c => c.Employees)
@@ -1018,10 +1020,8 @@ namespace ServerAPIApp.Core.Repositories
                                                        new Employee { Id = 4, Name = ""Emp4"", Age = 32, DepartmentId = 2 }
                                                    );
                                                    context.SaveChanges();
-                                                }
-                                               var solution = new Solution();
-                                               var result = solution.GetEmployeesOlderThan30GroupedByDepartment(context);",
-                        InputExpression = "",
+                                                }",
+                        InputExpression = "var result = new Solution().GetEmployeesOlderThan30GroupedByDepartment(context);",
                         OutputExpression = @"NUnit.Framework.Assert.That(result.Count(), Is.EqualTo(2));
                                             NUnit.Framework.Assert.That(result.Keys, Is.EquivalentTo(new[] { ""IT"", ""HR"" }));
                                             NUnit.Framework.Assert.That(result[""IT""], Is.EquivalentTo(new[] { ""Emp1"", ""Emp2"" }));"
