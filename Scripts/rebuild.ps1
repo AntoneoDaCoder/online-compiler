@@ -13,6 +13,7 @@ $Images = @(
   'csharp-runner:local',
   'java-runner:local',
   'postgresql-runner:local',
+  'mssql-runner:local',
   #'swift-runner:local',
   'nodejs-runner:local',
   'kotlin-runner:local',
@@ -27,6 +28,7 @@ $RunnerMap = @{
   'csharp-runner:local'     = @{ ns='csharp-runners-namespace';     dep='csharp-runners-deployment' }
   'java-runner:local'       = @{ ns='java-runners-namespace';       dep='java-runners-deployment' }
   'postgresql-runner:local' = @{ ns='postgresql-runners-namespace'; dep='postgresql-runners-deployment' }
+  'mssql-runner:local'      = @{ ns='mssql-runners-namespace';      dep='mssql-runners-deployment' }
   'nodejs-runner:local'     = @{ ns='nodejs-runners-namespace';     dep='nodejs-runners-deployment' }
   'kotlin-runner:local'     = @{ ns='kotlin-runners-namespace';     dep='kotlin-runners-deployment' }
   'typescript-runner:local' = @{ ns='typescript-runners-namespace'; dep='typescript-runners-deployment' }
