@@ -34,6 +34,7 @@ bake:
 	@minikube -p minikube image load csharp-runner:local
 	@minikube -p minikube image load java-runner:local
 	@minikube -p minikube image load postgresql-runner:local
+	@minikube -p minikube image load mssql-runner:local
 	@minikube -p minikube image load nodejs-runner:local
 	@minikube -p minikube image load kotlin-runner:local
 	@minikube -p minikube image load typescript-runner:local
@@ -62,6 +63,23 @@ deploy: bake
 	kubectl -n postgresql apply -f k8s/postgres-statefulset.yaml && \
 	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=120s
 	@echo [92mDone![0m
+	
+
+	@echo [93mSetting up MSSQL...[0m
+	@cd $(ROOT_DIR) && \
+	kubectl create ns mssql || true && \
+	kubectl -n mssql delete secret mssql --ignore-not-found && \
+	kubectl -n mssql create secret generic mssql \
+	--from-literal=SA_PASSWORD=Admin123! \
+	--from-literal=ACCEPT_EULA=Y \
+	--from-literal=MSSQL_PID=Developer
+	@echo [92mDone![0m
+
+	@echo [93mDeploying MSSQL StatefulSet...[0m
+	@cd $(ROOT_DIR) && \
+	kubectl -n mssql apply -f k8s/mssql-statefulset.yaml
+	@echo [92mDone![0m
+
 
 	@echo [93mDeploying API to Kubernetes[0m
 	@cd $(ROOT_DIR) && \
@@ -69,6 +87,7 @@ deploy: bake
 	kubectl apply -f k8s/api-deployment.yaml && \
 	kubectl wait --for=condition=ready pod -l app=api-server --timeout=90s
 	@echo [92mDone![0m
+
 
 # --- Портфорвардинг API ---
 serve: deploy
