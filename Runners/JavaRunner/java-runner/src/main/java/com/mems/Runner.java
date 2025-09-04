@@ -63,16 +63,142 @@ public class Runner
     
     private static final HttpClient httpClient = HttpClient.newHttpClient();
     private static final ObjectMapper objectMapper = JsonUtils.getObjectMapper();
-    
+
     public static void main(String[] args) throws Exception {
         Runtime.getRuntime().addShutdownHook(new Thread(Runner::releaseResources));
 
+        if (args.length > 0 && args[0].equals("--server")) {
+            startServer();
+        } else if (args.length > 0 && args[0].equals("--once")) {
+            runOnce();
+        } else {
+            System.out.println("Usage: java -jar runner.jar [--server | --once]");
+        }
+    }
+
+    private static void startServer() throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(RUNNER_PORT), 0);
         server.createContext("/run", new RequestHandler());
         server.start();
 
-        System.out.println("[JavaRunner] Java runner started on port "+ RUNNER_PORT);
+        System.out.println("[JavaRunner] Java runner started on port " + RUNNER_PORT);
     }
+
+    private static void runOnce() {
+        try {
+            String requestJson = new String(System.in.readAllBytes(), StandardCharsets.UTF_8);
+
+            ProblemSolutionDto request = objectMapper.readValue(requestJson, ProblemSolutionDto.class);
+
+            CodeResponseDto response = executeUserCodeOnce(request);
+
+            String responseJson = objectMapper.writeValueAsString(response);
+            System.out.println(responseJson);
+
+        } catch (Exception e) {
+            System.err.println("[JavaRunner] CLI mode failed: " + e);
+            e.printStackTrace();
+        }
+    }
+
+    private static CodeResponseDto executeUserCodeOnce(ProblemSolutionDto request) {
+        CodeResponseDto response = new CodeResponseDto();
+        response.requestId = request.requestId;
+        response.language = "java";
+        response.result = new ExecutionResultDto();
+        response.result.requestSentAt = request.sentAt;
+
+        try {
+            String fullCode = wrapUserCode(request);
+            Files.writeString(Paths.get(TMP_JAVA_FILE), fullCode);
+
+            List<String> violations = checkForbiddenAPIs(fullCode);
+
+            if (!violations.isEmpty()) {
+                System.err.println("[JavaRunner] Forbidden API usage detected:");
+                response.status = RequestStatus.FAILED;
+                response.result.status = ExecutionStatus.CANCELLED;
+                response.result.exitCode = 2;
+                response.result.consoleOutput = String.join("\n", violations);
+                return response;
+            }
+
+            ByteArrayOutputStream errorOutput = new ByteArrayOutputStream();
+            boolean compiled = compileJavaFile(TMP_JAVA_FILE, errorOutput);
+
+            if (!compiled) {
+                response.status = RequestStatus.FAILED;
+                response.result.status = ExecutionStatus.COMPILE_ERROR;
+                response.result.exitCode = 1;
+
+                String fullError = errorOutput.toString(StandardCharsets.UTF_8);
+                int index = fullError.indexOf("error:");
+                if (index != -1) {
+                    fullError = fullError.substring(index);
+                }
+
+                response.result.consoleOutput = fullError;
+                return response;
+            }
+
+            String separator = System.getProperty("path.separator");
+            String classpath = TMP_DIR + separator + getJunitClasspath();
+
+            ProcessBuilder pb = new ProcessBuilder("java", "-cp", classpath, TMP_CLASS_NAME);
+            pb.redirectErrorStream(true);
+
+            Process process = pb.start();
+            StringBuilder output = new StringBuilder();
+
+            Thread outputReader = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        output.append(line).append("\n");
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            outputReader.start();
+
+            boolean completed = process.waitFor(MAX_PROCESS_LIFETIME_MS, TimeUnit.MILLISECONDS);
+            outputReader.join();
+
+            if (!completed) {
+                process.destroyForcibly();
+                response.status = RequestStatus.FAILED;
+                response.result.status = ExecutionStatus.TIMED_OUT;
+                response.result.exitCode = 124;
+                response.result.consoleOutput = "Execution timed out";
+            } else {
+                response.result.exitCode = process.exitValue();
+
+                if (process.exitValue() == 0) {
+                    response.status = RequestStatus.SUCCEEDED;
+                    response.result.status = ExecutionStatus.SUCCEEDED;
+                    response.result.consoleOutput = output.toString();
+                } else {
+                    response.status = RequestStatus.FAILED;
+                    response.result.status = parseTestResults(output.toString());
+                    response.result.consoleOutput = output.toString();
+                }
+            }
+
+        } catch (Exception e) {
+            response.status = RequestStatus.FAILED;
+            response.result.status = ExecutionStatus.RUNTIME_ERROR;
+            response.result.consoleOutput = e.toString();
+            System.err.println("[JavaRunner] Exception occurred: " + e);
+        } finally {
+            cleanupTempFiles();
+        }
+
+        return response;
+    }
+
+
+
 
     public static List<String> checkForbiddenAPIs(String sourceCode) {
         CompilationUnit cu = StaticJavaParser.parse(sourceCode);
