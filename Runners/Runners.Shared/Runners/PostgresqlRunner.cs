@@ -11,6 +11,17 @@ namespace Runners.Shared.Runners
         private readonly string _connectionString = "Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=postgresdb;Username=postgresadmin;Password=admin123";
         private Problem _problem;
         private string _solutionCode;
+        private string _codeWithoutTests;
+        private static readonly string[] _forbiddenKeywords =
+        [
+            "drop", "alter", "create", "truncate", "merge",
+            "grant", "revoke", "commit", "rollback", "savepoint",
+            "execute", "prepare", "deallocate",
+            "vacuum", "analyze", "reset", "discard",
+            "copy", "load", "listen", "notify", "unlisten",
+            "set", "show"
+        ];
+
         public PostgresqlRunner()
         {
             Console.WriteLine("[PostgreSQL Runner] Runner started.");
@@ -18,6 +29,10 @@ namespace Runners.Shared.Runners
 
         public async Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
         {
+            if (ContainsForbidden(_solutionCode, out var bad))
+            {
+                return (false, $"Forbidden keyword detected: {bad}");
+            }
             try
             {
                 await using var connection = new NpgsqlConnection(_connectionString);
@@ -66,23 +81,11 @@ namespace Runners.Shared.Runners
 
             try
             {
-                foreach (var def in _problem.AdditionalDefinitions)
-                {
-                    if (def.Language?.ToLower() == "postgresql" && !string.IsNullOrWhiteSpace(def.Value))
-                    {
-                        using var cmdSeed = connection.CreateCommand();
-                        cmdSeed.CommandText = def.Value;
-                        await cmdSeed.ExecuteNonQueryAsync(cancellationToken);
-                    }
-                }
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = _codeWithoutTests;
+                await cmd.ExecuteNonQueryAsync(cancellationToken);
 
-                using (var cmdUser = connection.CreateCommand())
-                {
-                    cmdUser.CommandText = $"CREATE TEMP TABLE user_result AS {_solutionCode.TrimEnd(';')};";
-                    await cmdUser.ExecuteNonQueryAsync(cancellationToken);
-                }
-
-                // Tests
+                // Tests are executed one by one
                 foreach (var test in _problem.TestCases)
                 {
                     using var cmdTest = connection.CreateCommand();
@@ -139,15 +142,36 @@ namespace Runners.Shared.Runners
             {
                 if (def.Language?.ToLower() == "postgresql" && !string.IsNullOrWhiteSpace(def.Value))
                 {
-                    sb.AppendLine(def.Value);
+                    sb.AppendLine(def.Value.TrimEnd(';') + ";");
                 }
             }
 
-            // Temp table with user's query result
-            sb.AppendLine();
-            sb.AppendLine($"CREATE TEMP TABLE user_result AS");
-            sb.AppendLine(problemSolutionDto.Code.TrimEnd(';') + ";");
-            sb.AppendLine();
+            // Goal - retrieve last select statement to store the result into a temporary table
+            var statements = _solutionCode.Split(";")
+                                              .Select(s => s.Trim())
+                                              .Where(s => !string.IsNullOrWhiteSpace(s))
+                                              .ToList();
+
+            string? lastSelect = null;
+
+            foreach (var statement in statements)
+            {
+                if (statement.StartsWith("select", StringComparison.OrdinalIgnoreCase))
+                {
+                    lastSelect = statement;
+                }
+                  
+                sb.AppendLine(statement + ";");
+            }
+
+            if (lastSelect is not null)
+            {
+                var query = $"CREATE TEMP TABLE user_result AS {lastSelect};";
+                sb.Append(query);
+            }
+
+            // Save current sql without tests
+            _codeWithoutTests = sb.ToString();
 
             // Tests
             foreach (var testCase in problemSolutionDto.Problem.TestCases)
@@ -166,6 +190,21 @@ namespace Runners.Shared.Runners
             Console.WriteLine("[PostgreSQL Runner] Final sql:" + finalSql);
 
             return finalSql;
+        }
+
+        private bool ContainsForbidden(string sql, out string keyword)
+        {
+            var lowered = sql.ToLowerInvariant();
+            foreach (var f in _forbiddenKeywords)
+            {
+                if (lowered.Contains(f))
+                {
+                    keyword = f;
+                    return true;
+                }
+            }
+            keyword = "";
+            return false;
         }
     }
 }
