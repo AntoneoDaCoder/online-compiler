@@ -42,6 +42,7 @@ namespace Runners.Shared.Runners
 
                 await using var cmd = connection.CreateCommand();
                 cmd.CommandText = fullCode;
+                cmd.Transaction = transaction;
 
                 await cmd.ExecuteNonQueryAsync(cancellationToken);
 
@@ -83,6 +84,8 @@ namespace Runners.Shared.Runners
             {
                 using var cmd = connection.CreateCommand();
                 cmd.CommandText = _codeWithoutTests;
+                cmd.Transaction = transaction;
+
                 await cmd.ExecuteNonQueryAsync(cancellationToken);
 
                 // Tests are executed one by one
@@ -109,7 +112,7 @@ namespace Runners.Shared.Runners
                     }
                 }
 
-                await transaction.CommitAsync(cancellationToken);
+                await transaction.RollbackAsync(cancellationToken);
 
                 result.Status = RequestStatus.Succeeded;
                 result.Result.Status = ExecutionStatus.Succeeded;
