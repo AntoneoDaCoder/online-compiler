@@ -11,6 +11,16 @@ namespace Runners.Shared.Runners
         private readonly string _connectionString = "Server=mssql-service.mssql.svc.cluster.local,1433;Database=master;User Id=sa;Password=Admin123!;Encrypt=False;TrustServerCertificate=True;";
         private Problem _problem;
         private string _solutionCode;
+        private string _codeWithoutTests;
+        private static readonly string[] _forbiddenKeywords =
+        [
+            "drop", "alter", "create", "truncate", "merge",
+            "grant", "revoke", "commit", "rollback", "save",
+            "execute", "sp_executesql", "bulk",    
+            "set", "shutdown", "dbcc", "use", "alter login",
+            "backup", "restore", "kill", "print", "waitfor"
+
+        ];
 
         public MsSqlRunner()
         {
@@ -19,15 +29,19 @@ namespace Runners.Shared.Runners
 
         public async Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
         {
+            if (ContainsForbidden(_solutionCode, out var bad))
+            {
+                return (false, $"Forbidden keyword detected: {bad}");
+            }
             try
             {
                 await using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync(cancellationToken);
 
-                await using var transaction = connection.BeginTransaction();
+                await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
                 await using var cmd = connection.CreateCommand();
-                cmd.Transaction = transaction;
+                cmd.Transaction = (SqlTransaction)transaction;
                 cmd.CommandText = fullCode;
 
                 await cmd.ExecuteNonQueryAsync(cancellationToken);
@@ -60,37 +74,25 @@ namespace Runners.Shared.Runners
             await using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
 
-            await using var transaction = connection.BeginTransaction();
+            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
             try
             {
-                // Seeding
-                foreach (var def in _problem.AdditionalDefinitions)
-                {
-                    if (def.Language?.ToLower() == "mssql" && !string.IsNullOrWhiteSpace(def.Value))
-                    {
-                        await using var cmdSeed = connection.CreateCommand();
-                        cmdSeed.Transaction = transaction;
-                        cmdSeed.CommandText = def.Value;
-                        await cmdSeed.ExecuteNonQueryAsync(cancellationToken);
-                    }
-                }
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = _codeWithoutTests;
+                cmd.Transaction = (SqlTransaction)transaction;
 
-                // User query as temp table
-                await using (var cmdUser = connection.CreateCommand())
-                {
-                    cmdUser.Transaction = transaction;
-                    cmdUser.CommandText = $"SELECT * INTO #user_result FROM ({_solutionCode.TrimEnd(';')}) AS user_query;";
-                    await cmdUser.ExecuteNonQueryAsync(cancellationToken);
-                }
+                await cmd.ExecuteNonQueryAsync(cancellationToken);
 
                 // Tests
                 foreach (var test in _problem.TestCases)
                 {
                     await using var cmdTest = connection.CreateCommand();
-                    cmdTest.Transaction = transaction;
+                    cmdTest.Transaction = (SqlTransaction)transaction;
+
                     string testSql = test.InputExpression.Replace("(...)", "#user_result");
                     cmdTest.CommandText = testSql;
+
                     var scalarResult = await cmdTest.ExecuteScalarAsync(cancellationToken);
 
                     bool passed = int.TryParse(scalarResult?.ToString(), out var code) && code == 1;
@@ -102,11 +104,12 @@ namespace Runners.Shared.Runners
                         result.Status = RequestStatus.Failed;
                         result.Result.Status = ExecutionStatus.FailedToExecute;
                         result.Result.ConsoleOutput = test.Name;
+
                         return result;
                     }
                 }
 
-                await transaction.CommitAsync(cancellationToken);
+                await transaction.RollbackAsync(cancellationToken);
                 result.Status = RequestStatus.Succeeded;
                 result.Result.Status = ExecutionStatus.Succeeded;
 
@@ -118,6 +121,7 @@ namespace Runners.Shared.Runners
                 result.Status = RequestStatus.Failed;
                 result.Result.Status = ExecutionStatus.RuntimeError;
                 result.Result.ConsoleOutput = ex.Message;
+
                 return result;
             }
         }
@@ -129,6 +133,7 @@ namespace Runners.Shared.Runners
 
             var sb = new StringBuilder();
 
+            // Seeding
             foreach (var def in problemSolutionDto.Problem.AdditionalDefinitions)
             {
                 if (def.Language?.ToLower() == "mssql" && !string.IsNullOrWhiteSpace(def.Value))
@@ -137,10 +142,31 @@ namespace Runners.Shared.Runners
                 }
             }
 
-            // Temp table with user query result
-            sb.AppendLine();
-            sb.AppendLine($"SELECT * INTO #user_result FROM ({problemSolutionDto.Code.TrimEnd(';')}) AS user_query;");
-            sb.AppendLine();
+            // Goal - retrieve last select statement to store the result into a temporary table
+            var statements = _solutionCode.Split(";")
+                                              .Select(s => s.Trim())
+                                              .Where(s => !string.IsNullOrWhiteSpace(s))
+                                              .ToList();
+
+            string? lastSelect = null;
+
+            foreach (var statement in statements)
+            {
+                if (statement.StartsWith("select", StringComparison.OrdinalIgnoreCase))
+                {
+                    lastSelect = statement;
+                }
+
+                sb.AppendLine(statement + ";");
+            }
+
+            if (lastSelect is not null)
+            {
+                sb.AppendLine($"SELECT * INTO #user_result FROM ({lastSelect.TrimEnd(';')}) AS user_query;");
+            }
+
+            // Save current sql without tests
+            _codeWithoutTests = sb.ToString();
 
             // Tests
             foreach (var testCase in problemSolutionDto.Problem.TestCases)
@@ -151,8 +177,26 @@ namespace Runners.Shared.Runners
                 }
             }
 
-            return sb.ToString();
+            var finalSql = sb.ToString();
+
+            Console.WriteLine("[MSSQL Runner] Final sql:" + finalSql);
+
+            return finalSql;
         }
-    
+
+        private bool ContainsForbidden(string sql, out string keyword)
+        {
+            var lowered = sql.ToLowerInvariant();
+            foreach (var f in _forbiddenKeywords)
+            {
+                if (lowered.Contains(f))
+                {
+                    keyword = f;
+                    return true;
+                }
+            }
+            keyword = "";
+            return false;
+        }
     }
 }
