@@ -60,8 +60,8 @@ deploy: bake
 
 	@echo [93mDeploying PostgreSQL StatefulSet...[0m
 	@cd $(ROOT_DIR) && \
-	kubectl -n postgresql apply -f k8s/postgres-statefulset.yaml && \
-	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=120s
+	kubectl -n postgresql apply -f k8s/postgres-statefulset.yaml 
+# 	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=120s
 	@echo [92mDone![0m
 	
 
