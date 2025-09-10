@@ -1,81 +1,78 @@
-﻿using Shared.DTOs;
+﻿using Runners.Shared;
+using Shared.DTOs;
 using System.Diagnostics;
 using System.Text.Json;
 
-namespace Runners.Shared.Runners
+public class JavaCompositeRunner : IRunner
 {
-    public class JavaCompositeRunner : IRunner
+    private static readonly JsonSerializerOptions _options = new JsonSerializerOptions
     {
-        private static JsonSerializerOptions _options = new JsonSerializerOptions
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
+    private static readonly ProcessStartInfo _pInfo = new ProcessStartInfo()
+    {
+        FileName = "java",
+        Arguments = "-jar JavaRunner/app.jar --once",
+        RedirectStandardInput = true,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false,
+    };
+
+    private ProblemSolutionDto? _dto;
+    private bool _isDisposed;
+
+    public async Task<CodeResponseDto> ExecuteCodeAsync(Guid requestId, DateTime requestDate, CancellationToken cancellationToken)
+    {
+        using var proc = new Process() { StartInfo = _pInfo };
+        proc.Start();
+
+        var requestJson = JsonSerializer.Serialize(_dto, _options);
+        await proc.StandardInput.WriteLineAsync(requestJson);
+
+        proc.StandardInput.Close();
+
+        string output = await proc.StandardOutput.ReadToEndAsync();
+        string errors = await proc.StandardError.ReadToEndAsync();
+
+        await proc.WaitForExitAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(output))
         {
-            PropertyNameCaseInsensitive = true
-        };
-
-        private static ProcessStartInfo _pInfo = new ProcessStartInfo()
-        {
-            FileName = "java",
-            Arguments = "-jar app.jar --once",
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-
-        private string _serializedDto = string.Empty;
-        private bool _isDisposed;
-
-        public async Task<CodeResponseDto> ExecuteCodeAsync(Guid requestId, DateTime requestDate, CancellationToken cancellationToken)
-        {
-            using var proc = new Process()
-            {
-                StartInfo = _pInfo,
-            };
-
-            proc.Start();
-            await proc.StandardInput.WriteLineAsync(_serializedDto);
-            proc.StandardInput.Close();
-
-            string output = await proc.StandardOutput.ReadToEndAsync();
-            string errors = await proc.StandardError.ReadToEndAsync();
-
-            await proc.WaitForExitAsync(cancellationToken);
-
-            var response = JsonSerializer.Deserialize<CodeResponseDto>(output, _options);
-
-            return response!;
+            throw new InvalidOperationException($"Java runner produced no output. Errors: {errors}");
         }
 
-        public Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
+        try
         {
-            _serializedDto = fullCode;
-
-            if (string.IsNullOrEmpty(_serializedDto))
-                return Task.FromResult((false, "Failed to compile code: no code provided"));
-
-            return Task.FromResult((true, string.Empty));
+            return JsonSerializer.Deserialize<CodeResponseDto>(output, _options)!;
         }
-
-        public string WrapCode(ProblemSolutionDto problemSolutionDto)
+        catch (Exception ex)
         {
-            return JsonSerializer.Serialize(problemSolutionDto, _options);
+            throw new InvalidOperationException(
+                $"Failed to parse Java runner output. Raw output:\n{output}\nErrors:\n{errors}", ex);
         }
+    }
 
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+    public Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
+    {
+        if (_dto == null)
+            throw new InvalidOperationException("Compile error. Failed to compile code");
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (_isDisposed)
-            {
-                return;
-            }
-            if (disposing)
-            {
-            }
-            _isDisposed = true;
-        }
+        return Task.FromResult((true, string.Empty));
+    }
+
+    public string WrapCode(ProblemSolutionDto problemSolutionDto)
+    {
+        _dto = problemSolutionDto;
+
+        return JsonSerializer.Serialize(problemSolutionDto, _options);
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed) return;
+        _isDisposed = true;
     }
 }
