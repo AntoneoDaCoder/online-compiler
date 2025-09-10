@@ -1,13 +1,18 @@
-# --- Основные цели ---
 .PHONY: up rebuild down bake deploy serve minikube-start
 
 ROOT_DIR := ..
+COMPOSITE ?= 0
 
 up: minikube-start bake deploy serve
 
 rebuild:
 	@echo [93mBuilding images in parallel via Bake...[0m
-	@powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File ./rebuild.ps1
+ifeq ($(COMPOSITE),1)
+	@powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File ./rebuild.ps1 -Mode composite
+else
+	@powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File ./rebuild.ps1 -Mode default
+endif
+
 
 down:
 	@echo [93mStopping minikube....[0m
@@ -25,11 +30,15 @@ minikube-start:
 	@echo [92mMinikube is ready.[0m
 
 
-# --- Сборка через Bake с выводом только ошибок ---
+# --- Сборка через Bake ---
 bake:
 	@echo [93mStarting parallel builds via Docker Bake...[0m
-	@bake_wrapper.bat
-	@echo [93mLoading images into minikube...[0m
+ifeq ($(COMPOSITE),1)
+	@bake_wrapper.bat composite
+	@minikube -p minikube image load api-server:local
+	@minikube -p minikube image load composite-runner:local
+else
+	@bake_wrapper.bat default
 	@minikube -p minikube image load api-server:local
 	@minikube -p minikube image load csharp-runner:local
 	@minikube -p minikube image load java-runner:local
@@ -37,9 +46,9 @@ bake:
 	@minikube -p minikube image load nodejs-runner:local
 	@minikube -p minikube image load kotlin-runner:local
 	@minikube -p minikube image load typescript-runner:local
-#   @minikube -p minikube image load swift-runner:local 
+#   @minikube -p minikube image load swift-runner:local
+endif
 	@echo [92mAll images have been loaded[0m
-
 	@echo [92mBuilds finished[0m
 
 
@@ -62,13 +71,32 @@ deploy: bake
 	kubectl -n postgresql apply -f k8s/postgres-statefulset.yaml && \
 	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=120s
 	@echo [92mDone![0m
+	
+
+	@echo [93mSetting up MSSQL...[0m
+	@cd $(ROOT_DIR) && \
+	kubectl create ns mssql || true && \
+	kubectl -n mssql delete secret mssql --ignore-not-found && \
+	kubectl -n mssql create secret generic mssql \
+	--from-literal=SA_PASSWORD=Admin123! \
+	--from-literal=ACCEPT_EULA=Y \
+	--from-literal=MSSQL_PID=Developer
+	@echo [92mDone![0m
+
+	@echo [93mDeploying MSSQL StatefulSet...[0m
+	@cd $(ROOT_DIR) && \
+	kubectl -n mssql apply -f k8s/mssql-statefulset.yaml
+	@echo [92mDone![0m
+
 
 	@echo [93mDeploying API to Kubernetes[0m
 	@cd $(ROOT_DIR) && \
 	kubectl apply -f k8s/rbac.yaml && \
 	kubectl apply -f k8s/api-deployment.yaml && \
 	kubectl wait --for=condition=ready pod -l app=api-server --timeout=90s
+
 	@echo [92mDone![0m
+
 
 # --- Портфорвардинг API ---
 serve: deploy

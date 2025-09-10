@@ -1,7 +1,14 @@
 @echo off
 cd ..
 
-docker buildx bake --file scripts/docker-bake.hcl --progress=plain
+if "%1"=="composite" (
+    echo Building in COMPOSITE mode...
+    docker buildx bake --file scripts/docker-bake.hcl composite --progress=plain
+) else (
+    echo Building in DEFAULT mode...
+    docker buildx bake --file scripts/docker-bake.hcl default --progress=plain
+)
+
 if %errorlevel% neq 0 (
     echo [91mBUILD FAILED[0m
 ) else (
