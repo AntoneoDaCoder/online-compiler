@@ -107,6 +107,7 @@ public class Runner
         response.language = "java";
         response.result = new ExecutionResultDto();
         response.result.requestSentAt = request.sentAt;
+        response.result.responseSentAt = LocalDateTime.now();
 
         try {
             String fullCode = wrapUserCode(request);
