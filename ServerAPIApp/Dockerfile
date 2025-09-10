@@ -1,3 +1,5 @@
+ARG USE_COMPOSITE=false
+
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS base
 WORKDIR /app
 
@@ -8,16 +10,23 @@ COPY --from=server-core / "ServerAPIApp.Core/"
 COPY . "ServerAPIApp/"
 COPY --from=shared / "Shared/"
 
-RUN dotnet restore "ServerAPIApp/ServerAPIApp.csproj"
 
-WORKDIR /src/ServerAPIApp
-RUN dotnet build -c Release -o /app/build
+RUN if [ "$USE_COMPOSITE" = "true" ]; then \
+      sed -i 's/"UseComposite": false/"UseComposite": true/' ServerAPIApp/appsettings.json ; \
+    fi
 
-FROM build AS publish
-RUN dotnet publish -c Release -o /app/publish
+WORKDIR /src/ServerAPIApp/
+
+RUN dotnet restore -r linux-x64
+
+RUN dotnet publish -c Release -o /app/publish \
+    -p:PublishReadyToRun=true \
+    -p:SelfContained=false
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
+
+USER 1001
 
 ENTRYPOINT ["dotnet", "ServerAPIApp.dll"]
