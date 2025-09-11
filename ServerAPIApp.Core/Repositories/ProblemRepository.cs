@@ -747,8 +747,8 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Language = "postgresql",
-                        Value = @"CREATE TEMP TABLE Customers(Id INT PRIMARY KEY, Name TEXT);
-                                  CREATE TEMP TABLE Orders(Id INT PRIMARY KEY, CustomerId INT, Amount REAL,
+                        Value = @"CREATE TABLE Customers(Id INT PRIMARY KEY, Name TEXT);
+                                  CREATE TABLE Orders(Id INT PRIMARY KEY, CustomerId INT, Amount REAL,
                                                        FOREIGN KEY(CustomerId) REFERENCES Customers(Id));
                                   INSERT INTO Customers VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
                                   INSERT INTO Orders VALUES (1, 1, 150), (2, 1, 90), (3, 2, 200), (4, 3, 50);"
@@ -757,12 +757,12 @@ namespace ServerAPIApp.Core.Repositories
                     {
                         Language = "mssql",
                         Value = @"
-                            CREATE TABLE #Customers(Id INT PRIMARY KEY, Name NVARCHAR(100));
-                            CREATE TABLE #Orders(Id INT PRIMARY KEY, CustomerId INT, Amount FLOAT,
-                                FOREIGN KEY(CustomerId) REFERENCES #Customers(Id)
+                            CREATE TABLE Customers(Id INT PRIMARY KEY, Name NVARCHAR(100));
+                            CREATE TABLE Orders(Id INT PRIMARY KEY, CustomerId INT, Amount FLOAT,
+                                FOREIGN KEY(CustomerId) REFERENCES Customers(Id)
                             );
-                            INSERT INTO #Customers VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
-                            INSERT INTO #Orders VALUES (1, 1, 150), (2, 1, 90), (3, 2, 200), (4, 3, 50);
+                            INSERT INTO Customers VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
+                            INSERT INTO Orders VALUES (1, 1, 150), (2, 1, 90), (3, 2, 200), (4, 3, 50);
                         "
                     }
                 },
@@ -805,8 +805,8 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Language = "postgresql",
-                        Value = @"CREATE TEMP TABLE Categories(Id INT PRIMARY KEY, Name TEXT);
-                                  CREATE TEMP TABLE Products(Id INT PRIMARY KEY, CategoryId INT, Price REAL,
+                        Value = @"CREATE TABLE Categories(Id INT PRIMARY KEY, Name TEXT);
+                                  CREATE TABLE Products(Id INT PRIMARY KEY, CategoryId INT, Price REAL,
                                                          FOREIGN KEY(CategoryId) REFERENCES Categories(Id));
                                   INSERT INTO Categories VALUES (1, 'Electronics'), (2, 'Furniture'), (3, 'Clothes');
                                   INSERT INTO Products VALUES (1, 1, 300), (2, 1, 250), (3, 2, 600), (4, 3, 100), (5, 3, 50);"
@@ -815,12 +815,12 @@ namespace ServerAPIApp.Core.Repositories
                     {
                         Language = "mssql",
                         Value = @"
-                            CREATE TABLE #Categories(Id INT PRIMARY KEY, Name NVARCHAR(100));
-                            CREATE TABLE #Products(Id INT PRIMARY KEY, CategoryId INT, Price FLOAT,
-                                FOREIGN KEY(CategoryId) REFERENCES #Categories(Id)
+                            CREATE TABLE Categories(Id INT PRIMARY KEY, Name NVARCHAR(100));
+                            CREATE TABLE Products(Id INT PRIMARY KEY, CategoryId INT, Price FLOAT,
+                                FOREIGN KEY(CategoryId) REFERENCES Categories(Id)
                             );
-                            INSERT INTO #Categories VALUES (1, 'Electronics'), (2, 'Furniture'), (3, 'Clothes');
-                            INSERT INTO #Products VALUES (1, 1, 300), (2, 1, 250), (3, 2, 600), (4, 3, 100), (5, 3, 50);
+                            INSERT INTO Categories VALUES (1, 'Electronics'), (2, 'Furniture'), (3, 'Clothes');
+                            INSERT INTO Products VALUES (1, 1, 300), (2, 1, 250), (3, 2, 600), (4, 3, 100), (5, 3, 50);
                         "
                     }
                 },
@@ -874,9 +874,9 @@ namespace ServerAPIApp.Core.Repositories
                     new()
                     {
                         Language = "postgresql",
-                        Value = @"CREATE TEMP TABLE Students(Id INT PRIMARY KEY, Name TEXT);
-                                  CREATE TEMP TABLE Courses(Id INT PRIMARY KEY, Title TEXT);
-                                  CREATE TEMP TABLE Enrollments(StudentId INT, CourseId INT,
+                        Value = @"CREATE TABLE Students(Id INT PRIMARY KEY, Name TEXT);
+                                  CREATE TABLE Courses(Id INT PRIMARY KEY, Title TEXT);
+                                  CREATE TABLE Enrollments(StudentId INT, CourseId INT,
                                                            FOREIGN KEY(StudentId) REFERENCES Students(Id),
                                                            FOREIGN KEY(CourseId) REFERENCES Courses(Id));
                                   INSERT INTO Students VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
@@ -887,18 +887,18 @@ namespace ServerAPIApp.Core.Repositories
                     {
                         Language = "mssql",
                         Value = @"
-                            CREATE TABLE #Students(Id INT PRIMARY KEY, Name NVARCHAR(100));
-                            CREATE TABLE #Courses(Id INT PRIMARY KEY, Title NVARCHAR(100));
-                            CREATE TABLE #Enrollments(
+                            CREATE TABLE Students(Id INT PRIMARY KEY, Name NVARCHAR(100));
+                            CREATE TABLE Courses(Id INT PRIMARY KEY, Title NVARCHAR(100));
+                            CREATE TABLE Enrollments(
                                 StudentId INT,
                                 CourseId INT,
-                                FOREIGN KEY(StudentId) REFERENCES #Students(Id),
-                                FOREIGN KEY(CourseId) REFERENCES #Courses(Id)
+                                FOREIGN KEY(StudentId) REFERENCES Students(Id),
+                                FOREIGN KEY(CourseId) REFERENCES Courses(Id)
                             );
 
-                            INSERT INTO #Students VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
-                            INSERT INTO #Courses VALUES (1, 'Math'), (2, 'Physics'), (3, 'History');
-                            INSERT INTO #Enrollments VALUES (1, 1), (1, 2), (2, 2), (3, 1), (3, 3);
+                            INSERT INTO Students VALUES (1, 'Tim'), (2, 'Tom'), (3, 'Don');
+                            INSERT INTO Courses VALUES (1, 'Math'), (2, 'Physics'), (3, 'History');
+                            INSERT INTO Enrollments VALUES (1, 1), (1, 2), (2, 2), (3, 1), (3, 3);
                         "
                     }
                 },
@@ -957,27 +957,81 @@ namespace ServerAPIApp.Core.Repositories
 
             _database[compileErrorProblem.Name] = compileErrorProblem;
 
-            //var forbiddenProblem = new Problem
-            //{
-            //    Name = "NetworkUsage",
-            //    TestCases = new List<TestCase>
-            //    {
-            //        new TestCase
-            //        {
-            //            Name = "testAdd",
-            //            TestInitialization = "",
-            //            InputExpression = """
-            //            Solution.openSite(); 
-            //            int result = 2+3;
-            //            """,
-            //            OutputExpression = "assertEquals(5, result);"
-            //        }
-            //    }
-            //};
-            //_database[forbiddenProblem.Name] = forbiddenProblem;
+            var linqTemplate = new Problem()
+            {
+                AdditionalDefinitions = new List<AdditionalDefinition> 
+                {
+                    new()
+                    {
+                        Language="csharp",
+                        Value=@"public class Department
+                                {
+                                    public int Id { get; set; }
+                                    public string Name { get; set; }
+                                    public List<Employee> Employees { get; set; } = new();
+                                }
+
+                                public class Employee
+                                {
+                                    public int Id { get; set; }
+                                    public string Name { get; set; }
+                                    public int Age { get; set; }
+                                    public int DepartmentId { get; set; }
+                                    public Department Department { get; set; }
+                                }
+
+                                public class AppDbContext : DbContext
+                                {
+                                    public DbSet<Department> Departments { get; set; }
+                                    public DbSet<Employee> Employees { get; set; }
+
+                                    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+                                    protected override void OnModelCreating(ModelBuilder modelBuilder)
+                                    {
+                                        modelBuilder.HasDefaultSchema(TestInfrastructure.Schema);
+
+                                        modelBuilder.Entity<Employee>()
+                                            .HasOne(o => o.Department)
+                                            .WithMany(c => c.Employees)
+                                            .HasForeignKey(o => o.DepartmentId);
+                                    }
+                                }"
+                        }
+                },
+                Name = "SimpleLinq",
+                TestCases = new List<TestCase>
+                {
+                    new TestCase
+                    {
+                        Name = "CheckResultDictionaryContent",
+                        TestLanguage = "csharp",
+                        TestInitialization = @"using var context = TestInfrastructure.CreateContext();
+                                               if (!context.Departments.Any())
+                                               {
+                                                   context.Departments.AddRange(
+                                                       new Department { Id = 1, Name = ""IT"" },
+                                                       new Department { Id = 2, Name = ""HR"" }
+                                                   );
+                                                   context.Employees.AddRange(
+                                                       new Employee { Id = 1, Name = ""Emp1"", Age = 35, DepartmentId = 1 },
+                                                       new Employee { Id = 2, Name = ""Emp2"", Age = 40, DepartmentId = 1 },
+                                                       new Employee { Id = 3, Name = ""Emp3"", Age = 28, DepartmentId = 2 },
+                                                       new Employee { Id = 4, Name = ""Emp4"", Age = 32, DepartmentId = 2 }
+                                                   );
+                                                   context.SaveChanges();
+                                                }",
+                        InputExpression = "var result = new Solution().GetEmployeesOlderThan30GroupedByDepartment(context);",
+                        OutputExpression = @"NUnit.Framework.Assert.That(result.Count(), Is.EqualTo(2));
+                                            NUnit.Framework.Assert.That(result.Keys, Is.EquivalentTo(new[] { ""IT"", ""HR"" }));
+                                            NUnit.Framework.Assert.That(result[""IT""], Is.EquivalentTo(new[] { ""Emp1"", ""Emp2"" }));"
+                    }
+                }
+            };
+
+            _database[linqTemplate.Name] = linqTemplate;
 
         }
-
 
         public Problem GetProblem(string name)
         {

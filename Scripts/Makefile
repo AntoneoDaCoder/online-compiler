@@ -43,6 +43,7 @@ else
 	@minikube -p minikube image load csharp-runner:local
 	@minikube -p minikube image load java-runner:local
 	@minikube -p minikube image load postgresql-runner:local
+	@minikube -p minikube image load mssql-runner:local
 	@minikube -p minikube image load nodejs-runner:local
 	@minikube -p minikube image load kotlin-runner:local
 	@minikube -p minikube image load typescript-runner:local
@@ -68,8 +69,8 @@ deploy: bake
 
 	@echo [93mDeploying PostgreSQL StatefulSet...[0m
 	@cd $(ROOT_DIR) && \
-	kubectl -n postgresql apply -f k8s/postgres-statefulset.yaml && \
-	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=120s
+	kubectl -n postgresql apply -f k8s/postgres-statefulset.yaml 
+# 	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=120s
 	@echo [92mDone![0m
 	
 
