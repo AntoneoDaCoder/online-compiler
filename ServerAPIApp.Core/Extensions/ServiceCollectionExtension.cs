@@ -11,164 +11,78 @@ namespace ServerAPIApp.Core.Extensions
 {
     public static class ServiceCollectionExtension
     {
-        public static IServiceCollection BindLanguageConfigs(this IServiceCollection services, IConfiguration conf)
+        private static readonly string[] SupportedLanguages = new[]
         {
-            services.Configure<LanguageConfig>("csharp", conf.GetSection("Languages:csharp"));
+            "csharp", /*"swift",*/ "java", "postgresql",
+            "mssql", "nodejs", "kotlin", "typescript"
+        };
 
-            services.Configure<LanguageConfig>("swift", conf.GetSection("Languages:swift"));
-
-            services.Configure<LanguageConfig>("java", conf.GetSection("Languages:java"));
-
-            services.Configure<LanguageConfig>("postgresql", conf.GetSection("Languages:postgresql"));
-
-            services.Configure<LanguageConfig>("mssql", conf.GetSection("Languages:mssql"));
-
-            services.Configure<LanguageConfig>("nodejs", conf.GetSection("Languages:nodejs"));
-
-            services.Configure<LanguageConfig>("kotlin", conf.GetSection("Languages:kotlin"));
-
-            services.Configure<LanguageConfig>("typescript", conf.GetSection("Languages:typescript"));
-
-            return services;
-        }
-
-        public static IServiceCollection RegisterServices(this IServiceCollection services)
+        public static IServiceCollection RegisterServices(this IServiceCollection services, IConfiguration config)
         {
             services.AddSingleton<ProblemRepository>();
 
             services.AddSingleton<IKubernetes>(sp =>
             {
-                var config = KubernetesClientConfiguration.BuildDefaultConfig();
-                return new Kubernetes(config);
+                var kubeConfig = KubernetesClientConfiguration.BuildDefaultConfig();
+                return new Kubernetes(kubeConfig);
             });
 
             services.AddSingleton<CallbackService>();
 
-            services.AddSingleton<IKubernetesJobManager>
-                (sp =>
-                {
-                    var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+            var useComposite = config.GetValue<bool>("UseComposite");
 
-                    return new KubernetesJobManager
-                    (
-                        "csharp",
-                        sp.GetRequiredService<IKubernetes>(),
-                        monitor,
-                        sp.GetRequiredService<CallbackService>()
-                    );
-                }
-            );
-
-            services.AddSingleton<IKubernetesJobManager>
-
-               (sp =>
-               {
-                   var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
-
-                   return new KubernetesJobManager
-                   (
-                       "swift",
-                       sp.GetRequiredService<IKubernetes>(),
-                       monitor,
-                       sp.GetRequiredService<CallbackService>()
-                   );
-               }
-           );
-
-            services.AddSingleton<IKubernetesJobManager>
-                (sp =>
-                  {
-                      var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
-
-                      return new KubernetesJobManager
-                      (
-                          "java",
-                          sp.GetRequiredService<IKubernetes>(),
-                          monitor,
-                          sp.GetRequiredService<CallbackService>()
-                      );
-                  }
-              );
-
-            services.AddSingleton<IKubernetesJobManager>
-                (sp =>
-                {
-                    var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
-
-                    return new KubernetesJobManager
-                    (
-                        "postgresql",
-                        sp.GetRequiredService<IKubernetes>(),
-                        monitor,
-                        sp.GetRequiredService<CallbackService>()
-                    );
-                }
-            );
-
-            services.AddSingleton<IKubernetesJobManager>
-                (sp =>
-                {
-                    var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
-
-                    return new KubernetesJobManager
-                    (
-                        "mssql",
-                        sp.GetRequiredService<IKubernetes>(),
-                        monitor,
-                        sp.GetRequiredService<CallbackService>()
-                    );
-                }
-            );
-
-            services.AddSingleton<IKubernetesJobManager>
-            (sp =>
+            if (useComposite)
             {
-                var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+                Console.WriteLine("[API] Server starts in composite mode");
 
-                return new KubernetesJobManager
-                (
-                    "nodejs",
-                    sp.GetRequiredService<IKubernetes>(),
-                    monitor,
-                    sp.GetRequiredService<CallbackService>()
-                );
+                services.Configure<LanguageConfig>("composite", config.GetSection($"Languages:composite"));
+
+                services.AddSingleton<CompositeKubernetesJobManager>(sp =>
+                {
+                    var mgr = new CompositeKubernetesJobManager(
+                        sp.GetRequiredService<IKubernetes>(),
+                        sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>(),
+                        sp.GetRequiredService<CallbackService>());
+
+                    foreach (var lang in SupportedLanguages)
+                        mgr.RegisterLanguage(lang);
+
+                    return mgr;
+                });
+
+                foreach (var lang in SupportedLanguages)
+                {
+                    services.AddSingleton<IKubernetesJobManager>(sp =>
+                        new CompositeJobManagerProxy(lang, sp.GetRequiredService<CompositeKubernetesJobManager>()));
+                }
             }
-            );
-
-            services.AddSingleton<IKubernetesJobManager>
-         (sp =>
-         {
-             var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
-
-             return new KubernetesJobManager
-             (
-             "kotlin",
-             sp.GetRequiredService<IKubernetes>(),
-             monitor,
-             sp.GetRequiredService<CallbackService>()
-             );
-         }
-         );
-
-            services.AddSingleton<IKubernetesJobManager>
-            (sp =>
+            else
             {
-                var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
-                return new KubernetesJobManager
-                (
-                    "typescript",
-                    sp.GetRequiredService<IKubernetes>(),
-                    monitor,
-                    sp.GetRequiredService<CallbackService>()
-                );
+                Console.WriteLine("[API] Server starts in default mode");
+
+                foreach (var lang in SupportedLanguages)
+                {
+                    services.Configure<LanguageConfig>(lang, config.GetSection($"Languages:{lang}"));
+                }
+
+                foreach (var lang in SupportedLanguages)
+                {
+                    services.AddSingleton<IKubernetesJobManager>(sp =>
+                    {
+                        var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+                        return new KubernetesJobManager(
+                            lang,
+                            sp.GetRequiredService<IKubernetes>(),
+                            monitor,
+                            sp.GetRequiredService<CallbackService>()
+                        );
+                    });
+                }
             }
-            );
 
             services.AddHostedService<ManagerAdapter>();
-
             services.AddSingleton<ICodeDispatcher, CodeDispatcher>();
             services.AddHostedService(provider => provider.GetRequiredService<ICodeDispatcher>());
-
 
             return services;
         }

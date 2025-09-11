@@ -13,4 +13,4 @@ WORKDIR /app
 COPY --from=build /app/target/java-runner-1.0-shaded.jar app.jar
 
 USER 1001
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar --server"]

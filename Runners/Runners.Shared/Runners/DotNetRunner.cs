@@ -28,9 +28,14 @@ namespace Runners.Shared.Runners
                 using NUnitLite;
                 using Microsoft.EntityFrameworkCore;
                 """;
-        const string _runtimeConfig = """
+
+        const string _runtimeConfig = 
+               """
                 {
                     "runtimeOptions": {
+                         "configProperties": {
+                            "System.GC.Server": false
+                    },
                     "tfm": "net9.0",
                     "framework": {
                         "name": "Microsoft.NETCore.App",
@@ -52,6 +57,8 @@ namespace Runners.Shared.Runners
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
+
+        private static int _compilationCount = 0;
 
         private static List<AssemblyMetadata> _metadataCache;
 
@@ -235,16 +242,19 @@ namespace Runners.Shared.Runners
 
             var compilationResult = compiledAssembly.Emit(ms, cancellationToken: cancellationToken);
 
-            string compilationResultString = string.Empty;
-
-            foreach (var diag in compilationResult.Diagnostics)
-                compilationResultString = string.Join("\n", compilationResult.Diagnostics);
+            var compilationResultString = string.Join("\n", compilationResult.Diagnostics);
 
             if (compilationResult.Success)
             {
                 ms.Seek(0, SeekOrigin.Begin);
+                using var fs = File.Create(_tmpDllPath);
+                ms.CopyTo(fs);
+            }
 
-                File.WriteAllBytes(_tmpDllPath, ms.ToArray());
+            if (Interlocked.Increment(ref _compilationCount) % 5 == 0)
+            {
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+                GC.WaitForPendingFinalizers();
             }
 
             return Task.FromResult((compilationResult.Success, compilationResultString));

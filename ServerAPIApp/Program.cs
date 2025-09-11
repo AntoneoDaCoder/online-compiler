@@ -26,10 +26,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-
-builder.Services.BindLanguageConfigs(builder.Configuration);
-
-builder.Services.RegisterServices();
+builder.Services.RegisterServices(builder.Configuration);
 
 builder.Services.AddSignalR();
 

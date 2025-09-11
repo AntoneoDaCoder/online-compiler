@@ -10,17 +10,17 @@ COPY . "Runners/DotNetRunner/"
 COPY --from=runners-shared / "Runners/Runners.Shared/"
 COPY --from=shared / "Shared/"
 
-RUN dotnet restore "Runners/DotNetRunner/DotNetRunner.csproj"
-
 WORKDIR /src/Runners/DotNetRunner
-RUN dotnet build -c Release -o /app/build
 
-FROM build AS publish
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet restore -r linux-x64
+
+RUN dotnet publish -c Release -o /app/publish \
+    -p:PublishReadyToRun=true \
+    -p:SelfContained=false
 
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 
 USER 1001
 
