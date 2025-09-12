@@ -28,16 +28,14 @@ namespace ServerAPIApp.Core.Services
             new ConcurrentDictionary<Guid, (string Name, string CallbackUrl)>();
 
         private IKubernetes _client;
-        private CallbackService _callbackService;
         private CancellationTokenSource? _cts;
         private HttpClient _httpClient;
         private bool _isDisposed;
 
-        public KubernetesJobManager(string language, IKubernetes client, IOptionsMonitor<LanguageConfig> config, CallbackService callbackService)
+        public KubernetesJobManager(string language, IKubernetes client, IOptionsMonitor<LanguageConfig> config)
         {
             Language = language;
             _client = client;
-            _callbackService = callbackService;
             _httpClient = new HttpClient();
 
             var section = config.Get(language);
@@ -179,8 +177,6 @@ namespace ServerAPIApp.Core.Services
                        cancellationToken: cancellationToken);
 
                 Console.WriteLine($"[KubernetesJobManager] Marked pod [Name:{requestData.Name} as free");
-
-                await _callbackService.NotifyClientAsync(podResponse, requestData.CallbackUrl, cancellationToken);
             }
             catch (Exception ex)
             {

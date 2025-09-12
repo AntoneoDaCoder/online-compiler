@@ -15,10 +15,9 @@ public class CompositeKubernetesJobManager : IKubernetesJobManager, IHostedServi
 
     public CompositeKubernetesJobManager(
         IKubernetes client,
-        IOptionsMonitor<LanguageConfig> config,
-        CallbackService callbackService)
+        IOptionsMonitor<LanguageConfig> config)
     {
-        _inner = new KubernetesJobManager("composite", client, config, callbackService);
+        _inner = new KubernetesJobManager("composite", client, config);
     }
 
     public void RegisterLanguage(string language)
