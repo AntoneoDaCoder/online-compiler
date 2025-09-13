@@ -9,7 +9,6 @@ namespace Shared.DTOs
         public string Language { get; set; } = string.Empty;
         public string Code { get; set; } = string.Empty;
         public Problem Problem { get; set; }
-        public string CallbackUrl { get; set; } = string.Empty;
         public DateTime SentAt { get; set; }
     }
 }

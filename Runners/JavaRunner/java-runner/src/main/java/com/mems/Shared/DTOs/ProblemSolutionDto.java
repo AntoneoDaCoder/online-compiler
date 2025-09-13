@@ -11,6 +11,5 @@ public class ProblemSolutionDto {
     public String language = "";
     public String code = "";
     public Problem problem;
-    public String callbackUrl = "";
     public LocalDateTime sentAt;
 }

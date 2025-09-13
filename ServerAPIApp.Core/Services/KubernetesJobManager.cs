@@ -24,8 +24,8 @@ namespace ServerAPIApp.Core.Services
         protected string _namespace = string.Empty;
         protected string _appLabel = string.Empty;
 
-        private ConcurrentDictionary<Guid, (string Name, string CallbackUrl)> _resultCallbacks =
-            new ConcurrentDictionary<Guid, (string Name, string CallbackUrl)>();
+        private ConcurrentDictionary<Guid, string> _resultCallbacks =
+            new ConcurrentDictionary<Guid, string>();
 
         private IKubernetes _client;
         private CancellationTokenSource? _cts;
@@ -98,7 +98,7 @@ namespace ServerAPIApp.Core.Services
 
             try
             {
-                _resultCallbacks.TryAdd(request.RequestId, (podName, request.CallbackUrl));
+                _resultCallbacks.TryAdd(request.RequestId, podName);
 
                 Console.WriteLine($"[KubernetesJobManager] Current state of pending callbacks:\r\n "
                     + JsonSerializer.Serialize(_resultCallbacks, new JsonSerializerOptions { WriteIndented = true }) + $", time:" + DateTime.UtcNow.ToString("o"));
@@ -172,11 +172,11 @@ namespace ServerAPIApp.Core.Services
 
                 await _client.CoreV1.PatchNamespacedPodAsync(
                        body: patch,
-                       name: requestData.Name,
+                       name: requestData,
                        namespaceParameter: _namespace,
                        cancellationToken: cancellationToken);
 
-                Console.WriteLine($"[KubernetesJobManager] Marked pod [Name:{requestData.Name} as free");
+                Console.WriteLine($"[KubernetesJobManager] Marked pod [Name:{requestData} as free");
             }
             catch (Exception ex)
             {
