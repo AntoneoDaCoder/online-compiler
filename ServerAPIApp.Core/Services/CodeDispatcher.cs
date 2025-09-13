@@ -141,7 +141,6 @@ namespace ServerAPIApp.Core.Services
                                 Code = request.Code,
                                 SentAt = request.RequestSentAt,
                                 MaxAllowedTimeInMilliseconds = request.MaxAllowedTimeInMilliseconds,
-                                CallbackUrl = request.CallbackUrl,
                                 Language = request.Language,
                             };
 

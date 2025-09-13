@@ -27,8 +27,6 @@ namespace ServerAPIApp.Core.Extensions
                 return new Kubernetes(kubeConfig);
             });
 
-            services.AddSingleton<CallbackService>();
-
             var useComposite = config.GetValue<bool>("UseComposite");
 
             if (useComposite)
@@ -41,8 +39,7 @@ namespace ServerAPIApp.Core.Extensions
                 {
                     var mgr = new CompositeKubernetesJobManager(
                         sp.GetRequiredService<IKubernetes>(),
-                        sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>(),
-                        sp.GetRequiredService<CallbackService>());
+                        sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>());
 
                     foreach (var lang in SupportedLanguages)
                         mgr.RegisterLanguage(lang);
@@ -73,8 +70,7 @@ namespace ServerAPIApp.Core.Extensions
                         return new KubernetesJobManager(
                             lang,
                             sp.GetRequiredService<IKubernetes>(),
-                            monitor,
-                            sp.GetRequiredService<CallbackService>()
+                            monitor
                         );
                     });
                 }

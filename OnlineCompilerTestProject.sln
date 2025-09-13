@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FrontendMockApp", "FrontendMockApp\FrontendMockApp.csproj", "{8D0377A6-0AB2-4AC6-B0B9-0B2B702299C7}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerAPIApp", "ServerAPIApp\ServerAPIApp.csproj", "{4661226C-06A6-48A7-A714-F0AB9DF956F5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerAPIApp.Core", "ServerAPIApp.Core\ServerAPIApp.Core.csproj", "{1754AA79-D18E-41D0-90C3-647E813AAA3D}"
@@ -35,10 +33,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8D0377A6-0AB2-4AC6-B0B9-0B2B702299C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8D0377A6-0AB2-4AC6-B0B9-0B2B702299C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8D0377A6-0AB2-4AC6-B0B9-0B2B702299C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8D0377A6-0AB2-4AC6-B0B9-0B2B702299C7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4661226C-06A6-48A7-A714-F0AB9DF956F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4661226C-06A6-48A7-A714-F0AB9DF956F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4661226C-06A6-48A7-A714-F0AB9DF956F5}.Release|Any CPU.ActiveCfg = Release|Any CPU

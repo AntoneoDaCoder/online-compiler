@@ -12,7 +12,6 @@ data class ProblemSolutionDto(
     val maxAllowedTimeInMilliseconds: Long,
     val language: String = "",
     val code: String = "",
-    val callbackUrl: String = "",
     val problem: Problem,
     @Contextual
     val sentAt: LocalDateTime
