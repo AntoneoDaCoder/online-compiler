@@ -29,7 +29,7 @@ namespace Runners.Shared.Runners
                 using Microsoft.EntityFrameworkCore;
                 """;
 
-        const string _runtimeConfig = 
+        const string _runtimeConfig =
                """
                 {
                     "runtimeOptions": {
@@ -87,7 +87,7 @@ namespace Runners.Shared.Runners
                 _metadataCache.Add(AssemblyMetadata.CreateFromFile(dll));
             }
 
-            var appDlls = Directory.GetFiles("/app", "*.dll");
+            var appDlls = Directory.GetFiles("/app", "*.dll", new EnumerationOptions() { RecurseSubdirectories = true });
 
             foreach (var dll in appDlls)
             {
@@ -165,8 +165,8 @@ namespace Runners.Shared.Runners
                     );
                 }
             }
-                
-            
+
+
             sb.AppendLine(
                 $$"""
             {{problemSolutionDto.Code}}
