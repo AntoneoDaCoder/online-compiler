@@ -20,4 +20,4 @@ COPY --from=build /app/Runners/KotlinRunner/build/libs/runner.jar ./runner.jar
 
 USER 1001
 
-CMD ["java", "-jar", "runner.jar --server"]
+CMD ["java", "-jar", "runner.jar", "--server"]
