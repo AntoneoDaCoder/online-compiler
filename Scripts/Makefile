@@ -3,7 +3,7 @@
 ROOT_DIR := ..
 COMPOSITE ?= 0
 
-up: minikube-start bake deploy serve
+up: minikube-start set-composite-config bake deploy serve
 
 rebuild:
 	@echo [93mBuilding images in parallel via Bake...[0m
@@ -54,7 +54,7 @@ endif
 
 
 # --- Деплой Kubernetes ресурсов ---
-deploy: bake
+deploy: bake set-composite-config
 	@echo [93mSetting up Postgre...[0m
 	@cd $(ROOT_DIR) && \
 	kubectl create ns postgresql || true && \
@@ -94,6 +94,7 @@ deploy: bake
 	@cd $(ROOT_DIR) && \
 	kubectl apply -f k8s/rbac.yaml && \
 	kubectl apply -f k8s/api-deployment.yaml && \
+	kubectl rollout restart deployment api-server -n default && \
 	kubectl wait --for=condition=ready pod -l app=api-server --timeout=90s
 
 	@echo [92mDone![0m
@@ -104,3 +105,11 @@ serve: deploy
 	@echo [93mStarting port-forward to API...[0m
 	@port_forward_wrapper.bat
 	@echo [92mAPI is ready to run code![0m
+
+
+set-composite-config:
+ifeq ($(COMPOSITE),1)
+	@kubectl create configmap api-config --from-literal=UseComposite=true --dry-run=client -o yaml | kubectl apply -f -
+else
+	@kubectl create configmap api-config --from-literal=UseComposite=false --dry-run=client -o yaml | kubectl apply -f -
+endif

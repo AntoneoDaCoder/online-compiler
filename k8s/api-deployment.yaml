@@ -18,6 +18,12 @@ spec:
         image: api-server:local
         ports:
         - containerPort: 8080
+        env:
+        - name: UseComposite
+          valueFrom:
+            configMapKeyRef:
+              name: api-config   
+              key: UseComposite 
 ---
 apiVersion: v1
 kind: Service
