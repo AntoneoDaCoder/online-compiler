@@ -1,6 +1,6 @@
 ﻿namespace ServerAPIApp.Domain.Entities
 {
-    public interface IBaseEntity : ICreatable, IModifiable
+    public interface IBaseEntity
     {
         Guid Id { get; set; }
     }
