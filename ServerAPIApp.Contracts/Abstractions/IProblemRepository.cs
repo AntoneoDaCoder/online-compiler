@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
-using ServerAPIApp.Domain.Entities;
+﻿using ServerAPIApp.Domain.Entities;
 
 namespace ServerAPIApp.Contracts.Abstractions
 {

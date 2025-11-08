@@ -1,25 +1,22 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Domain.Entities;
 
 namespace ServerAPIApp.Contracts.Abstractions
 {
     public interface IUserRepository
     {
-        Task<DisplayUserDto?> GetByIdShortenedAsync
+        Task<UserEntity?> GetByIdAsync
             (Guid userId,
             CancellationToken cancellationToken = default);
-        Task<UserEntity?> GetByIdFullAsync
-            (Guid userId,
-            CancellationToken cancellationToken = default);
-
-        Task<DisplayUserDto?> GetByEmailShortenedAsync
+        Task<UserEntity?> GetByEmailAsync
             (string email,
             CancellationToken cancellationToken = default);
-        Task<UserEntity?> GetByEmailFullAsync
+        Task<UserEntity?> GetByIdWithRolesAsync
+            (Guid id,
+            CancellationToken cancellationToken = default);
+        Task<UserEntity?> GetByEmailWithRolesAsync
             (string email,
             CancellationToken cancellationToken = default);
-
         Task<IdentityResult> UpdateAsync
             (UserEntity user,
             CancellationToken cancellationToken = default);
