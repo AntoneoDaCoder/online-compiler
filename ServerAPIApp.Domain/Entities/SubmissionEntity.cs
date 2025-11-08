@@ -2,14 +2,18 @@
 {
     public class SubmissionEntity : BaseEntity, ICreatable
     {
+        public Guid ProblemVersionId { get; set; }
         public ProblemVersionEntity? ProblemVersion { get; set; }
 
-        //public User? Creator {get;set;}
-        public Guid ProblemVersionId { get; set; }
-        public Guid CreatorId { get; set; }
+
         public DateTimeOffset CreatedAt { get; set; }
+        public Guid CreatedBy { get; set; } //index
+        public UserEntity? Creator { get; set; }
+
+
         public string Solution { get; set; } = "Sample solution";
-        public string Status { get; set; } = "Sample status";
-        public string SolutionLanguage { get; set; } = "Sample lamguage";
+        public int PassedTests { get; set; }
+        public int TotalTests { get; set; }
+        public string SolutionLanguage { get; set; } = "Sample language";
     }
 }
