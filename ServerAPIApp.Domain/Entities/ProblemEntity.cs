@@ -13,6 +13,7 @@
         public bool IsDeleted { get; set; } = false;
         public DateTimeOffset? DeletionScheduledAt { get; set; }
         public DateTimeOffset? DeletionDeadline { get; set; }
+        public Guid? InitiatorId { get; set; }
         public UserEntity? Initiator { get; set; }
 
 
