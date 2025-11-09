@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MsSqlRunner", "Runners\MsSq
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompositeRunner", "Runners\CompositeRunner\CompositeRunner.csproj", "{61B3C164-9521-457D-9B8E-81CB78A8F6AA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerAPIApp.Domain", "ServerAPIApp.Domain\ServerAPIApp.Domain.csproj", "{BCF713B8-091B-4C5B-A514-2FD11318C286}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -77,6 +79,10 @@ Global
 		{61B3C164-9521-457D-9B8E-81CB78A8F6AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{61B3C164-9521-457D-9B8E-81CB78A8F6AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{61B3C164-9521-457D-9B8E-81CB78A8F6AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCF713B8-091B-4C5B-A514-2FD11318C286}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCF713B8-091B-4C5B-A514-2FD11318C286}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCF713B8-091B-4C5B-A514-2FD11318C286}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCF713B8-091B-4C5B-A514-2FD11318C286}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
