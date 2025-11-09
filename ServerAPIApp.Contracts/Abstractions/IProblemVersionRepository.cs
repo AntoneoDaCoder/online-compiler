@@ -21,7 +21,7 @@ namespace ServerAPIApp.Contracts.Abstractions
             (ProblemVersionEntity problemVersion,
             CancellationToken cancellationToken = default);
         Task<ProblemVersionEntity> DeleteAsync
-            (ProblemVersionEntity problemVersion,
+            (Guid versionId,
             CancellationToken cancellationToken = default);
     }
 }

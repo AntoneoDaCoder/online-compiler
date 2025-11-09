@@ -24,7 +24,7 @@ namespace ServerAPIApp.Contracts.Abstractions
             (UserEntity user,
             CancellationToken cancellationToken = default);
         Task<IdentityResult> DeleteAsync
-            (UserEntity user,
+            (Guid userId,
             CancellationToken cancellationToken = default);
         Task<bool> CheckPasswordAsync
             (UserEntity user,

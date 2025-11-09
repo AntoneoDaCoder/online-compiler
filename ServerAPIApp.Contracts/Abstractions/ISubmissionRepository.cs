@@ -13,7 +13,7 @@ namespace ServerAPIApp.Contracts.Abstractions
             CancellationToken cancellationToken = default);
         Task<List<SubmissionEntity>?> GetUserSubmissionsFilteredByLanguageAsync
             (Guid userId,
-            Expression<Func<string, bool>> languageFilter,
+            Expression<Func<bool, SubmissionEntity>> languageFilter,
             CancellationToken cancellationToken = default);
         Task<SubmissionEntity> CreateAsync
             (SubmissionEntity entity,
@@ -22,7 +22,7 @@ namespace ServerAPIApp.Contracts.Abstractions
            (SubmissionEntity entity,
            CancellationToken cancellationToken = default);
         Task<SubmissionEntity> DeleteAsync
-           (SubmissionEntity entity,
+           (Guid submissionId,
             CancellationToken cancellationToken = default);
     }
 }
