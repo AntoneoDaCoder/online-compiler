@@ -1,6 +1,6 @@
 ﻿namespace ServerAPIApp.Domain.Entities
 {
-    public class ProblemVersionLanguagesEntity
+    public class ProblemVersionLanguage
     {
         public Guid VersionId { get; set; }
         public ProblemVersionEntity? Version { get; set; }
