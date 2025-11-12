@@ -18,9 +18,8 @@
         public int Version { get; set; }
         public string Statement { get; set; } = "Sample problem statement";
         public int TotalTests { get; set; }
+        public string TestTemplateKey { get; set; } = default!;
 
-        public ICollection<TestCaseEntity> TestCases { get; set; } = new List<TestCaseEntity>();
-        public ICollection<AdditionalDefinitionEntity> AdditionalDefinitions { get; set; } = new List<AdditionalDefinitionEntity>();
         public ICollection<ProblemVersionLanguage> SupportedLanguages { get; set; } = new List<ProblemVersionLanguage>();
     }
 }
