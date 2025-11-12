@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ServerAPIApp.Domain.Entities;
 using System.Reflection;
 
-namespace ServerAPIAPP.DAL.Contexts
+namespace ServerAPIApp.DAL.Contexts
 {
     public sealed class BaseDbContext : IdentityDbContext<UserEntity, IdentityRole<Guid>, Guid>
     {
