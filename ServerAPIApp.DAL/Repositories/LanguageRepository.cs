@@ -33,20 +33,20 @@ namespace ServerAPIApp.DAL.Repositories
 
         public async Task<LanguageEntity> CreateAsync(LanguageEntity entity, CancellationToken cancellationToken = default)
         {
-            _context.Languages.Add(entity);
+            var entry = _context.Languages.Add(entity);
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            return entity;
+            return entry.Entity;
         }
 
         public async Task<LanguageEntity> UpdateAsync(LanguageEntity entity, CancellationToken cancellationToken = default)
         {
-            _context.Languages.Update(entity);
+            var entry = _context.Languages.Update(entity);
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            return entity;
+            return entry.Entity;
         }
 
         public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -55,7 +55,10 @@ namespace ServerAPIApp.DAL.Repositories
                 .Where(x => x.Id == id)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            _context.ChangeTracker.Clear();
+            var entry = _context.Languages.Local.FirstOrDefault(x => x.Id == id);
+
+            if (entry is not null)
+                _context.Entry(entry).State = EntityState.Detached;
 
             return affected > 0;
         }
