@@ -16,7 +16,7 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<LanguageEntity> UpdateAsync
             (LanguageEntity lang,
             CancellationToken cancellationToken = default);
-        Task<LanguageEntity> DeleteAsync
+        Task<bool> DeleteAsync
             (Guid id,
             CancellationToken cancellationToken = default);
     }

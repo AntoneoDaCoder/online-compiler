@@ -26,11 +26,6 @@ namespace ServerAPIApp.DAL.Confs
             builder.HasIndex(l => l.Code)
                 .IsUnique()
                 .HasDatabaseName("ux_languages_code");
-
-            builder.HasMany(l => l.ProblemVersionLinks)
-                .WithOne(v => v.Language)
-                .HasForeignKey(v => v.LanguageId)
-                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
