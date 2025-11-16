@@ -142,10 +142,10 @@ namespace ServerAPIApp.DAL.Repositories
             CancellationToken cancellationToken = default)
         {
             var affected = await _context.ProblemVersions
-                .Where(x => x.Id == x.Id && x.IsDraft)
+                .Where(x => x.Id == draftId && x.IsDraft)
                 .ExecuteDeleteAsync(cancellationToken);
 
-            var entry = _context.ProblemVersions.Local.FirstOrDefault(x => x.Id == x.Id && x.IsDraft);
+            var entry = _context.ProblemVersions.Local.FirstOrDefault(x => x.Id == draftId && x.IsDraft);
 
             if (entry is not null)
                 _context.Entry(entry).State = EntityState.Detached;
