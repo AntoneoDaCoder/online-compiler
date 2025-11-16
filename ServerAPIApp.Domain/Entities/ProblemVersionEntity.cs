@@ -19,6 +19,7 @@
         public string Statement { get; set; } = "Sample problem statement";
         public int TotalTests { get; set; }
         public string TestTemplateKey { get; set; } = default!;
+        public int NumSubmissions { get; set; }
 
         public ICollection<ProblemVersionLanguage> SupportedLanguages { get; set; } = new List<ProblemVersionLanguage>();
     }

@@ -4,7 +4,7 @@ using ServerAPIApp.Domain.Entities;
 
 namespace ServerAPIApp.DAL.Confs
 {
-    public sealed class ProblemEntityConfiguration:IEntityTypeConfiguration<ProblemEntity>
+    public sealed class ProblemEntityConfiguration : IEntityTypeConfiguration<ProblemEntity>
     {
         public void Configure(EntityTypeBuilder<ProblemEntity> b)
         {
@@ -66,11 +66,11 @@ namespace ServerAPIApp.DAL.Confs
                 .OnDelete(DeleteBehavior.Restrict);
 
             b.Property(x => x.LastPublishedVersion)
-                .HasColumnName("last_published_version"); 
+                .HasColumnName("last_published_version");
 
-            b.HasOne<ProblemVersionEntity>()
+            b.HasOne(x => x.LastPublishedVersion)
                 .WithMany()
-                .HasForeignKey(x => x.LastPublishedVersion)
+                .HasForeignKey(x => x.LastPublishedVersionId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             b.HasMany(x => x.Versions)

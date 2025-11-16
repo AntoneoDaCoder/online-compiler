@@ -21,7 +21,8 @@
         public Guid ModifiedBy { get; set; }
         public UserEntity? Editor { get; set; }
 
-        public Guid? LastPublishedVersion { get; set; }
+        public Guid? LastPublishedVersionId { get; set; }
+        public ProblemVersionEntity? LastPublishedVersion {  get; set; }
 
         public ICollection<ProblemVersionEntity> Versions { get; set; } = new List<ProblemVersionEntity>();
     }

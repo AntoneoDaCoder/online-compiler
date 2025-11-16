@@ -1,4 +1,5 @@
 ﻿using ServerAPIApp.Domain.Entities;
+using System.Linq.Expressions;
 
 namespace ServerAPIApp.Contracts.Abstractions
 {
@@ -14,14 +15,17 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<List<ProblemVersionEntity>?> GetProblemVersionsByIdAsync
             (Guid problemId,
             CancellationToken cancellationToken = default);
-        Task<ProblemVersionEntity> CreateAsync
-            (ProblemVersionEntity problemVersion,
+        Task<List<ProblemVersionEntity>?> GetFilteredVersionsAsync
+            (Expression<Func<ProblemVersionEntity, bool>> filter,
             CancellationToken cancellationToken = default);
-        Task<ProblemVersionEntity> UpdateAsync
-            (ProblemVersionEntity problemVersion,
+        Task<ProblemVersionEntity> CreateDraftAsync
+            (ProblemVersionEntity draft,
             CancellationToken cancellationToken = default);
-        Task<ProblemVersionEntity> DeleteAsync
-            (Guid versionId,
+        Task<ProblemVersionEntity?> PublishDraftAsync
+            (ProblemVersionEntity draft,
+            CancellationToken cancellationToken = default);
+        Task<bool> DeleteDraftAsync
+            (Guid draftId,
             CancellationToken cancellationToken = default);
     }
 }
