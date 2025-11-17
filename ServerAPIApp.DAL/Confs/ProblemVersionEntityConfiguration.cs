@@ -51,6 +51,11 @@ namespace ServerAPIApp.DAL.Confs
              .WithOne(x => x.Version)
              .HasForeignKey(x => x.VersionId)
              .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Property(x => x.NumSubmissions)
+              .HasColumnName("num_submissions")
+              .HasDefaultValue(0)
+              .IsRequired();
         }
     }
 }
