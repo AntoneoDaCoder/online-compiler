@@ -13,7 +13,7 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<ProblemEntity> CreateAsync
             (ProblemEntity problem,
             CancellationToken cancellationToken = default);
-        Task<ProblemEntity> DeleteAsync
+        Task<bool> DeleteAsync
             (Guid problemId,
             CancellationToken cancellationToken = default);
     }
