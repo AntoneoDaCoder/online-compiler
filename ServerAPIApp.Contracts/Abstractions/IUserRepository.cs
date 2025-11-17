@@ -31,9 +31,6 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<IdentityResult> DeleteAsync
             (UserEntity user,
             CancellationToken cancellationToken = default);
-        Task<bool> DeleteRangeAsync
-            (IEnumerable<UserEntity> users,
-            CancellationToken cancellationToken = default);
         Task<bool> CheckPasswordAsync
             (UserEntity user,
             string password,

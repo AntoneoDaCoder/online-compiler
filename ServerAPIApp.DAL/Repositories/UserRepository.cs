@@ -132,11 +132,6 @@ namespace ServerAPIApp.DAL.Repositories
             return await _userManager.DeleteAsync(user);
         }
 
-        public async Task<bool> DeleteRangeAsync
-            (IEnumerable<UserEntity> users,
-            CancellationToken cancellationToken = default)
-        {
-
-        }
+        //TODO: implement batch user delete. for now i'll keep one at a time deletion strategy (im fucking lazy wcyd)
     }
 }
