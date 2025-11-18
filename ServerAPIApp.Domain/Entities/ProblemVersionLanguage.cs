@@ -2,9 +2,9 @@
 {
     public class ProblemVersionLanguage
     {
-        public Guid VersionId { get; set; } //part of fk
+        public Guid VersionId { get; set; } //part of pk
         public ProblemVersionEntity? Version { get; set; }
-        public Guid LanguageId { get; set; } //part of fk
+        public Guid LanguageId { get; set; } //part of pk
         public LanguageEntity? Language { get; set; }
         public string? ArtifactsKey { get; set; }
         public string EntryPoint { get; set; } = default!;

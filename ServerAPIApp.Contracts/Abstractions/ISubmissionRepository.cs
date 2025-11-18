@@ -18,9 +18,6 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<SubmissionEntity> CreateAsync
             (SubmissionEntity entity,
             CancellationToken cancellationToken = default);
-        Task<SubmissionEntity> UpdateAsync
-           (SubmissionEntity entity,
-           CancellationToken cancellationToken = default);
         Task<bool> DeleteAsync
            (Guid submissionId,
             CancellationToken cancellationToken = default);

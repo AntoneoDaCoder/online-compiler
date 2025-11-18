@@ -2,6 +2,7 @@
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.DAL.Contexts;
 using ServerAPIApp.Domain.Entities;
+using System;
 
 namespace ServerAPIApp.DAL.Repositories
 {
@@ -75,6 +76,29 @@ namespace ServerAPIApp.DAL.Repositories
                 _context.Entry(entry).State = EntityState.Detached;
 
             return affected > 0;
+        }
+
+        public async Task CreateRangeAsync
+            (IEnumerable<ProblemVersionLanguage> range,
+            CancellationToken cancellationToken = default)
+        {
+            await _context.VersionLanguages.AddRangeAsync(range, cancellationToken);
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task<List<ProblemVersionLanguage>> DeleteRangeAsync
+            (IEnumerable<ProblemVersionLanguage> range,
+            CancellationToken cancellationToken = default)
+        {
+            await _context.VersionLanguages
+                       .Where(x => x.VersionId == versionId && toRemove.Contains(x.LanguageId))
+                       .ExecuteDeleteAsync(cancellationToken);
+
+            var trackedRemoved = _context.VersionLanguages.Local
+                .Where(x => x.VersionId == versionId && toRemove.Contains(x.LanguageId))
+                .ToList();
+            foreach (var t in trackedRemoved) _context.Entry(t).State = EntityState.Detached;
         }
     }
 }
