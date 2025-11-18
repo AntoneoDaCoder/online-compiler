@@ -11,6 +11,8 @@ namespace ServerAPIApp.DAL.Repositories
     {
         private BaseDbContext _context;
 
+
+        //TODO: return back update draft method
         public ProblemVersionEntityRepository(BaseDbContext context)
         {
             _context = context;
@@ -25,18 +27,6 @@ namespace ServerAPIApp.DAL.Repositories
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
             return entity;
-        }
-
-        public async Task<ProblemVersionEntity?> GetByVersionAndProblemIdsAsync
-            (Guid problemId,
-            Guid versionId,
-            CancellationToken cancellationToken = default)
-        {
-            var entry = await _context.ProblemVersions
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.ProblemId == problemId && x.Id == versionId, cancellationToken);
-
-            return entry;
         }
 
         public async Task<List<ProblemVersionEntity>?> GetProblemVersionsByIdAsync

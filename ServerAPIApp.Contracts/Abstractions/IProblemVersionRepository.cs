@@ -8,10 +8,6 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<ProblemVersionEntity?> GetByIdAsync
             (Guid versionId,
             CancellationToken cancellationToken = default);
-        Task<ProblemVersionEntity?> GetByVersionAndProblemIdsAsync
-            (Guid problemId,
-            Guid versionId,
-            CancellationToken cancellationToken = default);
         Task<List<ProblemVersionEntity>?> GetProblemVersionsByIdAsync
             (Guid problemId,
             CancellationToken cancellationToken = default);

@@ -62,17 +62,6 @@ namespace ServerAPIApp.DAL.Repositories
             return entry.Entity;
         }
 
-        public async Task<SubmissionEntity> UpdateAsync
-          (SubmissionEntity entity,
-          CancellationToken cancellationToken = default)
-        {
-            var entry = _context.Submissions.Update(entity);
-
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return entry.Entity;
-        }
-
         public async Task<bool> DeleteAsync
             (Guid id,
             CancellationToken cancellationToken = default)
