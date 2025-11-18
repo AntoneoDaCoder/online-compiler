@@ -11,8 +11,6 @@ namespace ServerAPIApp.DAL.Repositories
     {
         private BaseDbContext _context;
 
-
-        //TODO: return back update draft method
         public ProblemVersionEntityRepository(BaseDbContext context)
         {
             _context = context;
@@ -46,6 +44,17 @@ namespace ServerAPIApp.DAL.Repositories
             CancellationToken cancellationToken = default)
         {
             var entry = _context.ProblemVersions.Add(draft);
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return entry.Entity;
+        }
+
+        public async Task<ProblemVersionEntity> UpdateDraftAsync
+            (ProblemVersionEntity draft,
+            CancellationToken cancellationToken = default)
+        {
+            var entry = _context.ProblemVersions.Update(draft);
 
             await _context.SaveChangesAsync(cancellationToken);
 
