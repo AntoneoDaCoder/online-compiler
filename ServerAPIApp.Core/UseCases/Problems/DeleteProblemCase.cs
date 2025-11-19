@@ -2,5 +2,5 @@
 
 namespace ServerAPIApp.Core.UseCases.Problems
 {
-    public record DeleteProblemCase(Guid ProblemId) : IRequest;
+    public record DeleteProblemCase(Guid ProblemId, Guid InitiatorId) : IRequest;
 }

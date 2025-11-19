@@ -4,6 +4,6 @@
     {
         public string DisplayName { get; set; } = default!;
         public string Code { get; set; } = default!;
-        public ICollection<ProblemVersionLanguage>? ProblemVersionLinks { get; set; }
+        public ICollection<ProblemVersionLanguage>? ProblemVersionLinks { get; set; } = new List<ProblemVersionLanguage>();
     }
 }

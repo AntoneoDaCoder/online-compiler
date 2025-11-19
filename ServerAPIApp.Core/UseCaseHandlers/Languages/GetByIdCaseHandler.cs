@@ -6,18 +6,18 @@ using ServerAPIApp.Domain.Exceptions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Languages
 {
-    public class GetByCodeHandler : IRequestHandler<GetLanguageByCodeCase, LanguageEntity>
+    public class GetByIdCaseHandler : IRequestHandler<GetLanguageByIdCase, LanguageEntity>
     {
         private ILanguageRepository _repo;
 
-        public GetByCodeHandler(ILanguageRepository repo)
+        public GetByIdCaseHandler(ILanguageRepository repo)
         {
             _repo = repo;
         }
 
-        public async Task<LanguageEntity> Handle(GetLanguageByCodeCase command, CancellationToken cancellationToken)
+        public async Task<LanguageEntity> Handle(GetLanguageByIdCase command, CancellationToken cancellationToken)
         {
-            var entity = await _repo.GetByCodeAsync(command.Code, cancellationToken);
+            var entity = await _repo.GetByIdAsync(command.Id, cancellationToken);
 
             if (entity is null)
                 throw new ResourceNotFoundException("Resource not found");

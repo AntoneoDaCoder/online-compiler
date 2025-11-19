@@ -16,5 +16,14 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<bool> DeleteAsync
             (Guid problemId,
             CancellationToken cancellationToken = default);
+        Task<bool> SoftDeleteAsync
+            (Guid id,
+            Guid initiatorId,
+            TimeSpan gracePeriod,
+            CancellationToken cancellationToken = default);
+        Task<bool> CancelSoftDeleteAsync
+              (Guid id,
+              Guid initiatorId,
+              CancellationToken cancellationToken = default);
     }
 }

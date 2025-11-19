@@ -2,6 +2,7 @@
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.DAL.Contexts;
 using ServerAPIApp.Domain.Entities;
+using System.Threading;
 
 namespace ServerAPIApp.DAL.Repositories
 {
@@ -59,6 +60,47 @@ namespace ServerAPIApp.DAL.Repositories
 
             if (entry is not null)
                 _context.Entry(entry).State = EntityState.Detached;
+
+            return affected > 0;
+        }
+
+        public async Task<bool> SoftDeleteAsync
+            (Guid id,
+            Guid initiatorId,
+            TimeSpan gracePeriod,
+            CancellationToken cancellationToken = default)
+        {
+            var now = DateTimeOffset.UtcNow;
+
+            var affected = await _context.Problems
+                .Where(p => p.Id == id && p.IsDeleted == false)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(p => p.IsDeleted, true)
+                    .SetProperty(p => p.InitiatorId, initiatorId)
+                    .SetProperty(p => p.DeletionScheduledAt, now)
+                    .SetProperty(p => p.DeletionDeadline, now + gracePeriod)
+                    .SetProperty(p => p.ModifiedAt, now)
+                    .SetProperty(p => p.ModifiedBy, initiatorId)
+                , cancellationToken);
+
+            return affected > 0;
+        }
+
+        public async Task<bool> CancelSoftDeleteAsync
+            (Guid id,
+            Guid initiatorId,
+            CancellationToken cancellationToken = default)
+        {
+            var affected = await _context.Problems
+               .Where(p => p.Id == id && p.IsDeleted == true)
+               .ExecuteUpdateAsync(s => s
+                   .SetProperty(p => p.IsDeleted, false)
+                   .SetProperty(p => p.InitiatorId, (Guid?)null)
+                   .SetProperty(p => p.DeletionScheduledAt, (DateTimeOffset?)null)
+                   .SetProperty(p => p.DeletionDeadline, (DateTimeOffset?)null)
+                   .SetProperty(p => p.ModifiedAt, DateTimeOffset.UtcNow)
+                   .SetProperty(p => p.ModifiedBy, initiatorId)
+               , cancellationToken);
 
             return affected > 0;
         }
