@@ -1,6 +1,7 @@
 ﻿using MediatR;
+using ServerAPIApp.Domain.Entities;
 
 namespace ServerAPIApp.Core.UseCases.Submissions
 {
-    public record UpdateProblemCase(Guid VersionId,Guid CreatedBy,string Solution,int PassedTests, int TotalTests, string SolutionLanguage) : IRequest;
+    public record CreateSubmissionCase(Guid VersionId, Guid CreatedBy, string Solution, int PassedTests, int TotalTests, string SolutionLanguage) : IRequest<SubmissionEntity>;
 }

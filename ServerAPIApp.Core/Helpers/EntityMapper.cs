@@ -1,5 +1,6 @@
 ﻿using ServerAPIApp.Core.UseCases.Languages;
 using ServerAPIApp.Core.UseCases.Problems;
+using ServerAPIApp.Core.UseCases.Submissions;
 using ServerAPIApp.Domain.Entities;
 
 namespace ServerAPIApp.Core.Helpers
@@ -56,6 +57,25 @@ namespace ServerAPIApp.Core.Helpers
                 Title = command.Title,
                 ModifiedAt = DateTimeOffset.UtcNow,
                 ModifiedBy = command.EditorId
+            };
+
+            return entity;
+        }
+        #endregion
+
+        #region SubmissionEntity related mapping
+        public static SubmissionEntity ToEntity(this CreateSubmissionCase command)
+        {
+            var entity = new SubmissionEntity()
+            {
+                Id = Guid.NewGuid(),
+                ProblemVersionId = command.VersionId,
+                CreatedAt = DateTimeOffset.UtcNow,
+                CreatedBy = command.CreatedBy,
+                Solution = command.Solution,
+                SolutionLanguage = command.SolutionLanguage,
+                PassedTests = command.PassedTests,
+                TotalTests = command.TotalTests
             };
 
             return entity;
