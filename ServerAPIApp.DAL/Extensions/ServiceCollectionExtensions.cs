@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.DAL.Contexts;
-using ServerAPIApp.Domain.Entities;
 using ServerAPIApp.DAL.Repositories;
+using ServerAPIApp.Domain.Entities;
 
 namespace ServerAPIApp.DAL.Extensions
 {
@@ -45,6 +46,21 @@ namespace ServerAPIApp.DAL.Extensions
             services.AddScoped<ISubmissionRepository, SubmissionRepository>();
 
             services.AddScoped<IUserRepository, UserRepository>();
+        }
+
+        public static void ConfigureObjectStorage(this IServiceCollection services)
+        {
+            services.AddSingleton<IObjectStorage>
+                (
+                sp =>
+                {
+                    var cfg = sp.GetRequiredService<IConfiguration>();
+                    var endpoint = cfg["Minio:Endpoint"];
+                    var access = cfg["Minio:AccessKey"];
+                    var secret = cfg["Minio:SecretKey"];
+                    var useSsl = bool.Parse(cfg["Minio:UseSsl"] ?? "true");
+                    return new ObjectStorage(endpoint, access, secret, useSsl);
+                });
         }
     }
 }
