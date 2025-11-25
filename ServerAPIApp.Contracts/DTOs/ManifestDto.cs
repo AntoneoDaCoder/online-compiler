@@ -4,7 +4,6 @@ namespace ServerAPIApp.Contracts.DTOs
 {
     public class ManifestDto
     {
-        public int SchemaVersion { get; set; }
         public string Entrypoint { get; set; } = "";
         public Signature Signature { get; set; } = new Signature();
         public HelpersBlock Helpers { get; set; } = new HelpersBlock();

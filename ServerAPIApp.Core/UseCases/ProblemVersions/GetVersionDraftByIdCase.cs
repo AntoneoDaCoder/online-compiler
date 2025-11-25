@@ -3,5 +3,5 @@ using ServerAPIApp.Contracts.DTOs;
 
 namespace ServerAPIApp.Core.UseCases.ProblemVersions
 {
-    public record GetVersionByIdCase(Guid VersionId) : IRequest<UserProblemVersionDto>;
+    public record GetVersionDraftByIdCase(Guid VersionId) : IRequest<EditorProblemVersionDto>;
 }

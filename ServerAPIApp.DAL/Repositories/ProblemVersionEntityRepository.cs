@@ -18,25 +18,23 @@ namespace ServerAPIApp.DAL.Repositories
 
         public async Task<ProblemVersionEntity?> GetByIdAsync
             (Guid id,
+            bool isDraft = false,
             CancellationToken cancellationToken = default)
         {
-            var entity = await _context.ProblemVersions
+            var query = _context.ProblemVersions
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .Where(x => x.Id == id);
+
+            if (isDraft)
+            {
+                query = query.Where(x => x.IsDraft)
+                    .Include(x => x.SupportedLanguages)
+                    .ThenInclude(x => x.Language);
+            }
+
+            var entity = await query.FirstOrDefaultAsync(cancellationToken);
 
             return entity;
-        }
-
-        public async Task<List<ProblemVersionEntity>?> GetProblemVersionsByIdAsync
-            (Guid problemId,
-            CancellationToken cancellationToken = default)
-        {
-            var entries = await _context.ProblemVersions
-                .AsNoTracking()
-                .Where(x => x.ProblemId == problemId)
-                .ToListAsync(cancellationToken);
-
-            return entries;
         }
 
         public async Task<ProblemVersionEntity> CreateDraftAsync
@@ -124,13 +122,21 @@ namespace ServerAPIApp.DAL.Repositories
             }
         }
 
-        public async Task<List<ProblemVersionEntity>?> GetFilteredVersionsAsync
-            (Expression<Func<ProblemVersionEntity, bool>> filter,
+        public async Task<List<ProblemVersionEntity>?> GetFilteredAsync
+            (Guid problemId,
+            Expression<Func<ProblemVersionEntity, bool>>? filter = null,
             CancellationToken cancellationToken = default)
         {
-            var entries = await _context.ProblemVersions
-                .AsNoTracking()
-                .Where(filter)
+            var query = _context.ProblemVersions.AsNoTracking()
+                .Where(x => x.ProblemId == problemId);
+
+            if (filter is not null)
+            {
+                query = query.Where(filter);
+            }
+
+            var entries = await query
+                .Include(x => x.Creator)
                 .ToListAsync(cancellationToken);
 
             return entries;

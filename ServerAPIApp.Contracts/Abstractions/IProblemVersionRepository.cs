@@ -7,12 +7,11 @@ namespace ServerAPIApp.Contracts.Abstractions
     {
         Task<ProblemVersionEntity?> GetByIdAsync
             (Guid versionId,
+            bool isDraft = false,
             CancellationToken cancellationToken = default);
-        Task<List<ProblemVersionEntity>?> GetProblemVersionsByIdAsync
+        Task<List<ProblemVersionEntity>?> GetFilteredAsync
             (Guid problemId,
-            CancellationToken cancellationToken = default);
-        Task<List<ProblemVersionEntity>?> GetFilteredVersionsAsync
-            (Expression<Func<ProblemVersionEntity, bool>> filter,
+            Expression<Func<ProblemVersionEntity, bool>>? filter = null,
             CancellationToken cancellationToken = default);
         Task<ProblemVersionEntity> CreateDraftAsync
             (ProblemVersionEntity draft,
