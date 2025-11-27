@@ -15,12 +15,14 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Languages
             _repo = repo;
         }
 
-        //either way we must return the entity regardless of whether it has existed before or not (create otherwise)
         public async Task<LanguageEntity> Handle(UpdateLanguageCase command, CancellationToken cancellationToken)
         {
-            var updated = command.ToEntity();
+            var entity = command.ToEntity();
 
-            var entity = await _repo.UpdateAsync(updated, cancellationToken);
+            var updated = await _repo.UpdateAsync(entity, cancellationToken);
+
+            if (!updated)
+                throw new ResourceNotFoundException("Resource not found");
 
             return entity;
         }

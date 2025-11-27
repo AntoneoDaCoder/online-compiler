@@ -17,7 +17,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
         public async Task Handle(PublishVersionDraftCase command, CancellationToken cancellationToken)
         {
             var entity = await _repo.GetByIdAsync(command.DraftId, isDraft: true, cancellationToken);
-
+           
             if (entity is null)
                 throw new ResourceNotFoundException("Resource not found");
 

@@ -16,7 +16,7 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<ProblemVersionEntity> CreateDraftAsync
             (ProblemVersionEntity draft,
             CancellationToken cancellationToken = default);
-        Task<ProblemVersionEntity> UpdateDraftAsync
+        Task<bool> UpdateDraftAsync
             (ProblemVersionEntity draft,
             CancellationToken cancellationToken = default);
         Task<ProblemVersionEntity?> PublishDraftAsync

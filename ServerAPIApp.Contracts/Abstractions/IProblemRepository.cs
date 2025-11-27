@@ -7,9 +7,9 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<ProblemEntity?> GetByIdAsync
          (Guid problemId,
          CancellationToken cancellationToken = default);
-        Task<ProblemEntity> UpdateAsync
-            (ProblemEntity problem,
-            CancellationToken cancellationToken = default);
+        Task<bool> UpdateAsync
+        (ProblemEntity problem,
+        CancellationToken cancellationToken = default);
         Task<ProblemEntity> CreateAsync
             (ProblemEntity problem,
             CancellationToken cancellationToken = default);

@@ -42,7 +42,10 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
                 entity.TestTemplateKey = key;
             }
 
-            await _repo.UpdateDraftAsync(entity, cancellationToken);
+           var updated =  await _repo.UpdateDraftAsync(entity, cancellationToken);
+
+            if (!updated)
+                throw new ResourceNotFoundException("Resource not found");
         }
     }
 }

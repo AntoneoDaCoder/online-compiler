@@ -13,7 +13,7 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<LanguageEntity> CreateAsync
             (LanguageEntity lang,
             CancellationToken cancellationToken = default);
-        Task<LanguageEntity> UpdateAsync
+        Task<bool> UpdateAsync
             (LanguageEntity lang,
             CancellationToken cancellationToken = default);
         Task<bool> DeleteAsync

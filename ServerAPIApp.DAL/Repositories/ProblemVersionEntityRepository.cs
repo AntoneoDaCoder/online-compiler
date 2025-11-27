@@ -48,15 +48,22 @@ namespace ServerAPIApp.DAL.Repositories
             return entry.Entity;
         }
 
-        public async Task<ProblemVersionEntity> UpdateDraftAsync
+        public async Task<bool> UpdateDraftAsync
             (ProblemVersionEntity draft,
             CancellationToken cancellationToken = default)
         {
-            var entry = _context.ProblemVersions.Update(draft);
+            var affected = await _context.ProblemVersions
+                .Where(x => x.Id == draft.Id && x.ProblemId == draft.ProblemId && x.IsDraft)
+                .ExecuteUpdateAsync
+                (
+                    x => x
+                    .SetProperty(x => x.Statement, draft.Statement)
+                    .SetProperty(x => x.TotalTests, draft.TotalTests)
+                    .SetProperty(x => x.TestTemplateKey, draft.TestTemplateKey),
+                    cancellationToken
+                );
 
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return entry.Entity;
+            return affected > 0;
         }
 
         public async Task<ProblemVersionEntity?> PublishDraftAsync

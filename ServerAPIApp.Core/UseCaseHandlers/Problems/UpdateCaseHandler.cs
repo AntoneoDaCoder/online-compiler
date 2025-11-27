@@ -17,9 +17,12 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 
         public async Task<ProblemEntity> Handle(UpdateProblemCase command, CancellationToken cancellationToken)
         {
-            var updated = command.ToEntity();
+            var entity = command.ToEntity();
 
-            var entity = await _repo.UpdateAsync(updated, cancellationToken);
+            var updated = await _repo.UpdateAsync(entity, cancellationToken);
+
+            if (!updated)
+                throw new ResourceNotFoundException("Resource not found");
 
             return entity;
         }

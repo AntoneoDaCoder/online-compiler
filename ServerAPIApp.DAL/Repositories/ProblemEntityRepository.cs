@@ -3,6 +3,7 @@ using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.DAL.Contexts;
 using ServerAPIApp.Domain.Entities;
 using System.Threading;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace ServerAPIApp.DAL.Repositories
 {
@@ -37,15 +38,23 @@ namespace ServerAPIApp.DAL.Repositories
             return entry.Entity;
         }
 
-        public async Task<ProblemEntity> UpdateAsync
+        public async Task<bool> UpdateAsync
             (ProblemEntity entity,
             CancellationToken cancellationToken = default)
         {
-            var entry = _context.Problems.Update(entity);
+            var affected = await _context.Problems
+                .Where(x => x.Id == entity.Id)
+                .ExecuteUpdateAsync
+                (
+                    x => x
+                    .SetProperty(x => x.Slug, entity.Slug)
+                    .SetProperty(x => x.Title, entity.Title)
+                    .SetProperty(x => x.ModifiedAt, entity.ModifiedAt)
+                    .SetProperty(x => x.ModifiedBy, entity.ModifiedBy),
+                    cancellationToken
+                );
 
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return entry.Entity;
+            return affected > 0;
         }
 
         public async Task<bool> DeleteAsync

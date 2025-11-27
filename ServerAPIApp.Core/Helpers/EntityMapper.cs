@@ -122,8 +122,6 @@ namespace ServerAPIApp.Core.Helpers
             {
                 Id = command.VersionId,
                 ProblemId = command.ProblemId,
-                CreatedAt = DateTimeOffset.UtcNow,
-                CreatedBy = command.CreatedBy,
                 Statement = command.Statement,
                 TotalTests = command.TotalTests,
             };
