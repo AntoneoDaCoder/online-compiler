@@ -25,11 +25,23 @@ namespace ServerAPIApp.DAL.Confs
 
             builder.Property(u => u.Email)
              .HasMaxLength(256)
-             .HasColumnName("email");
+             .HasColumnName("email")
+             .IsRequired(false);
 
             builder.Property(u => u.NormalizedEmail)
              .HasMaxLength(256)
-             .HasColumnName("normalized_email");
+             .HasColumnName("normalized_email")
+             .IsRequired(false);
+
+            builder.Property(u => u.EncryptedEmail)
+               .HasColumnName("encrypted_email")
+               .HasColumnType("text")
+               .IsRequired(false);
+
+            builder.Property(u => u.EmailHash)
+                .HasColumnName("email_hash")
+                .HasMaxLength(64)
+                .IsRequired(false);
 
             builder.Property(u => u.EmailConfirmed)
              .HasColumnName("email_confirmed");
@@ -57,7 +69,7 @@ namespace ServerAPIApp.DAL.Confs
              .HasColumnName("two_factor_enabled");
 
             builder.Property(u => u.LockoutEnd)
-             .HasColumnName("lockout_end"); 
+             .HasColumnName("lockout_end");
 
             builder.Property(u => u.LockoutEnabled)
              .HasColumnName("lockout_enabled");
@@ -77,10 +89,6 @@ namespace ServerAPIApp.DAL.Confs
 
             builder.Property(u => u.RefreshTokenExpiryTime)
              .HasColumnName("refresh_token_expiry_time")
-             .IsRequired(false);
-
-            builder.Property(u => u.TokenRevokedAt)
-             .HasColumnName("token_revoked_at")
              .IsRequired(false);
 
             builder.Property(u => u.CreatedAt)
@@ -133,6 +141,10 @@ namespace ServerAPIApp.DAL.Confs
             builder.HasIndex(u => u.NormalizedUserName)
              .IsUnique()
              .HasDatabaseName("ux_users_normalizedusername");
+
+            builder.HasIndex(u => u.EmailHash)
+                .IsUnique()
+                .HasDatabaseName("ux_users_emailhash");
 
             builder.HasIndex(u => u.NormalizedEmail)
              .HasDatabaseName("ix_users_normalizedemail");

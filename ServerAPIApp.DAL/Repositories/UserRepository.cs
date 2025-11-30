@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.DAL.Contexts;
+using Shared.Helpers;
 using ServerAPIApp.Domain.Entities;
 using System.Linq.Expressions;
 
@@ -27,6 +28,14 @@ namespace ServerAPIApp.DAL.Repositories
             var user = await _userManager.FindByIdAsync(userId.ToString());
 
             return user;
+        }
+
+        public async Task<UserEntity?> GetByHashedEmailAsync(string email, CancellationToken cancellationToken = default)
+        {
+            var hash = CryptoHelpers.ComputeSha256Hex(email);
+            return await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.EmailHash == hash, cancellationToken);
         }
 
         public async Task<List<UserEntity>?> GetFilteredUsersAsync

@@ -86,17 +86,15 @@ namespace ServerAPIApp.DAL.Repositories
                 var nextLatest = latestVersion + 1;
                 var now = DateTimeOffset.UtcNow;
 
-                var updated = await _context.Database
-                    .ExecuteSqlInterpolatedAsync
-                    ($@"
+                var updated = await _context.Database.ExecuteSqlInterpolatedAsync($@"
                     UPDATE problem_versions
                     SET version = {nextLatest},
-                        is_draft = FALSE,
-                        is_published = TRUE,
-                        published_by = {draft.PublishedBy},
-                        modified_at = {now}
-                    WHERE id = {draft.Id} AND is_draft = TRUE"
-                    , cancellationToken);
+                    is_draft = FALSE,
+                    is_published = TRUE,
+                    published_by = {draft.PublishedBy!.Value},
+                    published_at = {now},
+                    WHERE id = {draft.Id} AND is_draft = TRUE
+                    ", cancellationToken);
 
                 if (updated == 0)
                 {
@@ -113,10 +111,10 @@ namespace ServerAPIApp.DAL.Repositories
 
                 problem.LastPublishedVersionId = draft.Id;
                 problem.ModifiedAt = now;
+                problem.ModifiedBy = draft.PublishedBy!.Value;
 
                 await _context.SaveChangesAsync(cancellationToken);
                 await tx.CommitAsync(cancellationToken);
-
 
                 return await _context.ProblemVersions
                     .AsNoTracking()

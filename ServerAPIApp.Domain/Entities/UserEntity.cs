@@ -13,10 +13,12 @@ namespace ServerAPIApp.Domain.Entities
         public UserEntity? Editor { get; set; }
 
         public string? Name { get; set; }
+        public string? EncryptedEmail { get; set; }   // IDataProtector protected string
+        public string? EmailHash { get; set; }
+
+
         public string? RefreshToken { get; set; } //gonna be encrypted in db
         public DateTimeOffset? RefreshTokenExpiryTime { get; set; }
-        public DateTimeOffset? TokenRevokedAt { get; set; }
-
 
         public bool IsDeleted { get; set; } = false;
         public DateTimeOffset? DeletionScheduledAt { get; set; }

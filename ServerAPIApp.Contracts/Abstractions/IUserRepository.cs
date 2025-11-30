@@ -9,6 +9,10 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<UserEntity?> GetByIdAsync
             (Guid userId,
             CancellationToken cancellationToken = default);
+        Task<UserEntity?> GetByHashedEmailAsync
+            (string email,
+            CancellationToken cancellationToken = default);
+
         Task<List<UserEntity>?> GetFilteredUsersAsync
             (Expression<Func<UserEntity, bool>> filter,
             CancellationToken cancellationToken = default);

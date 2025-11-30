@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ServerAPIApp.Contracts\ServerAPIApp.Contracts.csproj" />
     <ProjectReference Include="..\ServerAPIApp.Domain\ServerAPIApp.Domain.csproj" />
+    <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 
 </Project>
