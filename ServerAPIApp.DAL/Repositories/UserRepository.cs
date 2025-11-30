@@ -83,13 +83,13 @@ namespace ServerAPIApp.DAL.Repositories
             return (user, roles);
         }
 
-        public async Task<(UserEntity? user, List<string>? roles)> GetByEmailWithRolesAsync
+        public async Task<(UserEntity? user, List<string>? roles)> GetByHashedEmailWithRolesAsync
             (string email,
             CancellationToken cancellationToken = default)
         {
             var query =
                 from u in _context.Users
-                where u.Email == email
+                where u.EmailHash == email
                 join ur in _context.UserRoles on u.Id equals ur.UserId into urj
                 from ur in urj.DefaultIfEmpty()
                 join r in _context.Roles on ur.RoleId equals r.Id into rj
@@ -139,6 +139,66 @@ namespace ServerAPIApp.DAL.Repositories
             CancellationToken cancellationToken = default)
         {
             return await _userManager.DeleteAsync(user);
+        }
+
+        public async Task<UserEntity?> FindByLoginAsync
+            (string provider,
+            string providerKey,
+            CancellationToken cancellationToken = default)
+        {
+            return await _userManager.FindByLoginAsync(provider, providerKey);
+        }
+
+        public async Task<IdentityResult> AddToRoleAsync
+            (UserEntity user,
+            string role,
+            CancellationToken cancellationToken = default)
+        {
+            var result = await _userManager.AddToRoleAsync(user!, role);
+
+            return result;
+        }
+
+        public async Task<IdentityResult> RemoveRoleAsync
+            (UserEntity user,
+            string role,
+            CancellationToken cancellationToken = default)
+        {
+            var result = await _userManager.RemoveFromRoleAsync(user, role);
+
+            return result;
+        }
+
+        public async Task<bool> AddLoginAsync
+            (UserEntity user,
+            string provider,
+            string providerKey,
+            string? displayName = null,
+            CancellationToken cancellationToken = default)
+        {
+            var login = new UserLoginInfo(provider, providerKey, displayName ?? provider);
+
+            var res = await _userManager.AddLoginAsync(user, login);
+
+            return res.Succeeded;
+        }
+
+        public async Task<bool> RemoveLoginAsync
+            (UserEntity user,
+            string provider,
+            string providerKey,
+            CancellationToken cancellationToken = default)
+        {
+            var res = await _userManager.RemoveLoginAsync(user, provider, providerKey);
+
+            return res.Succeeded;
+        }
+
+        public async Task<IList<UserLoginInfo>> GetUserLoginsAsync
+            (UserEntity user,
+            CancellationToken cancellationToken = default)
+        {
+            return await _userManager.GetLoginsAsync(user);
         }
 
         //TODO: implement batch user delete. for now i'll keep one at a time deletion strategy (im fucking lazy wcyd)

@@ -6,7 +6,8 @@ namespace ServerAPIApp.Core.Abstractions
     {
         Task<string> UpdateAccessTokenAsync(string access, string deviceId, CancellationToken cancellationToken = default);
         Task LogoutUserAsync(Guid id, string devicedId, CancellationToken cancellationToken = default);
-        Task CreateNewRefreshTokenAsync(UserEntity userEntity, string deviceId, CancellationToken cancellationToken = default);
+        string CreateNewRefreshToken();
+        DateTimeOffset GetTokenExpirationTime(DateTimeOffset dateIssued);
         string GenerateAccessToken(List<string> roles, Guid userId);
     }
 }

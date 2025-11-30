@@ -11,6 +11,7 @@ namespace ServerAPIApp.Core.Services
     public class JwtTokenService : IJwtTokenService
     {
         private const string RefreshTokenLifetimeKey = "REFRESH_TOKEN_LIFETIME";
+        private readonly TimeSpan _tokenLifetime;
 
         private readonly IJwtTokenGenerator _tokenGenerator;
         private readonly IUserRepository _userRepository;
@@ -23,6 +24,11 @@ namespace ServerAPIApp.Core.Services
             _userRepository = userRepository;
             _protector = protector;
             _logger = logger;
+
+            string refreshTokenLifetime = Environment.GetEnvironmentVariable(RefreshTokenLifetimeKey)!;
+
+            if (!TimeSpan.TryParse(refreshTokenLifetime, CultureInfo.InvariantCulture, out _tokenLifetime))
+                throw new IncorrectTokenFormatException("Token service failed to parse token's lifetime. Incorrect data format (expected ISO 8601)");
         }
 
         public async Task<string> UpdateAccessTokenAsync(string oldAccessToken, string deviceId, CancellationToken cancellationToken = default)
@@ -80,23 +86,14 @@ namespace ServerAPIApp.Core.Services
             await _userRepository.UpdateAsync(user, cancellationToken);
         }
 
-        public async Task CreateNewRefreshTokenAsync(UserEntity userEntity, string deviceId, CancellationToken cancellationToken = default)
+        public string CreateNewRefreshToken()
         {
-            _logger.LogInformation("{ServiceName} is starting new refresh token for user [Id:{UserId}] generation sequence", GetType().Name, userEntity.Id);
+            return _tokenGenerator.GenerateRefreshToken();
+        }
 
-            string refreshTokenLifetime = Environment.GetEnvironmentVariable(RefreshTokenLifetimeKey)!;
-
-            if (!TimeSpan.TryParse(refreshTokenLifetime, CultureInfo.InvariantCulture, out TimeSpan lifetime))
-                throw new IncorrectTokenFormatException("Token service failed to parse token's lifetime. Incorrect data format (expected ISO 8601)");
-
-            var refreshToken = _tokenGenerator.GenerateRefreshToken();
-
-            userEntity.RefreshToken = _protector.Protect(refreshToken);
-            userEntity.RefreshTokenExpiryTime = DateTimeOffset.UtcNow.Add(lifetime);
-
-            await _userRepository.UpdateAsync(userEntity, cancellationToken);
-
-            _logger.LogInformation("{ServiceName} generated new refresh token for user [Id:{UserId}]", GetType().Name, userEntity.Id);
+        public DateTimeOffset GetTokenExpirationTime(DateTimeOffset dateIssued)
+        {
+            return dateIssued.Add(_tokenLifetime);
         }
 
         public string GenerateAccessToken(List<string> roles, Guid userId)
