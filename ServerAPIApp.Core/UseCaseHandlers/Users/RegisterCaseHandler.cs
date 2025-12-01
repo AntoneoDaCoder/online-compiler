@@ -16,7 +16,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
 
 
         //TODO: move it outta here later
-        private const string DefaultRole = "User";
+        private const string DefaultRole = "user";
 
         public RegisterCaseHandler(IUserRepository repo, IJwtTokenService service, ISecretProtector protector)
         {
@@ -42,7 +42,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             {
                 Id = newId,
                 CreatedAt = DateTimeOffset.UtcNow,
-                CreatedBy = newId,
+                CreatedBy = Guid.Empty,
                 Name = command.Name,
                 EmailHash = emailHash,
                 EncryptedEmail = _protector.Protect(command.Email),
@@ -55,7 +55,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             if (!res.Succeeded)
                 throw new RegistrationException("Failed to create user's account");
 
-            var roleRes = await _repo.AddToRoleAsync(newUser, DefaultRole, cancellationToken);
+            var roleRes = await _repo.AddToRolesAsync(newUser, [DefaultRole], cancellationToken);
 
             if (!roleRes.Succeeded)
                 throw new RegistrationException("Failed to add user to role");
