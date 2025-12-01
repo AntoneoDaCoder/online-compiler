@@ -12,13 +12,13 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<UserEntity?> GetByHashedEmailAsync
             (string email,
             CancellationToken cancellationToken = default);
-        Task<IdentityResult> AddToRoleAsync
+        Task<IdentityResult> AddToRolesAsync
             (UserEntity user,
-            string role,
+            IEnumerable<string> roles,
             CancellationToken cancellationToken = default);
-        Task<IdentityResult> RemoveRoleAsync
+        Task<IdentityResult> RemoveFromRolesAsync
             (UserEntity user,
-            string role,
+           IEnumerable<string> roles,
             CancellationToken cancellationToken = default);
         Task<List<UserEntity>?> GetFilteredUsersAsync
             (Expression<Func<UserEntity, bool>> filter,
@@ -29,8 +29,12 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<(UserEntity? user, List<string>? roles)> GetByIdWithRolesAsync
             (Guid id,
             CancellationToken cancellationToken = default);
-        Task<(UserEntity? user, List<string>? roles)> GetByEmailWithRolesAsync
+        Task<(UserEntity? user, List<string>? roles)> GetByHashedEmailWithRolesAsync
             (string email,
+            CancellationToken cancellationToken = default);
+        Task<(UserEntity? user, List<string>? roles)> GetByLoginWithRolesAsync
+            (string provider,
+            string providerKey,
             CancellationToken cancellationToken = default);
         Task<IdentityResult> UpdateAsync
             (UserEntity user,

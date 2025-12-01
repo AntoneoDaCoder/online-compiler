@@ -107,6 +107,37 @@ namespace ServerAPIApp.DAL.Repositories
             return (user, roles);
         }
 
+        public async Task<(UserEntity? user, List<string>? roles)> GetByLoginWithRolesAsync
+            (string provider,
+            string providerKey,
+            CancellationToken cancellationToken = default)
+        {
+            var query =
+                from ul in _context.UserLogins
+                where ul.LoginProvider == provider && ul.ProviderKey == providerKey
+                join u in _context.Users on ul.UserId equals u.Id
+                join ur in _context.UserRoles on u.Id equals ur.UserId into urj
+                from ur in urj.DefaultIfEmpty()
+                join r in _context.Roles on ur.RoleId equals r.Id into rj
+                from r in rj.DefaultIfEmpty()
+                select new { User = u, Role = r.Name };
+
+            var rows = await query.AsNoTracking().ToListAsync(cancellationToken);
+
+            if (rows.Count == 0)
+                return (null, null);
+
+            var user = rows[0].User;
+            var roles = rows
+                .Where(x => x.Role is not null)
+                .Select(x => x.Role!)
+                .Distinct()
+                .ToList();
+
+            return (user, roles);
+        }
+
+
         public async Task<IdentityResult> CreateAsync
             (UserEntity user,
             string password,
@@ -149,22 +180,22 @@ namespace ServerAPIApp.DAL.Repositories
             return await _userManager.FindByLoginAsync(provider, providerKey);
         }
 
-        public async Task<IdentityResult> AddToRoleAsync
+        public async Task<IdentityResult> AddToRolesAsync
             (UserEntity user,
-            string role,
+           IEnumerable<string> roles,
             CancellationToken cancellationToken = default)
         {
-            var result = await _userManager.AddToRoleAsync(user!, role);
+            var result = await _userManager.AddToRolesAsync(user!, roles);
 
             return result;
         }
 
-        public async Task<IdentityResult> RemoveRoleAsync
+        public async Task<IdentityResult> RemoveFromRolesAsync
             (UserEntity user,
-            string role,
+            IEnumerable<string> roles,
             CancellationToken cancellationToken = default)
         {
-            var result = await _userManager.RemoveFromRoleAsync(user, role);
+            var result = await _userManager.RemoveFromRolesAsync(user, roles);
 
             return result;
         }
