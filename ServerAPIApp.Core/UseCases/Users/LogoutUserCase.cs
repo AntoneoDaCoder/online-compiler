@@ -5,5 +5,5 @@ using System.Text;
 
 namespace ServerAPIApp.Core.UseCases.Users
 {
-    public record ExternalLoginUserCase(string IdToken) : IRequest<string>;
+    public record LogoutUserCase(Guid InitiatorId, Guid TokenUserId) : IRequest;
 }
