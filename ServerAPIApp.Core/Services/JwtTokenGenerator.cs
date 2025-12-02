@@ -23,7 +23,7 @@ namespace ServerAPIApp.Core.Services
             _userRepository = userRepository;
         }
 
-        public string GenerateAccessToken(List<string> roles, Guid userId)
+        public string GenerateAccessToken(IEnumerable<string> roles, Guid userId)
         {
             var signingCredentials = GetSigningCredentials();
 
@@ -44,7 +44,7 @@ namespace ServerAPIApp.Core.Services
             }
         }
 
-        public async Task<ClaimsPrincipal> GetPrincipalFromExpiredTokenAsync(string token)
+        public async Task<ClaimsPrincipal> GetPrincipalFromExpiredTokenAsync(string token, CancellationToken cancellationToken = default)
         {
             var tokenValidationParameters = new TokenValidationParameters
             {
@@ -81,7 +81,7 @@ namespace ServerAPIApp.Core.Services
             return new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
         }
 
-        private static List<Claim> GetClaims(List<string> roles, string userId)
+        private static List<Claim> GetClaims(IEnumerable<string> roles, string userId)
         {
             var claims = new List<Claim>
             {

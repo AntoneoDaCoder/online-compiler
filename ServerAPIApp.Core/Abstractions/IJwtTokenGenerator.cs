@@ -5,8 +5,8 @@ namespace ServerAPIApp.Core.Abstractions
 {
     public interface IJwtTokenGenerator
     {
-        string GenerateAccessToken(List<string> roles, Guid userId);
+        string GenerateAccessToken(IEnumerable<string> roles, Guid userId);
         string GenerateRefreshToken();
-        Task<ClaimsPrincipal> GetPrincipalFromExpiredTokenAsync(string token);
+        Task<ClaimsPrincipal> GetPrincipalFromExpiredTokenAsync(string token, CancellationToken cancellationToken = default);
     }
 }
