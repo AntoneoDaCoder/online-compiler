@@ -6,6 +6,8 @@ using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.Configs;
 using ServerAPIApp.Core.Repositories;
 using ServerAPIApp.Core.Services;
+using ServerAPIApp.DAL.Extensions;
+using System.Reflection;
 
 namespace ServerAPIApp.Core.Extensions
 {
@@ -79,6 +81,18 @@ namespace ServerAPIApp.Core.Extensions
             services.AddHostedService<ManagerAdapter>();
             services.AddSingleton<ICodeDispatcher, CodeDispatcher>();
             services.AddHostedService(provider => provider.GetRequiredService<ICodeDispatcher>());
+
+            services.ConfigureDbContext();
+            services.ConfigureObjectStorage();
+            services.ConfigureRepositories();
+
+            services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+            services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+            services.AddMediatR
+                (
+                cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly())
+                );
 
             return services;
         }

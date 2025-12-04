@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ServerAPIApp.Contracts\ServerAPIApp.Contracts.csproj" />
+    <ProjectReference Include="..\ServerAPIAPP.DAL\ServerAPIApp.DAL.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 

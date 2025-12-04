@@ -13,16 +13,10 @@ namespace ServerAPIApp.Core.Services
         private readonly TimeSpan _tokenLifetime;
 
         private readonly IJwtTokenGenerator _tokenGenerator;
-        private readonly IUserRepository _userRepository;
-        private readonly ISecretProtector _protector;
-        private readonly ILogger<JwtTokenService> _logger;
 
-        public JwtTokenService(IUserRepository userRepository, IJwtTokenGenerator generator, ISecretProtector protector, ILogger<JwtTokenService> logger)
+        public JwtTokenService(IJwtTokenGenerator generator)
         {
             _tokenGenerator = generator;
-            _userRepository = userRepository;
-            _protector = protector;
-            _logger = logger;
 
             string refreshTokenLifetime = Environment.GetEnvironmentVariable(RefreshTokenLifetimeKey)!;
 

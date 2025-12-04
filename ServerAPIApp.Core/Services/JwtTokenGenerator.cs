@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.Abstractions;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -14,13 +13,11 @@ namespace ServerAPIApp.Core.Services
     {
         private const string JwtSecretKey = "JWT_SECRET";
 
-        private readonly IUserRepository _userRepository;
         private readonly JwtSettings _jwtSettings;
 
-        public JwtTokenGenerator(IOptions<JwtSettings> jwtSettings, IUserRepository userRepository)
+        public JwtTokenGenerator(IOptions<JwtSettings> jwtSettings)
         {
             _jwtSettings = jwtSettings.Value;
-            _userRepository = userRepository;
         }
 
         public string GenerateAccessToken(IEnumerable<string> roles, Guid userId)
