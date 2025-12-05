@@ -7,8 +7,8 @@ namespace Shared.DTOs
         public ExecutionStatus Status { get; set; }
         public int ExitCode { get; set; }
         public string? ConsoleOutput { get; set; }
-        public DateTime RequestSentAt { get; set; }
-        public DateTime ResponseSentAt { get; set; }
+        public DateTimeOffset RequestSentAt { get; set; }
+        public DateTimeOffset ResponseSentAt { get; set; }
         public double LatencyInSeconds => (ResponseSentAt - RequestSentAt).TotalSeconds;
     }
 }
