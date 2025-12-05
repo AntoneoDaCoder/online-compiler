@@ -28,8 +28,6 @@ builder.Services.AddCors(options =>
 
 builder.Services.RegisterServices(builder.Configuration);
 
-builder.Services.AddSignalR();
-
 var app = builder.Build();
 
 app.UseCors();
