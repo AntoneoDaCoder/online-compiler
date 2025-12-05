@@ -18,17 +18,6 @@ namespace Runners.Shared.Runners
         const string _tmpDllPath = "/tmp/UserProgram.dll";
         const string _tmpRuntimeConfigPath = "/tmp/UserProgram.runtimeconfig.json";
 
-        const string _boilerplateUsings = """
-                using System;
-                using System.Collections.Generic;
-                using System.Linq;
-                using System.Text;
-                using System.Threading.Tasks;
-                using NUnit.Framework;
-                using NUnitLite;
-                using Microsoft.EntityFrameworkCore;
-                """;
-
         const string _runtimeConfig =
                """
                 {
@@ -48,7 +37,6 @@ namespace Runners.Shared.Runners
         static string[] _dllsToCopy = new[] {
             "nunitlite.dll",
             "nunit.framework.dll",
-            "Microsoft.EntityFrameworkCore.dll",
         };
         static ProcessStartInfo _pInfo = new ProcessStartInfo
         {
@@ -64,6 +52,8 @@ namespace Runners.Shared.Runners
 
         private bool _isDisposed;
 
+        private ITestWrapper _codeWrapper;
+
         static DotNetRunner()
         {
             _metadataCache = new List<AssemblyMetadata>();
@@ -78,8 +68,6 @@ namespace Runners.Shared.Runners
                 typeof(Task).Assembly.Location,
                 typeof(Assert).Assembly.Location,
                 typeof(AutoRun).Assembly.Location,
-                typeof(DbContext).Assembly.Location,
-                typeof(DbContextOptionsBuilder).Assembly.Location,
             };
 
             foreach (var dll in systemAssemblies)
@@ -125,104 +113,108 @@ namespace Runners.Shared.Runners
             }
         }
 
-        public DotNetRunner()
+        public DotNetRunner(ITestWrapper wrapper)
         {
             File.WriteAllText(_tmpRuntimeConfigPath, _runtimeConfig);
+
+            _codeWrapper = wrapper;
         }
 
-        public string WrapCode(ProblemSolutionDto problemSolutionDto)
+        //public string WrapCode(ProblemSolutionDto problemSolutionDto)
+        //{
+        //    var sb = new StringBuilder(_boilerplateUsings);
+
+        //    foreach (var definition in problemSolutionDto.Problem.AdditionalDefinitions)
+        //    {
+        //        sb.AppendLine(definition.Value);
+
+        //        if (definition.Value.Contains("DbContext"))
+        //        {
+        //            sb.AppendLine(@"    public static class TestInfrastructure
+        //                                {
+        //                                    public static string Schema = ""linq_schema"";
+
+        //                                    public static AppDbContext CreateContext()
+        //                                    {
+        //                                        var connectionString = ""Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=postgresdb;Username=postgresadmin;Password=admin123"";
+
+        //                                        var options = new DbContextOptionsBuilder<AppDbContext>()
+        //                                                    .UseNpgsql(connectionString, o => o.MigrationsHistoryTable(""__EFMigrationsHistory"", Schema))
+        //                                                    .Options;
+
+        //                                        var context = new AppDbContext(options);
+
+        //                                        context.Database.ExecuteSql($""CREATE SCHEMA IF NOT EXISTS \""{Schema}\"""");
+
+        //                                        context.Database.EnsureDeleted();
+        //                                        context.Database.EnsureCreated();
+
+        //                                        return context;
+        //                                    }
+        //                                }"
+        //            );
+        //        }
+        //    }
+
+
+        //    sb.AppendLine(
+        //        $$"""
+        //    {{problemSolutionDto.Code}}
+        //    public class Program
+        //    {
+        //        static int Main(string[] args)
+        //        {
+        //            var argsWithNoResult = args.Concat(new[] { "--noresult" }).ToArray();
+        //            var result = new AutoRun().Execute(argsWithNoResult);
+        //            Console.Out.Flush();
+        //            return result;
+        //        }
+        //    }
+        //    [TestFixture]
+        //    public class GeneratedTests
+        //    {      
+        //    """);
+
+
+        //    foreach (var testCase in problemSolutionDto.Problem.TestCases)
+        //    {
+        //        sb.AppendLine(
+        //            $$"""
+        //        [Test]
+        //        public void {{testCase.Name}}()
+        //        {
+        //            {{testCase.TestInitialization}}
+
+        //            var testTask = Task.Run( ()=>
+        //            {
+        //                {{testCase.InputExpression}}
+        //                {{testCase.OutputExpression}}
+        //            });
+
+        //            try
+        //            {
+        //                if (!testTask.Wait(TimeSpan.FromMilliseconds({{problemSolutionDto.MaxAllowedTimeInMilliseconds}})))
+        //                {
+        //                    Assert.Fail("Test execution timed out");
+        //                }
+        //            }
+        //            catch(AggregateException ae)
+        //            {
+        //                throw ae.InnerException ?? ae;
+        //            }
+        //        }
+        //        """
+        //            );
+        //    }
+        //    sb.AppendLine("}");
+
+        //    return sb.ToString();
+        //}
+
+        public Task<(bool Success, string CompilationErrors)> CompileCodeAsync(ProblemSolutionDto userSolution, CancellationToken cancellationToken)
         {
-            var sb = new StringBuilder(_boilerplateUsings);
+            var fullCode = _codeWrapper.GenerateSource(userSolution.TestManifest, userSolution.UserSolution, "SolutionContainer");
 
-            foreach (var definition in problemSolutionDto.Problem.AdditionalDefinitions)
-            {
-                sb.AppendLine(definition.Value);
-
-                if (definition.Value.Contains("DbContext"))
-                {
-                    sb.AppendLine(@"    public static class TestInfrastructure
-                                        {
-                                            public static string Schema = ""linq_schema"";
-
-                                            public static AppDbContext CreateContext()
-                                            {
-                                                var connectionString = ""Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=postgresdb;Username=postgresadmin;Password=admin123"";
-
-                                                var options = new DbContextOptionsBuilder<AppDbContext>()
-                                                            .UseNpgsql(connectionString, o => o.MigrationsHistoryTable(""__EFMigrationsHistory"", Schema))
-                                                            .Options;
-
-                                                var context = new AppDbContext(options);
-
-                                                context.Database.ExecuteSql($""CREATE SCHEMA IF NOT EXISTS \""{Schema}\"""");
-
-                                                context.Database.EnsureDeleted();
-                                                context.Database.EnsureCreated();
-
-                                                return context;
-                                            }
-                                        }"
-                    );
-                }
-            }
-
-
-            sb.AppendLine(
-                $$"""
-            {{problemSolutionDto.Code}}
-            public class Program
-            {
-                static int Main(string[] args)
-                {
-                    var argsWithNoResult = args.Concat(new[] { "--noresult" }).ToArray();
-                    var result = new AutoRun().Execute(argsWithNoResult);
-                    Console.Out.Flush();
-                    return result;
-                }
-            }
-            [TestFixture]
-            public class GeneratedTests
-            {      
-            """);
-
-
-            foreach (var testCase in problemSolutionDto.Problem.TestCases)
-            {
-                sb.AppendLine(
-                    $$"""
-                [Test]
-                public void {{testCase.Name}}()
-                {
-                    {{testCase.TestInitialization}}
-
-                    var testTask = Task.Run( ()=>
-                    {
-                        {{testCase.InputExpression}}
-                        {{testCase.OutputExpression}}
-                    });
-                    
-                    try
-                    {
-                        if (!testTask.Wait(TimeSpan.FromMilliseconds({{problemSolutionDto.MaxAllowedTimeInMilliseconds}})))
-                        {
-                            Assert.Fail("Test execution timed out");
-                        }
-                    }
-                    catch(AggregateException ae)
-                    {
-                        throw ae.InnerException ?? ae;
-                    }
-                }
-                """
-                    );
-            }
-            sb.AppendLine("}");
-
-            return sb.ToString();
-        }
-
-        public Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
-        {
             var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
 
             var options = new CSharpCompilationOptions(
@@ -260,7 +252,7 @@ namespace Runners.Shared.Runners
             return Task.FromResult((compilationResult.Success, compilationResultString));
         }
 
-        public async Task<CodeResponseDto> ExecuteCodeAsync(Guid requestId, DateTime requestDate, CancellationToken cancellationToken)
+        public async Task<CodeResponseDto> ExecuteCodeAsync(Guid requestId, DateTimeOffset requestDate, CancellationToken cancellationToken)
         {
             var result = new CodeResponseDto()
             {

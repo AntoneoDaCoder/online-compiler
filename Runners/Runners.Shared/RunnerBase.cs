@@ -94,18 +94,16 @@ namespace Runners.Shared
 
         private async Task ExecuteUserCodeAsync(ProblemSolutionDto request, CancellationToken cancellationToken)
         {
-            var wrappedCode = _runner.WrapCode(request);
-
             Console.WriteLine("[Runner] Compiling code");
 
-            var compilationResult = await _runner.CompileCodeAsync(wrappedCode, cancellationToken);
+            var compilationResult = await _runner.CompileCodeAsync(request, cancellationToken);
 
             if (!compilationResult.Success)
             {
                 var result = new CodeResponseDto()
                 {
                     RequestId = request.RequestId,
-                    Language = request.Language,
+                    Language = request.LanguageCode,
                     Status = RequestStatus.Failed,
                     Result = new ExecutionResultDto()
                     {
