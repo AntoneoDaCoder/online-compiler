@@ -3,11 +3,6 @@ using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Core.Helpers;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
-using ServerAPIApp.Domain.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 {
@@ -24,7 +19,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
         {
             var entities = await _repo.GetFilteredAsync(command.ProblemId, cancellationToken: cancellationToken);
 
-            return entities.ToDto();
+            return DraftListDto.From(entities);
         }
     }
 }

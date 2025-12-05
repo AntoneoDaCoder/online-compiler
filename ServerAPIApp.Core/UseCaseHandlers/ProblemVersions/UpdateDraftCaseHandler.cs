@@ -26,17 +26,15 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 
         public async Task Handle(UpdateVersionDraftCase command, CancellationToken cancellationToken)
         {
-            var (entity, manifest) = command.ToEntity();
+            var (entity, manifestJson) = command.ToEntity();
 
-            if (manifest is not null)
+            if (manifestJson is not null)
             {
                 var key = $"problems/{command.ProblemId}/versions/{command.VersionId}/template.json";
 
                 await _storage.DeleteObjectAsync(_bucketName, key, cancellationToken);
 
-                var serializedManifest = JsonSerializer.Serialize(manifest);
-
-                if (!await _storage.UploadStringAsync(_bucketName, key, serializedManifest, cancellationToken: cancellationToken))
+                if (!await _storage.UploadStringAsync(_bucketName, key, manifestJson, cancellationToken: cancellationToken))
                     throw new ObjectStorageUploadException("Failed to save tests.");
 
                 entity.TestTemplateKey = key;

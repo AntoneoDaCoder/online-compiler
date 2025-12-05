@@ -24,15 +24,13 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 
         public async Task<ProblemVersionEntity> Handle(CreateVersionDraftCase command, CancellationToken cancellationToken)
         {
-            var (draft, manifest) = command.ToEntity();
+            var (draft, manifestJson) = command.ToEntity();
 
-            if (manifest is not null)
+            if (manifestJson is not null)
             {
-                var serializedManifest = JsonSerializer.Serialize(manifest);
-
                 var key = $"problems/{draft.ProblemId}/versions/{draft.Id}/template.json";
 
-                if (!await _storage.UploadStringAsync(_bucketName, key, serializedManifest, cancellationToken: cancellationToken))
+                if (!await _storage.UploadStringAsync(_bucketName, key, manifestJson, cancellationToken: cancellationToken))
                     throw new ObjectStorageUploadException("Failed to save tests.");
 
                 draft.TestTemplateKey = key;

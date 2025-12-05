@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Contracts.DTOs;
+using Shared.DTOs;
 using ServerAPIApp.Core.Helpers;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
 using ServerAPIApp.Domain.Exceptions;
@@ -38,7 +39,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
             if (manifestString is not null)
                 manifestDto = JsonSerializer.Deserialize<ManifestDto>(manifestString);
 
-            return (entity, manifestDto).ToDto();
+            return EditorProblemVersionDto.From(entity, manifestDto);
         }
     }
 }

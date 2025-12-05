@@ -23,7 +23,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
             if (entity is null)
                 throw new ResourceNotFoundException("Resource not found");
 
-            return entity.ToDto();
+            return UserProblemVersionDto.From(entity);
         }
     }
 }
