@@ -37,6 +37,18 @@ namespace ServerAPIApp.DAL.Repositories
             return entity;
         }
 
+        public async Task<ProblemVersionEntity?> GetByIdWithLanguagesAsync
+            (Guid versionId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.ProblemVersions
+                .AsNoTracking()
+                .Where(x => x.Id == versionId)
+                .Include(x => x.SupportedLanguages)
+                .ThenInclude(x => x.Language)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         public async Task<ProblemVersionEntity> CreateDraftAsync
             (ProblemVersionEntity draft,
             CancellationToken cancellationToken = default)
