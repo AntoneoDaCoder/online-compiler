@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using ServerAPIApp.Domain.Entities;
+using Shared.DTOs;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ServerAPIApp.Contracts.DTOs
 {
@@ -11,7 +11,23 @@ namespace ServerAPIApp.Contracts.DTOs
         public Guid CreatedBy { get; set; }
         public string Statement { get; set; }
         public int TotalTests { get; set; }
-        public ICollection<string> SupportedLanguages { get; set; } = new List<string>();
+        public IEnumerable<string> SupportedLanguages { get; set; } = Enumerable.Empty<string>();
         public ManifestDto? TestManifest { get; set; }
+
+        public static EditorProblemVersionDto From(ProblemVersionEntity entity, ManifestDto? manifest)
+        {
+            var dto = new EditorProblemVersionDto()
+            {
+                ProblemId = entity.ProblemId,
+                CreatedAt = entity.CreatedAt,
+                CreatedBy = entity.CreatedBy,
+                Statement = entity.Statement,
+                TotalTests = entity.TotalTests,
+                SupportedLanguages = entity.SupportedLanguages.Select(x => x.Language.Code).ToList(),
+                TestManifest = manifest
+            };
+
+            return dto;
+        }
     }
 }
