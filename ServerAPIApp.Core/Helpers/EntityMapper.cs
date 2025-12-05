@@ -1,10 +1,8 @@
-﻿using ServerAPIApp.Contracts.DTOs;
-using ServerAPIApp.Core.UseCases.Languages;
+﻿using ServerAPIApp.Core.UseCases.Languages;
 using ServerAPIApp.Core.UseCases.Problems;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
 using ServerAPIApp.Core.UseCases.Submissions;
 using ServerAPIApp.Domain.Entities;
-using System.Data;
 
 namespace ServerAPIApp.Core.Helpers
 {
@@ -33,13 +31,6 @@ namespace ServerAPIApp.Core.Helpers
             };
 
             return entity;
-        }
-
-        public static List<string> ToCodeList(this ICollection<LanguageEntity> entities)
-        {
-            var list = entities.Select(x => x.Code).ToList();
-
-            return list;
         }
         #endregion
 
@@ -82,6 +73,7 @@ namespace ServerAPIApp.Core.Helpers
                 ProblemVersionId = command.VersionId,
                 CreatedAt = DateTimeOffset.UtcNow,
                 CreatedBy = command.CreatedBy,
+                BriefStatus = command.BriefStatus,
                 Solution = command.Solution,
                 SolutionLanguage = command.SolutionLanguage,
                 PassedTests = command.PassedTests,
@@ -93,9 +85,9 @@ namespace ServerAPIApp.Core.Helpers
         #endregion
 
         #region ProblemVersionEntity related mapping
-        public static (ProblemVersionEntity Entity, ManifestDto? TestManifest) ToEntity(this CreateVersionDraftCase command)
+        public static (ProblemVersionEntity Entity, string? TestManifestJson) ToEntity(this CreateVersionDraftCase command)
         {
-            var manifest = command.TestManifest;
+            var manifest = command.TestManifestJson;
 
             var draft = new ProblemVersionEntity()
             {
@@ -114,9 +106,9 @@ namespace ServerAPIApp.Core.Helpers
             return (draft, manifest);
         }
 
-        public static (ProblemVersionEntity Entity, ManifestDto? TestManifest) ToEntity(this UpdateVersionDraftCase command)
+        public static (ProblemVersionEntity Entity, string? TestManifestJson) ToEntity(this UpdateVersionDraftCase command)
         {
-            var manifest = command.TestManifest;
+            var manifest = command.TestManifestJson;
 
             var draft = new ProblemVersionEntity()
             {
@@ -127,44 +119,6 @@ namespace ServerAPIApp.Core.Helpers
             };
 
             return (draft, manifest);
-        }
-
-        public static EditorProblemVersionDto ToDto(this (ProblemVersionEntity Entity, ManifestDto? Manifest) data)
-        {
-            var dto = new EditorProblemVersionDto()
-            {
-                ProblemId = data.Entity.ProblemId,
-                CreatedAt = data.Entity.CreatedAt,
-                CreatedBy = data.Entity.CreatedBy,
-                Statement = data.Entity.Statement,
-                TotalTests = data.Entity.TotalTests,
-                SupportedLanguages = data.Entity.SupportedLanguages.Select(x => x.Language.Code).ToList(),
-                TestManifest = data.Manifest
-            };
-
-            return dto;
-        }
-
-        public static UserProblemVersionDto ToDto(this ProblemVersionEntity entity)
-        {
-            var dto = new UserProblemVersionDto(entity.ProblemId, entity.Statement, entity.TotalTests);
-
-            return dto;
-        }
-
-        public static DraftListDto ToDto(this List<ProblemVersionEntity>? data)
-        {
-            if (data is null)
-                return new DraftListDto(null);
-
-            var entities = data
-                .Select
-                (
-                    x => new ShortDraftDto(x.Id, x.ProblemId, x.Creator.Name, x.CreatedAt)
-                )
-                .ToList();
-
-            return new DraftListDto(entities);
         }
         #endregion
     }
