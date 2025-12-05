@@ -12,6 +12,7 @@
 
 
         public string Solution { get; set; } = "Sample solution";
+        public string BriefStatus { get; set; } = "Status not set";
         public int PassedTests { get; set; }
         public int TotalTests { get; set; }
         public string SolutionLanguage { get; set; } = "Sample language";
