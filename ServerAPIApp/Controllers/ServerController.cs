@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Shared.DTOs;
 using Shared.Enums;
-using ServerAPIApp.Core.Abstractions;
+using ServerAPIApp.Contracts.Abstractions;
 using Microsoft.AspNetCore.SignalR;
-using ServerAPIApp.Hubs;
+using ServerAPIApp.Contracts.DTOs;
 
 namespace ServerAPIApp.Controllers
 {
@@ -12,11 +12,12 @@ namespace ServerAPIApp.Controllers
     public class ServerController : ControllerBase
     {
         private ICodeDispatcher _dispatcher;
-        private IHubContext<ResultHub> _hubContext;
-        public ServerController(ICodeDispatcher dispatcher, IHubContext<ResultHub> hubContext)
+        private ISubmissionNotifier _notifier;
+
+        public ServerController(ICodeDispatcher dispatcher, ISubmissionNotifier notifier)
         {
             _dispatcher = dispatcher;
-            _hubContext = hubContext;
+            _notifier = notifier;
         }
 
         [HttpPost("jobs/start")]
@@ -32,7 +33,7 @@ namespace ServerAPIApp.Controllers
                 {
                     RequestId = dto.RequestId,
                     Status = RequestStatus.Acknowledged,
-                    Language = dto.Language,
+                    Language = dto.LanguageCode,
                     Result = new ExecutionResultDto()
                     {
                         Status = ExecutionStatus.Pending,
@@ -48,7 +49,7 @@ namespace ServerAPIApp.Controllers
                 {
                     RequestId = dto.RequestId,
                     Status = RequestStatus.Failed,
-                    Language = dto.Language,
+                    Language = dto.LanguageCode,
                     Result = new ExecutionResultDto()
                     {
                         Status = ExecutionStatus.FailedToExecute,
@@ -70,8 +71,7 @@ namespace ServerAPIApp.Controllers
 
             await _dispatcher.CompleteExecutionAsync(podResponse, cancellationToken);
 
-            await _hubContext.Clients.Group(podResponse.RequestId.ToString())
-                .SendAsync("ExecutionCompleted", podResponse, cancellationToken);
+            await _notifier.NotifyCompletedAsync(podResponse, cancellationToken);
 
             Console.WriteLine($"[API Controller] Sent a response [Id:{podResponse.RequestId}] to client, time:" + DateTime.UtcNow.ToString("o"));
 
