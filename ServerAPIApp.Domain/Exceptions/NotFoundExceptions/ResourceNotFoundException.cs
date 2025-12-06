@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ServerAPIApp.Domain.Exceptions
+namespace ServerAPIApp.Domain.Exceptions.NotFoundExceptions
 {
     public class ResourceNotFoundException : ApplicationException
     {

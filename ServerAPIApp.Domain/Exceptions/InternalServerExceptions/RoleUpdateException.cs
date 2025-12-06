@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ServerAPIApp.Domain.Exceptions
+namespace ServerAPIApp.Domain.Exceptions.InternalServerExceptions
 {
-    public class RoleUpdateException : ApplicationException
+    public class RoleUpdateException : InternalServerException
     {
         public RoleUpdateException(string msg) : base(msg)
         {

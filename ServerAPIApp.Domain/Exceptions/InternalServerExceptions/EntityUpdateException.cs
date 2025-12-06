@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ServerAPIApp.Domain.Exceptions
+namespace ServerAPIApp.Domain.Exceptions.InternalServerExceptions
 {
-    public class EntityUpdateException : ApplicationException
+    public class EntityUpdateException : InternalServerException
     {
         public EntityUpdateException(string msg) : base(msg)
         {

@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ServerAPIApp.Domain.Exceptions
+namespace ServerAPIApp.Domain.Exceptions.BadRequestExceptions
 {
-    public class UnsupportedLanguageException : ApplicationException
+    public class UnsupportedLanguageException : BadRequestException
     {
         public UnsupportedLanguageException(string msg) : base(msg)
         {
