@@ -33,7 +33,11 @@ builder.Services.ConfigureDispatchers(builder.Configuration);
 
 var app = builder.Build();
 
+app.UseHttpsRedirection();
+
 app.UseCors();
+
+app.ConfigureMiddleware();
 
 app.MapControllers();
 
