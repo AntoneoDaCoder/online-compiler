@@ -13,6 +13,7 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 using System.Linq;
                 using System.Text;
                 using System.Threading.Tasks;
+                using System.Threading;
                 using NUnit.Framework;
                 using NUnitLite;
                 """;
@@ -32,6 +33,15 @@ namespace Runners.Shared.CodeWrappers.CSharp
             sb.AppendLine(CSharpBaseSourceCode.Source);
             sb.AppendLine();
 
+            // Test counter/monitor
+            sb.AppendLine("    public static class __TestMonitor");
+            sb.AppendLine("    {");
+            sb.AppendLine("        private static int _passed = 0;");
+            sb.AppendLine("        public static void Inc() => System.Threading.Interlocked.Increment(ref _passed);");
+            sb.AppendLine("        public static int Get() => System.Threading.Volatile.Read(ref _passed);");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
             // include helpers.inline
             if (!string.IsNullOrWhiteSpace(manifest.Helpers?.Inline))
             {
@@ -40,30 +50,54 @@ namespace Runners.Shared.CodeWrappers.CSharp
             }
 
             // user code inside container
-            sb.AppendLine($"public static class {entrypointContainerClass}");
-            sb.AppendLine("{");
+            sb.AppendLine($"    public static class {entrypointContainerClass}");
+            sb.AppendLine("    {");
             sb.AppendLine(userCode);
-            sb.AppendLine("}");
+            sb.AppendLine("    }");
             sb.AppendLine();
 
             // advanced tests code (if provided). Place inside AdvancedTestsContainer
             if (manifest.AdvancedTests != null && manifest.AdvancedTests.Count > 0)
             {
-                sb.AppendLine("public static class AdvancedTestsContainer");
-                sb.AppendLine("{");
+                sb.AppendLine("    public static class AdvancedTestsContainer");
+                sb.AppendLine("    {");
                 foreach (var adv in manifest.AdvancedTests)
                 {
                     sb.AppendLine(adv.Source ?? "");
                     sb.AppendLine();
                 }
-                sb.AppendLine("}");
+                sb.AppendLine("    }");
                 sb.AppendLine();
             }
 
+            // Program.Main wrapper — ensure we always print PassedTests:<n> to stdout on termination
+            sb.AppendLine("    public class Program");
+            sb.AppendLine("    {");
+            sb.AppendLine("        static int Main(string[] args)");
+            sb.AppendLine("        {");
+            sb.AppendLine("            try");
+            sb.AppendLine("            {");
+            sb.AppendLine("                var argsWithNoResult = args.Concat(new[] { \"--noresult\" }).ToArray();");
+            sb.AppendLine("                var result = new AutoRun().Execute(argsWithNoResult);");
+            sb.AppendLine("                return result;");
+            sb.AppendLine("            }");
+            sb.AppendLine("            finally");
+            sb.AppendLine("            {");
+            sb.AppendLine("                try");
+            sb.AppendLine("                {");
+            sb.AppendLine("                    Console.WriteLine($\"PassedTests:{__TestMonitor.Get()}\");");
+            sb.AppendLine("                    Console.Out.Flush();");
+            sb.AppendLine("                }");
+            sb.AppendLine("                catch { }");
+            sb.AppendLine("            }");
+            sb.AppendLine("        }");
+            sb.AppendLine("    }");
+            sb.AppendLine();
+
             // GeneratedTests
-            sb.AppendLine("[TestFixture]");
-            sb.AppendLine("public class GeneratedTests");
-            sb.AppendLine("{");
+            sb.AppendLine("    [TestFixture]");
+            sb.AppendLine("    public class GeneratedTests");
+            sb.AppendLine("    {");
 
             // Sample tests
             int idx = 0;
@@ -71,13 +105,13 @@ namespace Runners.Shared.CodeWrappers.CSharp
             {
                 idx++;
                 var testMethodName = SanitizeMethodName($"Sample_{st.Name}_{idx}");
-                sb.AppendLine("    [Test]");
-                sb.AppendLine($"    public async Task {testMethodName}()");
-                sb.AppendLine("    {");
+                sb.AppendLine("        [Test]");
+                sb.AppendLine($"        public async Task {testMethodName}()");
+                sb.AppendLine("        {");
 
                 // compute per-test timeout (use long internally)
                 var timeoutMsExpr = (st.TimeoutMs > 0) ? st.TimeoutMs : defaultTimeoutMs;
-                sb.AppendLine($"        var __timeout = TimeSpan.FromMilliseconds({timeoutMsExpr}L);");
+                sb.AppendLine($"            var __timeout = TimeSpan.FromMilliseconds({timeoutMsExpr}L);");
 
                 // render inputs into local variables
                 if (st.Inputs.HasValue)
@@ -92,22 +126,22 @@ namespace Runners.Shared.CodeWrappers.CSharp
                                 : null;
                             var rendered = CSharpTokenParser.Render(arr[i], pType);
                             var csharpType = pType != null ? CSharpTokenParser.RenderTypeName(pType) : "object";
-                            sb.AppendLine($"        var arg{i} = {rendered};");
+                            sb.AppendLine($"            var arg{i} = {rendered};");
                         }
                         var argsList = string.Join(", ", Enumerable.Range(0, arr.Count).Select(i => $"arg{i}"));
-                        sb.AppendLine($"        object?[] __args = new object?[] {{ {argsList} }};");
+                        sb.AppendLine($"            object?[] __args = new object?[] {{ {argsList} }};");
                     }
                     else
                     {
                         var pType = manifest.Signature.Parameters != null && manifest.Signature.Parameters.Count > 0 ? manifest.Signature.Parameters[0].Type : null;
                         var rendered = CSharpTokenParser.Render(j, pType);
-                        sb.AppendLine($"        var arg0 = {rendered};");
-                        sb.AppendLine($"        object?[] __args = new object?[] {{ arg0 }};");
+                        sb.AppendLine($"            var arg0 = {rendered};");
+                        sb.AppendLine($"            object?[] __args = new object?[] {{ arg0 }};");
                     }
                 }
                 else
                 {
-                    sb.AppendLine($"        object?[] __args = new object?[] {{}};");
+                    sb.AppendLine($"            object?[] __args = new object?[] {{}};");
                 }
 
                 // determine return type
@@ -119,52 +153,58 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 {
                     if (parsed.IsTask)
                     {
-                        sb.AppendLine($"        var __call = {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)});");
-                        sb.AppendLine($"        var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
-                        sb.AppendLine($"        if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
+                        sb.AppendLine($"            var __call = {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)});");
+                        sb.AppendLine($"            var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
+                        sb.AppendLine($"            if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
                     }
                     else
                     {
-                        sb.AppendLine($"        var __call = Task.Run(() => {{ {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)}); }});");
-                        sb.AppendLine($"        var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
-                        sb.AppendLine($"        if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
+                        sb.AppendLine($"            var __call = Task.Run(() => {{ {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)}); }});");
+                        sb.AppendLine($"            var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
+                        sb.AppendLine($"            if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
                     }
+
+                    // success -> increment counter
+                    sb.AppendLine("            __TestMonitor.Inc();");
                 }
                 else
                 {
                     var rt = parsed.ResultTypeCSharp;
                     if (parsed.IsTask)
                     {
-                        sb.AppendLine($"        var __call = {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)});");
-                        sb.AppendLine($"        var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
-                        sb.AppendLine($"        if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
-                        sb.AppendLine($"        var __actual = await __call;");
+                        sb.AppendLine($"            var __call = {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)});");
+                        sb.AppendLine($"            var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
+                        sb.AppendLine($"            if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
+                        sb.AppendLine($"            var __actual = await __call;");
                     }
                     else
                     {
-                        sb.AppendLine($"        var __call = Task.Run(() => {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)}));");
-                        sb.AppendLine($"        var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
-                        sb.AppendLine($"        if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
-                        sb.AppendLine($"        var __actual = await __call;");
+                        sb.AppendLine($"            var __call = Task.Run(() => {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)}));");
+                        sb.AppendLine($"            var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
+                        sb.AppendLine($"            if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
+                        sb.AppendLine($"            var __actual = await __call;");
                     }
 
                     if (st.Expected.HasValue)
                     {
                         var expectedToken = JToken.Parse(st.Expected.Value.GetRawText());
                         var expectedRendered = CSharpTokenParser.Render(expectedToken, parsed.ResultTypeDescriptor);
-                        sb.AppendLine($"        var __expected = {expectedRendered};");
+                        sb.AppendLine($"            var __expected = {expectedRendered};");
                     }
                     else
                     {
-                        sb.AppendLine($"        var __expected = default({rt});");
+                        sb.AppendLine($"            var __expected = default({rt});");
                     }
 
                     var comparator = string.IsNullOrWhiteSpace(st.Comparator) ? "eq" : st.Comparator;
-                    sb.AppendLine($"        if (!RunnerHelpers.Compare(__actual, __expected, \"{comparator}\"))");
-                    sb.AppendLine($"            Assert.Fail($\"Sample test '{st.Name}' failed. Expected={{__expected}} Actual={{__actual}}\");");
+                    sb.AppendLine($"            if (!RunnerHelpers.Compare(__actual, __expected, \"{comparator}\"))");
+                    sb.AppendLine($"                Assert.Fail($\"Sample test '{st.Name}' failed. Expected={{__expected}} Actual={{__actual}}\");");
+
+                    // success -> increment counter
+                    sb.AppendLine("            __TestMonitor.Inc();");
                 }
 
-                sb.AppendLine("    }");
+                sb.AppendLine("        }");
                 sb.AppendLine();
             } // end sample tests
 
@@ -177,27 +217,27 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     advIdx++;
                     var methodName = adv.Name;
                     var testMethodName = SanitizeMethodName($"Advanced_{methodName}_{advIdx}");
-                    sb.AppendLine("    [Test]");
-                    sb.AppendLine($"    public async Task {testMethodName}()");
-                    sb.AppendLine("    {");
+                    sb.AppendLine("        [Test]");
+                    sb.AppendLine($"        public async Task {testMethodName}()");
+                    sb.AppendLine("        {");
 
                     var advTimeout = adv.TimeoutMs > 0 ? adv.TimeoutMs : defaultTimeoutMs;
-                    sb.AppendLine($"        var __timeout = TimeSpan.FromMilliseconds({advTimeout}L);");
+                    sb.AppendLine($"            var __timeout = TimeSpan.FromMilliseconds({advTimeout}L);");
 
-                    //if (!string.IsNullOrWhiteSpace(adv.Init))
-                    //{
-                    //    sb.AppendLine($"        {adv.Init}");
-                    //}
+                    // call advanced test method (assume it returns Task or Task<T> or void)
+                    sb.AppendLine($"            var __call = AdvancedTestsContainer.{methodName}();");
+                    sb.AppendLine($"            var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
+                    sb.AppendLine($"            if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Advanced test timed out\");");
 
-                    sb.AppendLine($"        var __call = AdvancedTestsContainer.{methodName}();");
-                    sb.AppendLine($"        var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
-                    sb.AppendLine($"        if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Advanced test timed out\");");
-                    sb.AppendLine("    }");
+                    // success -> increment counter
+                    sb.AppendLine("            __TestMonitor.Inc();");
+
+                    sb.AppendLine("        }");
                     sb.AppendLine();
                 }
             }
 
-            sb.AppendLine("}"); // class
+            sb.AppendLine("    }"); // class
             sb.AppendLine("}"); // namespace
 
             return sb.ToString();

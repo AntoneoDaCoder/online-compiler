@@ -1,8 +1,9 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
 using NUnitLite;
+using Shared.Helpers;
+using ServerAPIApp.Domain.Exceptions;
 using Shared.DTOs;
 using Shared.Enums;
 using System.Diagnostics;
@@ -211,9 +212,48 @@ namespace Runners.Shared.Runners
         //    return sb.ToString();
         //}
 
-        public Task<(bool Success, string CompilationErrors)> CompileCodeAsync(ProblemSolutionDto userSolution, CancellationToken cancellationToken)
+        public Task<CompilationResult> CompileCodeAsync(ProblemSolutionDto userSolution, CancellationToken cancellationToken)
         {
-            var fullCode = _codeWrapper.GenerateSource(userSolution.TestManifest, userSolution.UserSolution, "SolutionContainer");
+            ManifestDto manifest;
+            try
+            {
+                manifest = ManifestParser.Parse(userSolution.TestManifestJson);
+            }
+            catch (InvalidTestTemplateException ex)
+            {
+                return Task.FromResult
+                    (
+                    new CompilationResult()
+                    {
+                        Success = false,
+                        CompilationErrors = $"Manifest validation failed: {ex.Message}"
+                    }
+                    );
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                return Task.FromResult
+                  (
+                  new CompilationResult()
+                  {
+                      Success = false,
+                      CompilationErrors = $"Manifest JSON parse error: {ex.Message}"
+                  }
+                  );
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult
+                    (
+                    new CompilationResult()
+                    {
+                        Success = false,
+                        CompilationErrors = $"Manifest parse error: {ex.Message}"
+                    }
+                    );
+            }
+
+            var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.UserSolution, "SolutionContainer");
 
             var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
 
@@ -249,18 +289,29 @@ namespace Runners.Shared.Runners
                 GC.WaitForPendingFinalizers();
             }
 
-            return Task.FromResult((compilationResult.Success, compilationResultString));
+            return Task.FromResult
+                (
+                new CompilationResult()
+                {
+                    Success = compilationResult.Success,
+                    CompilationErrors = compilationResultString,
+                    TotalTests = manifest.SampleTests.Count + manifest.AdvancedTests.Count,
+                });
         }
 
-        public async Task<CodeResponseDto> ExecuteCodeAsync(Guid requestId, DateTimeOffset requestDate, CancellationToken cancellationToken)
+        public async Task<CodeResponseDto> ExecuteCodeAsync(ExecutionData data, CancellationToken cancellationToken)
         {
             var result = new CodeResponseDto()
             {
-                RequestId = requestId,
-                Language = "csharp",
+                RequestId = data.RequestId,
+                UserId = data.UserId,
+                UserSolution = data.UserSolution,
+                Language = data.Language,
+                VersionId = data.VersionId,
                 Result = new ExecutionResultDto()
                 {
-                    RequestSentAt = requestDate,
+                    RequestSentAt = data.RequestDate,
+                    TotalTests = data.TotalTests,
                 }
             };
 
@@ -286,19 +337,32 @@ namespace Runners.Shared.Runners
 
             result.Result.ExitCode = proc.ExitCode;
 
+            var stdout = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
+            var stderr = await proc.StandardError.ReadToEndAsync(cancellationToken);
+
+            var passedMatch = Regex.Match(stdout ?? string.Empty, @"PassedTests\s*:\s*(\d+)", RegexOptions.IgnoreCase);
+            if (passedMatch.Success && int.TryParse(passedMatch.Groups[1].Value, out var passedCount))
+            {
+                result.Result.PassedTests = passedCount;
+            }
+            else
+            {
+                result.Result.PassedTests = 0;
+            }
+
             if (proc.ExitCode != 0)
             {
                 result.Status = RequestStatus.Failed;
                 result.Result.Status = ExecutionStatus.RuntimeError;
 
-                //because nuunitlite throws everything into stdout (even errors, it treats them as test result)
-                string errorString = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
+                //because nunitlite writes results to stdout (including failures)
+                var combined = (stdout ?? "") + (stderr ?? "");
 
-                if (errorString.Contains("Test execution timed out"))
+                if (combined.Contains("Test execution timed out"))
                 {
                     result.Result.Status = ExecutionStatus.TimedOut;
                 }
-                else if (errorString.Contains("AssertionException") || errorString.Contains("Failed :", StringComparison.OrdinalIgnoreCase))
+                else if (combined.Contains("AssertionException") || combined.Contains("Failed :", StringComparison.OrdinalIgnoreCase))
                 {
                     result.Result.Status = ExecutionStatus.FailedToExecute;
                 }
@@ -309,25 +373,35 @@ namespace Runners.Shared.Runners
 
                 var failedTestNames = new StringBuilder();
 
-                var matchCollection = Regex.Matches(errorString, @"\d+\)\s+Failed\s+:\s+([\w\.]+)");
+                var matchCollection = Regex.Matches(combined, @"\d+\)\s+Failed\s+:\s+([\w\.]+)");
 
                 foreach (Match match in matchCollection)
                 {
                     failedTestNames.AppendLine(match.Groups[1].Value);
                 }
 
-                result.Result.ConsoleOutput = failedTestNames.ToString();
+                var sbOut = new StringBuilder();
+                sbOut.AppendLine(failedTestNames.ToString().Trim());
+                sbOut.AppendLine("--- STDOUT ---");
+                sbOut.AppendLine(stdout);
+                sbOut.AppendLine("--- STDERR ---");
+                sbOut.AppendLine(stderr);
+
+                result.Result.ConsoleOutput = sbOut.ToString().Trim();
             }
             else
             {
                 result.Status = RequestStatus.Succeeded;
                 result.Result.Status = ExecutionStatus.Succeeded;
+
+                result.Result.ConsoleOutput = stdout;
             }
 
             File.Delete(_tmpDllPath);
 
             return result;
         }
+
 
         public void Dispose()
         {
