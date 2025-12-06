@@ -1,4 +1,5 @@
 using ServerAPIApp.Core.Extensions;
+using ServerAPIApp.Extensions;
 using ServerAPIApp.Hubs;
 using System.Text.Json.Serialization;
 
@@ -19,7 +20,7 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         policy
-            .WithOrigins("http://localhost:4200") 
+            .WithOrigins("http://localhost:4200")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -27,6 +28,8 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.RegisterServices(builder.Configuration);
+
+builder.Services.ConfigureDispatchers(builder.Configuration);
 
 var app = builder.Build();
 
