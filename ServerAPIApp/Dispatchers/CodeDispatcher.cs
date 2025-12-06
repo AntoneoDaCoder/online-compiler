@@ -156,6 +156,8 @@ namespace ServerAPIApp.Dispatchers
                                 var newSolution = new ProblemSolutionDto()
                                 {
                                     RequestId = request.RequestId,
+                                    VersionId = request.ProblemVersionId,
+                                    UserId = userId,
                                     UserSolution = request.Code,
                                     SentAt = request.RequestSentAt,
                                     LanguageCode = request.LanguageCode,
