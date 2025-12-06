@@ -1,5 +1,4 @@
-﻿using ServerAPIApp.Domain.Entities;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 
 namespace ServerAPIApp.Core.Abstractions
 {

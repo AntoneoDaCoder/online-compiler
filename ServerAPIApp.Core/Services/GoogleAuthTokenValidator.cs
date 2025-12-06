@@ -1,7 +1,6 @@
 ﻿using Google.Apis.Auth;
 using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Core.Abstractions;
-using ServerAPIApp.Domain.Exceptions;
 
 namespace ServerAPIApp.Core.Services
 {

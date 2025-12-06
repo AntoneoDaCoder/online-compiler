@@ -5,7 +5,7 @@ using Shared.DTOs;
 using ServerAPIApp.Core.Helpers;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
 using ServerAPIApp.Domain.Exceptions;
-using System.Text.Json;
+using Shared.Helpers;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 {
@@ -37,7 +37,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
             var manifestString = await _storage.GetStringAsync(_bucketName, key, cancellationToken);
 
             if (manifestString is not null)
-                manifestDto = JsonSerializer.Deserialize<ManifestDto>(manifestString);
+                manifestDto = ManifestParser.Parse(manifestString);
 
             return EditorProblemVersionDto.From(entity, manifestDto);
         }

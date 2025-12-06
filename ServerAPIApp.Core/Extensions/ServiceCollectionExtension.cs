@@ -1,10 +1,7 @@
-﻿using k8s;
-using Microsoft.AspNetCore.DataProtection;
+﻿using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using ServerAPIApp.Core.Abstractions;
-using ServerAPIApp.Core.Configs;
 using ServerAPIApp.Core.Services;
 using ServerAPIApp.DAL.Extensions;
 using System.Reflection;

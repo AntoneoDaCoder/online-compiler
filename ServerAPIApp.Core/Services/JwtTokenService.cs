@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using ServerAPIApp.Contracts.Abstractions;
-using ServerAPIApp.Core.Abstractions;
+﻿using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Domain.Exceptions;
 using System.Globalization;
 using System.Security.Claims;

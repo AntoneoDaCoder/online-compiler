@@ -1,6 +1,4 @@
-﻿using ServerAPIApp.Domain.Entities;
-
-namespace ServerAPIApp.Core.Abstractions
+﻿namespace ServerAPIApp.Core.Abstractions
 {
     public interface IJwtTokenService
     {
