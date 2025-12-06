@@ -35,8 +35,8 @@ namespace ServerAPIApp.Dispatchers
 
         public Task<bool> ExecuteAsync(ProblemSolutionDto request, CancellationToken token)
         {
-            if (!CanHandle(request.Language))
-                throw new NotSupportedException($"Language '{request.Language}' is not supported by composite manager");
+            if (!CanHandle(request.LanguageCode))
+                throw new NotSupportedException($"Language '{request.LanguageCode}' is not supported by composite manager");
 
             return _inner.ExecuteAsync(request, token);
         }

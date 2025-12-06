@@ -4,13 +4,14 @@ using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
 using Shared.DTOs;
 using System.Threading.Channels;
-using ServerAPIApp.Core.UseCases.Submissions;
 
 namespace ServerAPIApp.Dispatchers
 {
     public class CodeDispatcher : ICodeDispatcher
     {
-        private Channel<(Guid UserId, CodeRequestDto Body)> _channel;
+        private const int MaxRetries = 10;
+
+        private Channel<RequestData> _channel;
 
         private Dictionary<string, IKubernetesJobManager> _managers;
         private IServiceScopeFactory _scopeFactory;
@@ -18,11 +19,10 @@ namespace ServerAPIApp.Dispatchers
         private Task? _consumeTask;
         private bool _isConsuming;
         private bool _disposed;
-        private ISubmissionNotifier _notifier;
 
-        public CodeDispatcher(IEnumerable<IKubernetesJobManager> managers, IServiceScopeFactory scopeFactory, ISubmissionNotifier notifier)
+        public CodeDispatcher(IEnumerable<IKubernetesJobManager> managers, IServiceScopeFactory scopeFactory)
         {
-            _channel = Channel.CreateUnbounded<(Guid UserId, CodeRequestDto Body)>
+            _channel = Channel.CreateUnbounded<RequestData>
              (
                 new UnboundedChannelOptions
                 {
@@ -32,12 +32,11 @@ namespace ServerAPIApp.Dispatchers
              );
             _managers = managers.ToDictionary(m => m.Language, StringComparer.OrdinalIgnoreCase);
             _scopeFactory = scopeFactory;
-            _notifier = notifier;
         }
 
         public async Task ScheduleForExecutionAsync(Guid userId, CodeRequestDto request, CancellationToken cancellationToken)
         {
-            await _channel.Writer.WriteAsync((userId, request), cancellationToken);
+            await _channel.Writer.WriteAsync(new RequestData(userId, request), cancellationToken);
         }
 
         public async Task CompleteExecutionAsync(CodeResponseDto response, CancellationToken cancellationToken)
@@ -136,14 +135,23 @@ namespace ServerAPIApp.Dispatchers
 
                             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
+                            var notifier = scope.ServiceProvider.GetRequiredService<ISubmissionNotifier>();
+
+                            if (requestData.NumRetries > MaxRetries)
+                            {
+                                await notifier.NotifyFailedAsync(requestData.Body.RequestId, "Exceeded maximum number of retries", cancellationToken);
+
+                                continue;
+                            }
+
                             try
                             {
                                 var request = requestData.Body;
                                 var userId = requestData.UserId;
 
-                                var command = new GetVersionByIdForExecutionCase(request.ProblemVersionId, request.LanguageCode);
+                                var command = new GetValidatedVersionManifestByIdCase(request.ProblemVersionId, request.LanguageCode);
 
-                                var executionDto = await mediator.Send(command, cancellationToken);
+                                var manifestString = await mediator.Send(command, cancellationToken);
 
                                 var newSolution = new ProblemSolutionDto()
                                 {
@@ -151,41 +159,37 @@ namespace ServerAPIApp.Dispatchers
                                     UserSolution = request.Code,
                                     SentAt = request.RequestSentAt,
                                     LanguageCode = request.LanguageCode,
+                                    TestManifestJson = manifestString,
                                 };
-
-                                var submissionCommand = new CreateSubmissionCase
-                                    (command.VersionId,
-                                    userId,
-                                    "Awaiting response",
-                                    request.Code,
-                                    0,
-                                    executionDto.Entity.TotalTests,
-                                    request.LanguageCode);
-
-                                await mediator.Send(submissionCommand, cancellationToken);
-
-                                //TODO: notify admins and user-creator about submission creation
 
                                 if (!_managers.TryGetValue(request.LanguageCode, out var manager))
                                     throw new NotSupportedException($"Language '{request.LanguageCode}' is not supported");
 
                                 if (!await manager.ExecuteAsync(newSolution, cancellationToken))
                                 {
-                                    await RescheduleExecution(request, cancellationToken);
+                                    requestData.NumRetries++;
 
-                                    Console.WriteLine("Rescheduling execution for request {0}", request.RequestId);
+                                    await RescheduleExecution(requestData, cancellationToken);
+
+                                    Console.WriteLine("Rescheduling execution for request {0}, manager failed to send the request", request.RequestId);
                                 }
                             }
                             catch (ApplicationException ex)
                             {
+                                requestData.NumRetries++;
 
+                                await RescheduleExecution(requestData, cancellationToken);
+
+                                Console.WriteLine("Rescheduling execution for request {0}, application exception occured: {1}", requestData.Body.RequestId, ex);
                             }
                         }
                         catch (Exception ex)
                         {
-                            await RescheduleExecution(request, cancellationToken);
+                            requestData.NumRetries++;
 
-                            Console.WriteLine("rescheduling execution due to an exception? Exception: " + ex);
+                            await RescheduleExecution(requestData, cancellationToken);
+
+                            Console.WriteLine("Rescheduling execution for request {0}, reason: {1} ", requestData.Body.RequestId, ex);
                         }
                     }
                 }
@@ -200,11 +204,24 @@ namespace ServerAPIApp.Dispatchers
             }
         }
 
-        private async Task RescheduleExecution(Guid userId, CodeRequestDto request, CancellationToken cancellationToken)
+        private async Task RescheduleExecution(RequestData data, CancellationToken cancellationToken)
         {
             await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken);
 
-            await _channel.Writer.WriteAsync((userId, request), cancellationToken);
+            await _channel.Writer.WriteAsync(data, cancellationToken);
+        }
+
+        private class RequestData
+        {
+            public Guid UserId { get; set; }
+            public CodeRequestDto Body { get; set; }
+            public int NumRetries { get; set; } = 0;
+
+            public RequestData(Guid userId, CodeRequestDto body)
+            {
+                UserId = userId;
+                Body = body;
+            }
         }
     }
 }
