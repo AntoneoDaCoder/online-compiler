@@ -1,7 +1,8 @@
 ﻿using MediatR;
 using ServerAPIApp.Domain.Entities;
+using Shared.DTOs;
 
 namespace ServerAPIApp.Core.UseCases.Submissions
 {
-    public record CreateSubmissionCase(Guid VersionId, Guid CreatedBy, string BriefStatus, string Solution, int PassedTests, int TotalTests, string SolutionLanguage) : IRequest<SubmissionEntity>;
+    public record CreateSubmissionCase(CodeResponseDto Response) : IRequest<SubmissionEntity>;
 }

@@ -40,11 +40,6 @@ namespace ServerAPIApp.DAL.Confs
                 .HasColumnType("text")
                 .IsRequired();
 
-            b.Property(x => x.BriefStatus)
-                .HasColumnName("brief_status")
-                .HasMaxLength(30)
-                .IsRequired();
-
             b.Property(x => x.PassedTests)
                 .HasColumnName("passed_tests")
                 .IsRequired();

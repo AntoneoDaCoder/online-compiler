@@ -70,14 +70,13 @@ namespace ServerAPIApp.Core.Helpers
             var entity = new SubmissionEntity()
             {
                 Id = Guid.NewGuid(),
-                ProblemVersionId = command.VersionId,
+                ProblemVersionId = command.Response.VersionId,
                 CreatedAt = DateTimeOffset.UtcNow,
-                CreatedBy = command.CreatedBy,
-                BriefStatus = command.BriefStatus,
-                Solution = command.Solution,
-                SolutionLanguage = command.SolutionLanguage,
-                PassedTests = command.PassedTests,
-                TotalTests = command.TotalTests
+                CreatedBy = command.Response.UserId,
+                Solution = command.Response.UserSolution,
+                SolutionLanguage = command.Response.Language,
+                PassedTests = command.Response.Result.PassedTests,
+                TotalTests = command.Response.Result.TotalTests
             };
 
             return entity;
