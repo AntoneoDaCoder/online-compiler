@@ -3,7 +3,8 @@ using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.UseCases.Users;
 using ServerAPIApp.Domain.Entities;
-using ServerAPIApp.Domain.Exceptions;
+using ServerAPIApp.Domain.Exceptions.ConflictExceptions;
+using ServerAPIApp.Domain.Exceptions.UnauthorizedExceptions;
 using Shared.Helpers;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Users

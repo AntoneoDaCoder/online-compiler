@@ -2,9 +2,8 @@
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Contracts.DTOs;
 using Shared.DTOs;
-using ServerAPIApp.Core.Helpers;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
-using ServerAPIApp.Domain.Exceptions;
+using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 using Shared.Helpers;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions

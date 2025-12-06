@@ -1,5 +1,5 @@
 ﻿using ServerAPIApp.Core.Abstractions;
-using ServerAPIApp.Domain.Exceptions;
+using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
 using System.Globalization;
 using System.Security.Claims;
 

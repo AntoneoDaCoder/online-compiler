@@ -2,7 +2,7 @@
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.UseCases.Problems;
 using ServerAPIApp.Domain.Entities;
-using ServerAPIApp.Domain.Exceptions;
+using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 {

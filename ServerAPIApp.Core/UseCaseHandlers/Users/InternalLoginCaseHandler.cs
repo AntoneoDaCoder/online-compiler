@@ -3,7 +3,8 @@ using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.UseCases.Users;
 using Shared.Helpers;
-using ServerAPIApp.Domain.Exceptions;
+using ServerAPIApp.Domain.Exceptions.UnauthorizedExceptions;
+using ServerAPIApp.Domain.Exceptions.ForbiddenExceptions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Users
 {
@@ -43,7 +44,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
                 throw new LoginException("Failed to issue token");
 
             if (roles is null || roles.Count == 0)
-                throw new LoginException("Unable to issue token to user with no valid roles");
+                throw new EmptyRolesException("Unable to issue token to user with no valid roles");
 
             return _tokenService.GenerateAccessToken(roles, entity.Id);
         }

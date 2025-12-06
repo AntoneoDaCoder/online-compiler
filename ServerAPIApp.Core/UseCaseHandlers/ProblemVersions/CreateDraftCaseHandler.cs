@@ -3,7 +3,7 @@ using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.Helpers;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
 using ServerAPIApp.Domain.Entities;
-using ServerAPIApp.Domain.Exceptions;
+using ServerAPIApp.Domain.Exceptions.InternalServerExceptions;
 using System.Text.Json;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions

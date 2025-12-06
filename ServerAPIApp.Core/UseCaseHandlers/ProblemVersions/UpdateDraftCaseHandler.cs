@@ -2,11 +2,8 @@
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.Helpers;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
-using ServerAPIApp.Domain.Exceptions;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Text.Json;
+using ServerAPIApp.Domain.Exceptions.InternalServerExceptions;
+using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 {

@@ -3,13 +3,13 @@ using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 using NUnitLite;
 using Shared.Helpers;
-using ServerAPIApp.Domain.Exceptions;
 using Shared.DTOs;
 using Shared.Enums;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using ServerAPIApp.Domain.Exceptions.UnauthorizedExceptions;
 
 namespace Runners.Shared.Runners
 {

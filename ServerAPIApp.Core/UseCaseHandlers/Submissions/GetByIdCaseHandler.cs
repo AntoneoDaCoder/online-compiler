@@ -2,7 +2,7 @@
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.UseCases.Submissions;
 using ServerAPIApp.Domain.Entities;
-using ServerAPIApp.Domain.Exceptions;
+using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Submissions
 {

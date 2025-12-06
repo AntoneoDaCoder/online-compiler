@@ -1,7 +1,8 @@
 ﻿using MediatR;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.UseCases.Users;
-using ServerAPIApp.Domain.Exceptions;
+using ServerAPIApp.Domain.Exceptions.InternalServerExceptions;
+using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Users
 {

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using Shared.DTOs;
-using ServerAPIApp.Domain.Exceptions;
+using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
 
 namespace Shared.Helpers
 {

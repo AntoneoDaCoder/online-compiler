@@ -3,7 +3,8 @@ using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.UseCases.Users;
 using ServerAPIApp.Domain.Entities;
-using ServerAPIApp.Domain.Exceptions;
+using ServerAPIApp.Domain.Exceptions.UnauthorizedExceptions;
+using ServerAPIApp.Domain.Exceptions.ForbiddenExceptions;
 using Shared.Helpers;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Users
@@ -43,7 +44,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             if (googleUser is not null)
             {
                 if (roles is null || roles.Count == 0)
-                    throw new LoginException("Unable to issue token to user with no valid roles");
+                    throw new EmptyRolesException("Unable to issue token to user with no valid roles");
 
                 googleUser.RefreshToken = _tokenService.CreateNewRefreshToken();
                 googleUser.RefreshTokenExpiryTime = _tokenService.GetTokenExpirationTime(now);
@@ -98,7 +99,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
                     googleUser = internalUser;
 
                     if (internalRoles is null || internalRoles.Count == 0)
-                        throw new LoginException("Unable to issue token to user with no valid roles");
+                        throw new EmptyRolesException("Unable to issue token to user with no valid roles");
 
                     roles = internalRoles;
 

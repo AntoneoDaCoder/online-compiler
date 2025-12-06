@@ -1,9 +1,10 @@
-﻿using k8s.KubeConfigModels;
-using MediatR;
+﻿using MediatR;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.UseCases.Users;
-using ServerAPIApp.Domain.Exceptions;
+using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
+using ServerAPIApp.Domain.Exceptions.ForbiddenExceptions;
+using ServerAPIApp.Domain.Exceptions.UnauthorizedExceptions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Users
 {
@@ -44,7 +45,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
                 throw new LoginException("Failed to issue token");
 
             if (roles is null || roles.Count == 0)
-                throw new LoginException("Unable to issue token to user with no valid roles");
+                throw new EmptyRolesException("Unable to issue token to user with no valid roles");
 
             return _tokenService.GenerateAccessToken(roles, tokenUserId);
         }

@@ -1,9 +1,6 @@
 ﻿using MediatR;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 {
