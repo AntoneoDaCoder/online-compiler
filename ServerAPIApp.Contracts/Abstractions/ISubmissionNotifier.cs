@@ -5,7 +5,7 @@ namespace ServerAPIApp.Contracts.Abstractions
     public interface ISubmissionNotifier
     {
         Task NotifyFailedAsync
-            (Guid submissionId,
+            (Guid reuqestId,
             string reason,
             CancellationToken cancellationToken = default);
         Task NotifyCompletedAsync

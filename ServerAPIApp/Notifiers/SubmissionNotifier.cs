@@ -21,12 +21,12 @@ namespace ServerAPIApp.Notifiers
         {
             await _hub.Clients
                 .Group(requestId.ToString())
-                .SendAsync("SubmissionFailed", 
-                new 
-                { 
-                    SubmissionId = requestId, 
-                    Reason = reason 
-                }, 
+                .SendAsync("RequestFailed",
+                new
+                {
+                    RequestId = requestId,
+                    Reason = reason
+                },
                 cancellationToken);
         }
 

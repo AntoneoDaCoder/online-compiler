@@ -4,6 +4,8 @@ using Shared.Enums;
 using ServerAPIApp.Contracts.Abstractions;
 using Microsoft.AspNetCore.SignalR;
 using ServerAPIApp.Contracts.DTOs;
+using MediatR;
+using ServerAPIApp.Core.UseCases.Submissions;
 
 namespace ServerAPIApp.Controllers
 {
@@ -13,11 +15,13 @@ namespace ServerAPIApp.Controllers
     {
         private ICodeDispatcher _dispatcher;
         private ISubmissionNotifier _notifier;
+        private IMediator _mediator;
 
-        public ServerController(ICodeDispatcher dispatcher, ISubmissionNotifier notifier)
+        public ServerController(ICodeDispatcher dispatcher, ISubmissionNotifier notifier, IMediator mediator)
         {
             _dispatcher = dispatcher;
             _notifier = notifier;
+            _mediator = mediator;
         }
 
         [HttpPost("jobs/start")]
@@ -25,6 +29,7 @@ namespace ServerAPIApp.Controllers
         {
             try
             {
+                //TODO: get userId from jwt token and pass to the method
                 await _dispatcher.ScheduleForExecutionAsync(dto, cancellationToken);
 
                 Console.WriteLine($"[API Controller] Received a request [Id:{dto.RequestId}], server time: {DateTime.Now}");
@@ -72,6 +77,12 @@ namespace ServerAPIApp.Controllers
             await _dispatcher.CompleteExecutionAsync(podResponse, cancellationToken);
 
             await _notifier.NotifyCompletedAsync(podResponse, cancellationToken);
+
+            var createCommand = new CreateSubmissionCase(podResponse);
+
+            await _mediator.Send(createCommand, cancellationToken);
+
+            //TODO: here notify user and admins about submission creation
 
             Console.WriteLine($"[API Controller] Sent a response [Id:{podResponse.RequestId}] to client, time:" + DateTime.UtcNow.ToString("o"));
 
