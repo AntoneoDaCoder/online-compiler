@@ -1,12 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
-using Shared.DTOs;
-using Shared.Enums;
-using ServerAPIApp.Contracts.Abstractions;
-using Microsoft.AspNetCore.SignalR;
-using ServerAPIApp.Contracts.DTOs;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using ServerAPIApp.Contracts.Abstractions;
+using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Core.UseCases.Submissions;
 using ServerAPIApp.Helpers;
+using Shared.DTOs;
+using Shared.Enums;
 
 namespace ServerAPIApp.Controllers
 {
@@ -25,6 +26,7 @@ namespace ServerAPIApp.Controllers
             _mediator = mediator;
         }
 
+        [Authorize(Policy = "DefaultAccess")]
         [HttpPost("jobs/start")]
         public async Task<IActionResult> ScheduleCodeExecutionAsync([FromBody] CodeRequestDto dto, CancellationToken cancellationToken)
         {
