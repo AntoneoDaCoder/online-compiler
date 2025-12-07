@@ -31,6 +31,8 @@ builder.Services.RegisterServices(builder.Configuration);
 
 builder.Services.ConfigureDispatchers(builder.Configuration);
 
+builder.Services.AddRoleHandler();
+
 var app = builder.Build();
 
 app.UseHttpsRedirection();

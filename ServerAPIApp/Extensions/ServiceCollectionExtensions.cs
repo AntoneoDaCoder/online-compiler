@@ -4,6 +4,8 @@ using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Configs;
 using ServerAPIApp.Dispatchers;
 using ServerAPIApp.Notifiers;
+using Microsoft.AspNetCore.Authorization;
+using ServerAPIApp.Middlewares;
 
 namespace ServerAPIApp.Extensions
 {
@@ -14,6 +16,11 @@ namespace ServerAPIApp.Extensions
             "csharp", /*"swift",*/ "java", "postgresql",
             "mssql", "nodejs", "kotlin", "typescript"
         };
+
+        public static void AddRoleHandler(this IServiceCollection services)
+        {
+            services.AddSingleton<IAuthorizationHandler, RoleHandler>();
+        }
 
         public static void ConfigureDispatchers(this IServiceCollection services, IConfiguration config)
         {

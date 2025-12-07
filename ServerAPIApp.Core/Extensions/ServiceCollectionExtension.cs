@@ -7,6 +7,7 @@ using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.Configs;
 using ServerAPIApp.Core.Services;
 using ServerAPIApp.DAL.Extensions;
+using ServerAPIApp.Core.AuthorizationRequirements;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text;
@@ -29,6 +30,15 @@ namespace ServerAPIApp.Core.Extensions
             var jwtSettings = jwtSection.Get<JwtSettings>();
 
             services.Configure<JwtSettings>(jwtSection);
+
+            services.AddAuthorizationBuilder()
+            .AddPolicy("AdminAccess", policy => policy
+                   .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                   .AddRequirements(new RoleRequirement(["Admin"])))
+            .AddPolicy("DefaultAccess", policy => policy
+                   .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                   .AddRequirements(new RoleRequirement(["Admin", "User"])));
+
 
             services.AddAuthentication(opt =>
             {
