@@ -253,6 +253,16 @@ namespace Runners.Shared.Runners
                     );
             }
 
+            if (manifest.SampleTests.Count == 0 && !manifest.AdvancedTests.Any(t => t.LanguageCode == userSolution.LanguageCode))
+                return Task.FromResult
+                   (
+                   new CompilationResult()
+                   {
+                       Success = false,
+                       CompilationErrors = $"Invalid manifest: no tests for {userSolution.LanguageCode} detected"
+                   }
+                   );
+
             var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.UserSolution, "SolutionContainer");
 
             var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
