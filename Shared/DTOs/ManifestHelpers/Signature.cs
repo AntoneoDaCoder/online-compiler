@@ -5,7 +5,7 @@ namespace Shared.DTOs.ManifestHelpers
 {
     public class Signature
     {
-        public string ReturnType { get; set; } = "void";
+        public TypeDescriptor ReturnType { get; set; } = new() { Kind = "primitive", Name = "void" };
         public List<ParameterDescriptor> Parameters { get; set; } = new();
     }
 }

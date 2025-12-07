@@ -9,6 +9,7 @@ namespace Runners.Shared.CodeWrappers.CSharp
     {
         const string _boilerplateUsings = """
                 using System;
+                using System.Collections;
                 using System.Collections.Generic;
                 using System.Linq;
                 using System.Text;
@@ -18,7 +19,7 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 using NUnitLite;
                 """;
 
-        public string GenerateSource(ManifestDto manifest, string userCode, string entrypointContainerClass = "SolutionContainer", int defaultTimeoutMs = 2000)
+        public string GenerateSource(ManifestDto manifest, string languageCode, string userCode, string entrypointContainerClass = "SolutionContainer", int defaultTimeoutMs = 2000)
         {
             if (manifest == null) throw new ArgumentNullException(nameof(manifest));
             var sb = new StringBuilder();
@@ -42,17 +43,20 @@ namespace Runners.Shared.CodeWrappers.CSharp
             sb.AppendLine("    }");
             sb.AppendLine();
 
-            // include helpers.inline
-            if (!string.IsNullOrWhiteSpace(manifest.Helpers?.Inline))
-            {
-                sb.AppendLine(manifest.Helpers.Inline);
-                sb.AppendLine();
-            }
+            // include helpers.inline (filter by languageCode)
+            var languageBlocks = manifest.Helpers?.FindAll(hb => hb.LanguageCode == languageCode);
+            if (languageBlocks is not null)
+                foreach (var block in languageBlocks)
+                    if (block.Inline is not null)
+                    {
+                        sb.AppendLine(block.Inline);
+                        sb.AppendLine();
+                    }
 
-            // user code inside container
+            // always generate entrypoint container
             sb.AppendLine($"    public static class {entrypointContainerClass}");
             sb.AppendLine("    {");
-            sb.AppendLine(userCode);
+            sb.AppendLine(userCode ?? string.Empty);
             sb.AppendLine("    }");
             sb.AppendLine();
 
@@ -113,82 +117,107 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 var timeoutMsExpr = (st.TimeoutMs > 0) ? st.TimeoutMs : defaultTimeoutMs;
                 sb.AppendLine($"            var __timeout = TimeSpan.FromMilliseconds({timeoutMsExpr}L);");
 
-                // render inputs into local variables
-                if (st.Inputs.HasValue)
+                // render inputs into local variables based on signature
+                var paramList = manifest.Signature?.Parameters ?? new List<ParameterDescriptor>();
+                int paramCount = paramList.Count;
+
+                if (st.Inputs.HasValue && paramCount > 0)
                 {
                     var j = JToken.Parse(st.Inputs.Value.GetRawText());
-                    if (j is JArray arr)
+
+                    if (paramCount == 1)
                     {
-                        for (int i = 0; i < arr.Count; i++)
-                        {
-                            var pType = (manifest.Signature.Parameters != null && manifest.Signature.Parameters.Count > i)
-                                ? manifest.Signature.Parameters[i].Type
-                                : null;
-                            var rendered = CSharpTokenParser.Render(arr[i], pType);
-                            var csharpType = pType != null ? CSharpTokenParser.RenderTypeName(pType) : "object";
-                            sb.AppendLine($"            var arg{i} = {rendered};");
-                        }
-                        var argsList = string.Join(", ", Enumerable.Range(0, arr.Count).Select(i => $"arg{i}"));
-                        sb.AppendLine($"            object?[] __args = new object?[] {{ {argsList} }};");
+                        var pType = paramList[0].Type;
+                        var rendered = CSharpTokenParser.Render(j, pType);
+                        sb.AppendLine($"            var arg0 = {rendered};");
                     }
                     else
                     {
-                        var pType = manifest.Signature.Parameters != null && manifest.Signature.Parameters.Count > 0 ? manifest.Signature.Parameters[0].Type : null;
-                        var rendered = CSharpTokenParser.Render(j, pType);
-                        sb.AppendLine($"            var arg0 = {rendered};");
-                        sb.AppendLine($"            object?[] __args = new object?[] {{ arg0 }};");
+                        if (j is JArray arr)
+                        {
+                            for (int i = 0; i < paramCount; i++)
+                            {
+                                var pType = i < paramCount ? paramList[i].Type : null;
+                                JToken item = i < arr.Count ? arr[i] : JValue.CreateNull();
+                                var rendered = CSharpTokenParser.Render(item, pType);
+                                sb.AppendLine($"            var arg{i} = {rendered};");
+                            }
+                        }
+                        else
+                        {
+                            var p0Type = paramList[0].Type;
+                            var rendered0 = CSharpTokenParser.Render(j, p0Type);
+                            sb.AppendLine($"            var arg0 = {rendered0};");
+                            for (int i = 1; i < paramCount; i++)
+                                sb.AppendLine($"            var arg{i} = default(object);");
+                        }
                     }
                 }
                 else
                 {
-                    sb.AppendLine($"            object?[] __args = new object?[] {{}};");
+                    for (int i = 0; i < paramCount; i++)
+                        sb.AppendLine($"            var arg{i} = default(object);");
                 }
 
-                // determine return type
-                var returnTypeRaw = manifest.Signature?.ReturnType ?? "void";
-                var parsed = ParseReturnType(returnTypeRaw);
+                // determine return type descriptor (now TypeDescriptor)
+                var returnTypeDescriptor = manifest.Signature?.ReturnType ?? new TypeDescriptor { Kind = "primitive", Name = "void" };
+                var parsed = ParseReturnType(returnTypeDescriptor);
 
-                // call & await with timeout
+                // build invocation args string
+                string invocationArgs = GenerateArgsInvocationBySignature(paramCount);
+
+                // If parsed.ResultTypeCSharp is 'object' try to infer type from expected token (if present)
+                string effectiveRt = parsed.ResultTypeCSharp;
+                TypeDescriptor? effectiveRtDescriptor = parsed.ResultTypeDescriptor;
+                bool needRuntimeCast = false;
+
+                if (effectiveRt == "object" && st.Expected.HasValue)
+                {
+                    var expectedTokenTemp = JToken.Parse(st.Expected.Value.GetRawText());
+                    var inferred = InferTypeDescriptorFromJToken(expectedTokenTemp);
+                    if (inferred != null)
+                    {
+                        effectiveRtDescriptor = inferred;
+                        effectiveRt = CSharpTokenParser.RenderTypeName(inferred);
+                        needRuntimeCast = parsed.ResultTypeCSharp != effectiveRt;
+                    }
+                }
+
+                // call & await with Task.WaitAsync(timeout)
                 if (!parsed.HasResult)
                 {
-                    if (parsed.IsTask)
-                    {
-                        sb.AppendLine($"            var __call = {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)});");
-                        sb.AppendLine($"            var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
-                        sb.AppendLine($"            if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
-                    }
-                    else
-                    {
-                        sb.AppendLine($"            var __call = Task.Run(() => {{ {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)}); }});");
-                        sb.AppendLine($"            var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
-                        sb.AppendLine($"            if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
-                    }
+                    // void / no result path
+                    sb.AppendLine($"            try");
+                    sb.AppendLine($"            {{");
+                    sb.AppendLine($"                var __call = Task.Run(() => {{ {entrypointContainerClass}.{manifest.Entrypoint}({invocationArgs}); }});");
+                    sb.AppendLine($"                await __call.WaitAsync(__timeout);");
+                    sb.AppendLine($"            }}");
+                    sb.AppendLine($"            catch (TimeoutException) {{ Assert.Fail(\"Test execution timed out\"); }}");
 
                     // success -> increment counter
                     sb.AppendLine("            __TestMonitor.Inc();");
                 }
                 else
                 {
-                    var rt = parsed.ResultTypeCSharp;
-                    if (parsed.IsTask)
-                    {
-                        sb.AppendLine($"            var __call = {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)});");
-                        sb.AppendLine($"            var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
-                        sb.AppendLine($"            if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
-                        sb.AppendLine($"            var __actual = await __call;");
-                    }
+                    var rt = effectiveRt;
+                    // declare __actual with concrete/effective type so NUnit/collections get correct types
+                    sb.AppendLine($"            {rt} __actual = default({rt});");
+                    sb.AppendLine($"            try");
+                    sb.AppendLine($"            {{");
+                    sb.AppendLine($"                var __task = Task.Run(() => {entrypointContainerClass}.{manifest.Entrypoint}({invocationArgs}));");
+                    sb.AppendLine($"                await __task.WaitAsync(__timeout);");
+                    if (needRuntimeCast)
+                        sb.AppendLine($"                __actual = ({rt}) await __task;");
                     else
-                    {
-                        sb.AppendLine($"            var __call = Task.Run(() => {entrypointContainerClass}.{manifest.Entrypoint}({GenerateArgsInvocation(manifest)}));");
-                        sb.AppendLine($"            var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
-                        sb.AppendLine($"            if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Test execution timed out\");");
-                        sb.AppendLine($"            var __actual = await __call;");
-                    }
+                        sb.AppendLine($"                __actual = await __task;");
+                    sb.AppendLine($"            }}");
+                    sb.AppendLine($"            catch (TimeoutException) {{ Assert.Fail(\"Test execution timed out\"); }}");
 
+                    // render expected using effective descriptor (if available) so types match
                     if (st.Expected.HasValue)
                     {
                         var expectedToken = JToken.Parse(st.Expected.Value.GetRawText());
-                        var expectedRendered = CSharpTokenParser.Render(expectedToken, parsed.ResultTypeDescriptor);
+                        var expectedRendered = CSharpTokenParser.Render(expectedToken, effectiveRtDescriptor);
                         sb.AppendLine($"            var __expected = {expectedRendered};");
                     }
                     else
@@ -197,8 +226,8 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     }
 
                     var comparator = string.IsNullOrWhiteSpace(st.Comparator) ? "eq" : st.Comparator;
-                    sb.AppendLine($"            if (!RunnerHelpers.Compare(__actual, __expected, \"{comparator}\"))");
-                    sb.AppendLine($"                Assert.Fail($\"Sample test '{st.Name}' failed. Expected={{__expected}} Actual={{__actual}}\");");
+                    // call helper that uses NUnit asserts and provides good diagnostics
+                    sb.AppendLine($"            RunnerHelpers.AssertCompare(__actual, __expected, \"{comparator}\", \"Sample test '{st.Name}'\");");
 
                     // success -> increment counter
                     sb.AppendLine("            __TestMonitor.Inc();");
@@ -224,14 +253,14 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     var advTimeout = adv.TimeoutMs > 0 ? adv.TimeoutMs : defaultTimeoutMs;
                     sb.AppendLine($"            var __timeout = TimeSpan.FromMilliseconds({advTimeout}L);");
 
-                    // call advanced test method (assume it returns Task or Task<T> or void)
-                    sb.AppendLine($"            var __call = AdvancedTestsContainer.{methodName}();");
-                    sb.AppendLine($"            var __completed = await Task.WhenAny(__call, Task.Delay(__timeout));");
-                    sb.AppendLine($"            if (!ReferenceEquals(__completed, __call)) Assert.Fail(\"Advanced test timed out\");");
+                    sb.AppendLine($"            try");
+                    sb.AppendLine($"            {{");
+                    sb.AppendLine($"                var __call = AdvancedTestsContainer.{methodName}();");
+                    sb.AppendLine($"                await __call.WaitAsync(__timeout);");
+                    sb.AppendLine($"            }}");
+                    sb.AppendLine($"            catch (TimeoutException) {{ Assert.Fail(\"Advanced test timed out\"); }}");
 
-                    // success -> increment counter
                     sb.AppendLine("            __TestMonitor.Inc();");
-
                     sb.AppendLine("        }");
                     sb.AppendLine();
                 }
@@ -241,6 +270,13 @@ namespace Runners.Shared.CodeWrappers.CSharp
             sb.AppendLine("}"); // namespace
 
             return sb.ToString();
+        }
+
+        private string GenerateArgsInvocationBySignature(int paramCount)
+        {
+            if (paramCount == 0) return "";
+            if (paramCount == 1) return "arg0";
+            return string.Join(", ", Enumerable.Range(0, paramCount).Select(i => $"arg{i}"));
         }
 
         private string SanitizeMethodName(string name)
@@ -254,73 +290,82 @@ namespace Runners.Shared.CodeWrappers.CSharp
             return sb.ToString();
         }
 
-        private (bool IsTask, bool HasResult, string ResultTypeCSharp, TypeDescriptor? ResultTypeDescriptor) ParseReturnType(string raw)
+        // --- Parse return type from TypeDescriptor (no Task<T> support here; returns IsTask=false)
+        private (bool IsTask, bool HasResult, string ResultTypeCSharp, TypeDescriptor? ResultTypeDescriptor) ParseReturnType(TypeDescriptor? td)
         {
-            if (string.IsNullOrWhiteSpace(raw)) return (false, false, "void", null);
+            if (td == null) return (false, false, "void", null);
 
-            raw = raw.Trim();
-            if (raw.StartsWith("Task<") && raw.EndsWith(">"))
-            {
-                var inner = raw.Substring(5, raw.Length - 6).Trim();
-                var descr = new TypeDescriptor();
-                if (inner.EndsWith("[]"))
-                {
-                    descr.Kind = "array";
-                    descr.Items = new TypeDescriptor { Kind = "class", Name = inner.Substring(0, inner.Length - 2) };
-                }
-                else if (IsPrimitiveName(inner))
-                {
-                    descr.Kind = "primitive";
-                    descr.Name = inner;
-                }
-                else
-                {
-                    descr.Kind = "class";
-                    descr.Name = inner;
-                }
-                return (true, true, MapToCSharpType(inner), descr);
-            }
-            if (raw == "Task")
-                return (true, false, "void", null);
+            // void
+            if (td.Kind == "primitive" && string.Equals(td.Name, "void", StringComparison.OrdinalIgnoreCase))
+                return (false, false, "void", td);
 
-            if (raw == "void")
-                return (false, false, "void", null);
-
-            if (raw.EndsWith("[]"))
-            {
-                var inner = raw.Substring(0, raw.Length - 2);
-                var descr = IsPrimitiveName(inner) ? new TypeDescriptor { Kind = "array", Items = new TypeDescriptor { Kind = "primitive", Name = inner } }
-                                                   : new TypeDescriptor { Kind = "array", Items = new TypeDescriptor { Kind = "class", Name = inner } };
-                return (false, true, MapToCSharpType(raw), descr);
-            }
-
-            var td = IsPrimitiveName(raw) ? new TypeDescriptor { Kind = "primitive", Name = raw } : new TypeDescriptor { Kind = "class", Name = raw };
-            return (false, true, MapToCSharpType(raw), td);
+            // array / primitive / class / nullable
+            var rtName = CSharpTokenParser.RenderTypeName(td);
+            return (false, true, rtName, td);
         }
 
-        private bool IsPrimitiveName(string n)
+        // ----- new helper: infer TypeDescriptor from a JToken (basic)
+        private TypeDescriptor? InferTypeDescriptorFromJToken(JToken token)
         {
-            return new[] { "int", "long", "double", "string", "bool", "void" }.Contains(n);
-        }
-
-        private string MapToCSharpType(string raw)
-        {
-            raw = raw.Trim();
-            if (raw.EndsWith("[]"))
+            if (token == null) return null;
+            switch (token.Type)
             {
-                var inner = raw.Substring(0, raw.Length - 2);
-                return inner + "[]";
+                case JTokenType.Null:
+                    return null;
+                case JTokenType.Integer:
+                    return new TypeDescriptor { Kind = "primitive", Name = "int" };
+                case JTokenType.Float:
+                    return new TypeDescriptor { Kind = "primitive", Name = "double" };
+                case JTokenType.Boolean:
+                    return new TypeDescriptor { Kind = "primitive", Name = "bool" };
+                case JTokenType.String:
+                    return new TypeDescriptor { Kind = "primitive", Name = "string" };
+                case JTokenType.Array:
+                    {
+                        var arr = token.Children().ToArray();
+                        if (arr.Length == 0)
+                        {
+                            return new TypeDescriptor { Kind = "array", Items = new TypeDescriptor { Kind = "class", Name = "object" } };
+                        }
+                        TypeDescriptor? first = null;
+                        bool allSame = true;
+                        foreach (var c in arr)
+                        {
+                            var td = InferTypeDescriptorFromJToken(c);
+                            if (first == null) first = td;
+                            else
+                            {
+                                if (!TypeDescriptorsEqual(first, td)) { allSame = false; break; }
+                            }
+                        }
+                        if (allSame && first != null)
+                        {
+                            if (first.Kind == "primitive")
+                                return new TypeDescriptor { Kind = "array", Items = new TypeDescriptor { Kind = "primitive", Name = first.Name } };
+                            return new TypeDescriptor { Kind = "array", Items = new TypeDescriptor { Kind = "class", Name = first.Name ?? "object" } };
+                        }
+                        return new TypeDescriptor { Kind = "array", Items = new TypeDescriptor { Kind = "class", Name = "object" } };
+                    }
+                case JTokenType.Object:
+                    return new TypeDescriptor { Kind = "class", Name = "object" };
+                default:
+                    return new TypeDescriptor { Kind = "class", Name = "object" };
             }
-            if (raw == "int" || raw == "long" || raw == "double" || raw == "string" || raw == "bool")
-                return raw;
-            return raw;
         }
 
-        private string GenerateArgsInvocation(ManifestDto manifest)
+        private bool TypeDescriptorsEqual(TypeDescriptor? a, TypeDescriptor? b)
         {
-            var count = manifest.Signature?.Parameters?.Count ?? 0;
-            if (count == 0) return "";
-            return string.Join(", ", Enumerable.Range(0, count).Select(i => $"arg{i}"));
+            if (a == null && b == null) return true;
+            if (a == null || b == null) return false;
+            if (a.Kind != b.Kind) return false;
+            if (a.Kind == "primitive") return a.Name == b.Name;
+            if (a.Kind == "array")
+            {
+                if (a.Items == null && b.Items == null) return true;
+                if (a.Items == null || b.Items == null) return false;
+                return TypeDescriptorsEqual(a.Items, b.Items);
+            }
+            return a.Name == b.Name;
         }
     }
 }

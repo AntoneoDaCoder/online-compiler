@@ -7,5 +7,6 @@ namespace Shared.DTOs.ManifestHelpers
     public class HelpersBlock
     {
         public string? Inline { get; set; }
+        public string LanguageCode { get; set; }
     }
 }

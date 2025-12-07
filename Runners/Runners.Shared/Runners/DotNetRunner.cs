@@ -263,7 +263,7 @@ namespace Runners.Shared.Runners
                    }
                    );
 
-            var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.UserSolution, "SolutionContainer");
+            var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.LanguageCode, userSolution.UserSolution, "SolutionContainer");
 
             var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
 
