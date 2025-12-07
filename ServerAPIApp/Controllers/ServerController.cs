@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 using ServerAPIApp.Contracts.DTOs;
 using MediatR;
 using ServerAPIApp.Core.UseCases.Submissions;
+using ServerAPIApp.Helpers;
 
 namespace ServerAPIApp.Controllers
 {
@@ -29,8 +30,9 @@ namespace ServerAPIApp.Controllers
         {
             try
             {
-                //TODO: get userId from jwt token and pass to the method
-                await _dispatcher.ScheduleForExecutionAsync(dto, cancellationToken);
+                var userId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
+
+                await _dispatcher.ScheduleForExecutionAsync(userId, dto, cancellationToken);
 
                 Console.WriteLine($"[API Controller] Received a request [Id:{dto.RequestId}], server time: {DateTime.Now}");
 
