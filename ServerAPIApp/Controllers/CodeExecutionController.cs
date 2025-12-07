@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Core.UseCases.Submissions;
@@ -13,13 +12,13 @@ namespace ServerAPIApp.Controllers
 {
     [ApiController]
     [Route("api")]
-    public class ServerController : ControllerBase
+    public class CodeExecutionController : ControllerBase
     {
         private ICodeDispatcher _dispatcher;
         private ISubmissionNotifier _notifier;
         private IMediator _mediator;
 
-        public ServerController(ICodeDispatcher dispatcher, ISubmissionNotifier notifier, IMediator mediator)
+        public CodeExecutionController(ICodeDispatcher dispatcher, ISubmissionNotifier notifier, IMediator mediator)
         {
             _dispatcher = dispatcher;
             _notifier = notifier;
@@ -50,7 +49,7 @@ namespace ServerAPIApp.Controllers
                     }
                 };
 
-                return Accepted(response);
+                return StatusCode(202, response);
             }
             catch (Exception ex)
             {
@@ -90,7 +89,7 @@ namespace ServerAPIApp.Controllers
 
             Console.WriteLine($"[API Controller] Sent a response [Id:{podResponse.RequestId}] to client, time:" + DateTime.UtcNow.ToString("o"));
 
-            return Ok();
+            return StatusCode(200);
         }
     }
 }
