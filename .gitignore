@@ -4,6 +4,7 @@
 /kubeconfig
 results-table.xlsx
 whatever.txt
+/Runners/JavaRunner/.idea/workspace.xml
 
 # User-specific files
 *.suo

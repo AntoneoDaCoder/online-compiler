@@ -1,15 +1,27 @@
 package com.mems.Shared.DTOs;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
-
-import com.mems.Shared.Models.Problem;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.OffsetDateTime;
 
 public class ProblemSolutionDto {
-    public UUID requestId;
-    public long maxAllowedTimeInMilliseconds;
-    public String language = "";
-    public String code = "";
-    public Problem problem;
-    public LocalDateTime sentAt;
+    @JsonProperty("RequestId")
+    public String RequestId;
+
+    @JsonProperty("VersionId")
+    public String VersionId;
+
+    @JsonProperty("UserId")
+    public String UserId;
+
+    @JsonProperty("TestManifestJson")
+    public String TestManifestJson;
+
+    @JsonProperty("LanguageCode")
+    public String LanguageCode;
+
+    @JsonProperty("UserSolution")
+    public String UserSolution;
+
+    @JsonProperty("SentAt")
+    public OffsetDateTime SentAt;
 }
