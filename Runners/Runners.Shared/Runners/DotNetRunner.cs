@@ -217,7 +217,7 @@ namespace Runners.Shared.Runners
             ManifestDto manifest;
             try
             {
-                manifest = ManifestParser.Parse(userSolution.TestManifestJson);
+                manifest = ManifestParser.Parse(userSolution.TestManifestJson, userSolution.LanguageCode);
             }
             catch (InvalidTestTemplateException ex)
             {
