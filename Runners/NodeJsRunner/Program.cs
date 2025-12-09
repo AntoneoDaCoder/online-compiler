@@ -1,5 +1,6 @@
-﻿using Runners.Shared;
+﻿using Runners.Shared.CodeWrappers.NodeJs;
 using Runners.Shared.Runners;
+using Runners.Shared;
 
 class Runner
 {
@@ -12,7 +13,7 @@ class Runner
             cts.Cancel();
         };
 
-        using (var runner = new RunnerBase(new NodeJsRunner()))
+        using (var runner = new RunnerBase(new NodeJsRunner(new NodeJsWrapper())))
         {
             await runner.ListenAsync(cts.Token);
         }
