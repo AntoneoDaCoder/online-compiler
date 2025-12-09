@@ -13,7 +13,7 @@ using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
 
 namespace Runners.Shared.Runners
 {
-    public class DotNetRunner : IRunner
+    public partial class DotNetRunner : IRunner
     {
         const int _maxProcessLifetime = 25000;
         const string _tmpDllPath = "/tmp/UserProgram.dll";
@@ -121,98 +121,7 @@ namespace Runners.Shared.Runners
             _codeWrapper = wrapper;
         }
 
-        //public string WrapCode(ProblemSolutionDto problemSolutionDto)
-        //{
-        //    var sb = new StringBuilder(_boilerplateUsings);
-
-        //    foreach (var definition in problemSolutionDto.Problem.AdditionalDefinitions)
-        //    {
-        //        sb.AppendLine(definition.Value);
-
-        //        if (definition.Value.Contains("DbContext"))
-        //        {
-        //            sb.AppendLine(@"    public static class TestInfrastructure
-        //                                {
-        //                                    public static string Schema = ""linq_schema"";
-
-        //                                    public static AppDbContext CreateContext()
-        //                                    {
-        //                                        var connectionString = ""Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=postgresdb;Username=postgresadmin;Password=admin123"";
-
-        //                                        var options = new DbContextOptionsBuilder<AppDbContext>()
-        //                                                    .UseNpgsql(connectionString, o => o.MigrationsHistoryTable(""__EFMigrationsHistory"", Schema))
-        //                                                    .Options;
-
-        //                                        var context = new AppDbContext(options);
-
-        //                                        context.Database.ExecuteSql($""CREATE SCHEMA IF NOT EXISTS \""{Schema}\"""");
-
-        //                                        context.Database.EnsureDeleted();
-        //                                        context.Database.EnsureCreated();
-
-        //                                        return context;
-        //                                    }
-        //                                }"
-        //            );
-        //        }
-        //    }
-
-
-        //    sb.AppendLine(
-        //        $$"""
-        //    {{problemSolutionDto.Code}}
-        //    public class Program
-        //    {
-        //        static int Main(string[] args)
-        //        {
-        //            var argsWithNoResult = args.Concat(new[] { "--noresult" }).ToArray();
-        //            var result = new AutoRun().Execute(argsWithNoResult);
-        //            Console.Out.Flush();
-        //            return result;
-        //        }
-        //    }
-        //    [TestFixture]
-        //    public class GeneratedTests
-        //    {      
-        //    """);
-
-
-        //    foreach (var testCase in problemSolutionDto.Problem.TestCases)
-        //    {
-        //        sb.AppendLine(
-        //            $$"""
-        //        [Test]
-        //        public void {{testCase.Name}}()
-        //        {
-        //            {{testCase.TestInitialization}}
-
-        //            var testTask = Task.Run( ()=>
-        //            {
-        //                {{testCase.InputExpression}}
-        //                {{testCase.OutputExpression}}
-        //            });
-
-        //            try
-        //            {
-        //                if (!testTask.Wait(TimeSpan.FromMilliseconds({{problemSolutionDto.MaxAllowedTimeInMilliseconds}})))
-        //                {
-        //                    Assert.Fail("Test execution timed out");
-        //                }
-        //            }
-        //            catch(AggregateException ae)
-        //            {
-        //                throw ae.InnerException ?? ae;
-        //            }
-        //        }
-        //        """
-        //            );
-        //    }
-        //    sb.AppendLine("}");
-
-        //    return sb.ToString();
-        //}
-
-        public Task<CompilationResult> CompileCodeAsync(ProblemSolutionDto userSolution, CancellationToken cancellationToken)
+        public Task<CompilationResult> CompileCodeAsync(ProblemSolutionDto userSolution, CancellationToken cancellationToken = default)
         {
             ManifestDto manifest;
             try
@@ -263,7 +172,7 @@ namespace Runners.Shared.Runners
                    }
                    );
 
-            var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.LanguageCode, userSolution.UserSolution, "SolutionContainer");
+            var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.UserSolution, "SolutionContainer");
 
             var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
 
@@ -309,7 +218,7 @@ namespace Runners.Shared.Runners
                 });
         }
 
-        public async Task<CodeResponseDto> ExecuteCodeAsync(ExecutionData data, CancellationToken cancellationToken)
+        public async Task<CodeResponseDto> ExecuteCodeAsync(ExecutionData data, CancellationToken cancellationToken = default)
         {
             var result = new CodeResponseDto()
             {
@@ -350,7 +259,7 @@ namespace Runners.Shared.Runners
             var stdout = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
             var stderr = await proc.StandardError.ReadToEndAsync(cancellationToken);
 
-            var passedMatch = Regex.Match(stdout ?? string.Empty, @"PassedTests\s*:\s*(\d+)", RegexOptions.IgnoreCase);
+            var passedMatch = PassedTestsRegex().Match(stdout ?? string.Empty);
             if (passedMatch.Success && int.TryParse(passedMatch.Groups[1].Value, out var passedCount))
             {
                 result.Result.PassedTests = passedCount;
@@ -383,7 +292,7 @@ namespace Runners.Shared.Runners
 
                 var failedTestNames = new StringBuilder();
 
-                var matchCollection = Regex.Matches(combined, @"\d+\)\s+Failed\s+:\s+([\w\.]+)");
+                var matchCollection = FailedTestsRegex().Matches(combined);
 
                 foreach (Match match in matchCollection)
                 {
@@ -447,5 +356,11 @@ namespace Runners.Shared.Runners
         {
             return _metadataCache.Select(am => am.GetReference());
         }
+
+        [GeneratedRegex(@"PassedTests\s*:\s*(\d+)", RegexOptions.IgnoreCase)]
+        private static partial Regex PassedTestsRegex();
+
+        [GeneratedRegex(@"\d+\)\s+Failed\s+:\s+([\w\.]+)", RegexOptions.IgnoreCase)]
+        private static partial Regex FailedTestsRegex();
     }
 }
