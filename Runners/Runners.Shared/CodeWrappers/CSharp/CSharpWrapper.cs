@@ -19,7 +19,7 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 using NUnitLite;
                 """;
 
-        public string GenerateSource(ManifestDto manifest, string languageCode, string userCode, string entrypointContainerClass = "SolutionContainer", int defaultTimeoutMs = 2000)
+        public string GenerateSource(ManifestDto manifest, string userCode, string entrypointContainerClass = "SolutionContainer", int defaultTimeoutMs = 2000)
         {
             if (manifest == null) throw new ArgumentNullException(nameof(manifest));
             var sb = new StringBuilder();
@@ -43,15 +43,14 @@ namespace Runners.Shared.CodeWrappers.CSharp
             sb.AppendLine("    }");
             sb.AppendLine();
 
-            // include helpers.inline (filter by languageCode)
-            var languageBlocks = manifest.Helpers?.FindAll(hb => hb.LanguageCode == languageCode);
-            if (languageBlocks is not null)
-                foreach (var block in languageBlocks)
-                    if (block.Inline is not null)
-                    {
-                        sb.AppendLine(block.Inline);
-                        sb.AppendLine();
-                    }
+            // include helpers.inline (already filtered by ManifestParser)
+            var languageBlocks = manifest.Helpers;
+            foreach (var block in languageBlocks)
+                if (!string.IsNullOrWhiteSpace(block.Inline))
+                {
+                    sb.AppendLine(block.Inline);
+                    sb.AppendLine();
+                }
 
             // always generate entrypoint container
             sb.AppendLine($"    public static class {entrypointContainerClass}");
