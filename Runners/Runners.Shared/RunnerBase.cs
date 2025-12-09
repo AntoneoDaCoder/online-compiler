@@ -33,7 +33,7 @@ namespace Runners.Shared
             GC.SuppressFinalize(this);
         }
 
-        public async Task ListenAsync(CancellationToken cancellationToken)
+        public async Task ListenAsync(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -75,7 +75,7 @@ namespace Runners.Shared
             }
         }
 
-        private async Task NotifyJobManagerAsync(CodeResponseDto response, string callbackUrl, Guid requestId, CancellationToken cancellationToken)
+        private async Task NotifyJobManagerAsync(CodeResponseDto response, string callbackUrl, Guid requestId, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -89,7 +89,7 @@ namespace Runners.Shared
             }
         }
 
-        private async Task ExecuteUserCodeAsync(ProblemSolutionDto request, CancellationToken cancellationToken)
+        private async Task ExecuteUserCodeAsync(ProblemSolutionDto request, CancellationToken cancellationToken = default)
         {
             Console.WriteLine("[Runner] Compiling code");
 
