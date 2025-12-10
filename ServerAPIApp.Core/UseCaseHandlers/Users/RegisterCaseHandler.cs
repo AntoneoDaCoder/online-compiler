@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using ServerAPIApp.Contracts.Abstractions;
+using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.UseCases.Users;
 using ServerAPIApp.Domain.Entities;
@@ -9,7 +10,7 @@ using Shared.Helpers;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Users
 {
-    public class RegisterCaseHandler : IRequestHandler<RegisterUserCase, string>
+    public class RegisterCaseHandler : IRequestHandler<RegisterUserCase, LoginDataDto>
     {
         private IUserRepository _repo;
         private IJwtTokenService _tokenService;
@@ -26,7 +27,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             _protector = protector;
         }
 
-        public async Task<string> Handle(RegisterUserCase command, CancellationToken cancellationToken)
+        public async Task<LoginDataDto> Handle(RegisterUserCase command, CancellationToken cancellationToken)
         {
             var emailHash = CryptoHelpers.ComputeSha256Hex(command.Email);
 
@@ -61,7 +62,9 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             if (!roleRes.Succeeded)
                 throw new RegistrationException("Failed to add user to role");
 
-            return _tokenService.GenerateAccessToken([DefaultRole], newId);
+            var accessToken = _tokenService.GenerateAccessToken([DefaultRole], newId);
+
+            return LoginDataDto.From(newId, command.Name, [DefaultRole], newUser.CreatedAt, accessToken);
         }
     }
 }

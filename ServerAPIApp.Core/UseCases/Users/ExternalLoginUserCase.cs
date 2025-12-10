@@ -1,9 +1,10 @@
 ﻿using MediatR;
+using ServerAPIApp.Contracts.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace ServerAPIApp.Core.UseCases.Users
 {
-    public record ExternalLoginUserCase(string IdToken) : IRequest<string>;
+    public record ExternalLoginUserCase(string IdToken) : IRequest<LoginDataDto>;
 }

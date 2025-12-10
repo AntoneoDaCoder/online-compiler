@@ -5,10 +5,11 @@ using ServerAPIApp.Core.UseCases.Users;
 using Shared.Helpers;
 using ServerAPIApp.Domain.Exceptions.UnauthorizedExceptions;
 using ServerAPIApp.Domain.Exceptions.ForbiddenExceptions;
+using ServerAPIApp.Contracts.DTOs;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Users
 {
-    public class InternalLoginCaseHandler : IRequestHandler<InternalLoginUserCase, string>
+    public class InternalLoginCaseHandler : IRequestHandler<InternalLoginUserCase, LoginDataDto>
     {
         private IUserRepository _repo;
         private IJwtTokenService _tokenService;
@@ -19,7 +20,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             _tokenService = service;
         }
 
-        public async Task<string> Handle(InternalLoginUserCase command, CancellationToken cancellationToken)
+        public async Task<LoginDataDto> Handle(InternalLoginUserCase command, CancellationToken cancellationToken)
         {
             var hashedEmail = CryptoHelpers.ComputeSha256Hex(command.Email);
 
@@ -46,7 +47,9 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             if (roles is null || roles.Count == 0)
                 throw new EmptyRolesException("Unable to issue token to user with no valid roles");
 
-            return _tokenService.GenerateAccessToken(roles, entity.Id);
+            var accessToken = _tokenService.GenerateAccessToken(roles, entity.Id);
+
+            return LoginDataDto.From(entity.Id, entity.Name, roles, entity.CreatedAt, accessToken);
         }
     }
 }

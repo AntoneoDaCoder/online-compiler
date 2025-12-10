@@ -6,10 +6,11 @@ using ServerAPIApp.Domain.Entities;
 using ServerAPIApp.Domain.Exceptions.UnauthorizedExceptions;
 using ServerAPIApp.Domain.Exceptions.ForbiddenExceptions;
 using Shared.Helpers;
+using ServerAPIApp.Contracts.DTOs;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Users
 {
-    public class ExternalLoginCaseHandler : IRequestHandler<ExternalLoginUserCase, string>
+    public class ExternalLoginCaseHandler : IRequestHandler<ExternalLoginUserCase, LoginDataDto>
     {
         private IUserRepository _repo;
         private ISecretProtector _protector;
@@ -28,7 +29,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             _authTokenValidator = validator;
         }
 
-        public async Task<string> Handle(ExternalLoginUserCase command, CancellationToken cancellationToken)
+        public async Task<LoginDataDto> Handle(ExternalLoginUserCase command, CancellationToken cancellationToken)
         {
             var payload = await _authTokenValidator.ValidateTokenAsync(command.IdToken, cancellationToken);
 
@@ -118,7 +119,9 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
                 }
             }
 
-            return _tokenService.GenerateAccessToken(roles, googleUser.Id);
+            var accessToken = _tokenService.GenerateAccessToken(roles, googleUser.Id);
+
+            return LoginDataDto.From(googleUser.Id, googleUser.Name, roles, googleUser.CreatedAt, accessToken);
         }
     }
 }
