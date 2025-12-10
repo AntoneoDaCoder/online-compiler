@@ -31,6 +31,11 @@ namespace ServerAPIApp.DAL.Repositories
             return entity;
         }
 
+        public async Task<List<LanguageEntity>?> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Languages.ToListAsync(cancellationToken);
+        }
+
         public async Task<LanguageEntity> CreateAsync(LanguageEntity entity, CancellationToken cancellationToken = default)
         {
             var entry = _context.Languages.Add(entity);
