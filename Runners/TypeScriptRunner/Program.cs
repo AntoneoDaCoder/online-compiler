@@ -1,4 +1,5 @@
 ﻿using Runners.Shared;
+using Runners.Shared.CodeWrappers.Typescript;
 using Runners.Shared.Runners;
 
 public class Runner
@@ -12,7 +13,7 @@ public class Runner
             cts.Cancel();
         };
 
-        using (var runner = new RunnerBase(new TypeScriptRunner()))
+        using (var runner = new RunnerBase(new TypeScriptRunner(new TypescriptWrapper())))
         {
             await runner.ListenAsync(cts.Token);
         }
