@@ -9,7 +9,7 @@ namespace ServerAPIApp.Extensions
         {
             var jwtToken = handler.ReadJsonWebToken(token);
 
-            return Guid.Parse(jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.UserData)?.Value!);
+            return Guid.Parse(jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value!);
         }
     }
 }

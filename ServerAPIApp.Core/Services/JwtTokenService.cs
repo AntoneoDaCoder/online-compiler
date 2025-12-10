@@ -26,7 +26,7 @@ namespace ServerAPIApp.Core.Services
         {
             var principal = await _tokenGenerator.GetPrincipalFromExpiredTokenAsync(accessToken, cancellationToken);
 
-            var parsedId = Guid.Parse(principal.Claims.First(x => x.Type == ClaimTypes.UserData).Value);
+            var parsedId = Guid.Parse(principal.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value);
 
             return parsedId;
         }

@@ -82,7 +82,7 @@ namespace ServerAPIApp.Core.Services
         {
             var claims = new List<Claim>
             {
-                new(ClaimTypes.UserData, userId)
+                new(ClaimTypes.NameIdentifier, userId)
             };
 
             foreach (var role in roles)
