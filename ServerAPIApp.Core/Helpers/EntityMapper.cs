@@ -1,4 +1,5 @@
-﻿using ServerAPIApp.Core.UseCases.Languages;
+﻿using ServerAPIApp.Contracts.DTOs;
+using ServerAPIApp.Core.UseCases.Languages;
 using ServerAPIApp.Core.UseCases.Problems;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
 using ServerAPIApp.Core.UseCases.Submissions;
@@ -31,6 +32,13 @@ namespace ServerAPIApp.Core.Helpers
             };
 
             return entity;
+        }
+
+        public static IEnumerable<LanguageDto>? ToDto(this IEnumerable<LanguageEntity>? entities)
+        {
+            if (entities is null) return null;
+
+            return entities.Select(e => LanguageDto.From(e));
         }
         #endregion
 
@@ -80,6 +88,13 @@ namespace ServerAPIApp.Core.Helpers
             };
 
             return entity;
+        }
+
+        public static IEnumerable<ShortSubmissionDto>? ToDto(this IEnumerable<SubmissionEntity>? entities)
+        {
+            if (entities is null) return null;
+
+            return entities.Select(e => ShortSubmissionDto.From(e));
         }
         #endregion
 
