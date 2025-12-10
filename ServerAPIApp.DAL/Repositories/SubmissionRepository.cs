@@ -21,26 +21,16 @@ namespace ServerAPIApp.DAL.Repositories
         {
             var entity = await _context.Submissions
                 .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+                .Where(s => s.Id == id)
+                .Include(s => s.ProblemVersion)
+                .ThenInclude(pv => pv.Problem)
+                .FirstOrDefaultAsync(cancellationToken);
 
             return entity;
         }
 
-        public async Task<List<SubmissionEntity>?> GetUserSubmissionsAsync
-            (Guid userId,
-            CancellationToken cancellationToken = default)
-        {
-            var entries = await _context.Submissions
-                .AsNoTracking()
-                .Where(s => s.CreatedBy == userId)
-                .ToListAsync(cancellationToken);
-
-            return entries;
-        }
-
-        public async Task<List<SubmissionEntity>?> GetUserSubmissionsFilteredByLanguageAsync
-            (Guid userId,
-            Expression<Func<SubmissionEntity, bool>> filter,
+        public async Task<List<SubmissionEntity>?> GetFilteredUserSubmissionsAsync
+            (Expression<Func<SubmissionEntity, bool>> filter,
             CancellationToken cancellationToken = default)
         {
             var entries = await _context.Submissions

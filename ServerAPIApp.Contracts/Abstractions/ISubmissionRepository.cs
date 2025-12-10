@@ -8,12 +8,8 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<SubmissionEntity?> GetByIdAsync
             (Guid id,
             CancellationToken cancellationToken = default);
-        Task<List<SubmissionEntity>?> GetUserSubmissionsAsync
-            (Guid userId,
-            CancellationToken cancellationToken = default);
-        Task<List<SubmissionEntity>?> GetUserSubmissionsFilteredByLanguageAsync
-            (Guid userId,
-            Expression<Func<SubmissionEntity, bool>> languageFilter,
+        Task<List<SubmissionEntity>?> GetFilteredUserSubmissionsAsync
+            (Expression<Func<SubmissionEntity, bool>> languageFilter,
             CancellationToken cancellationToken = default);
         Task<SubmissionEntity> CreateAsync
             (SubmissionEntity entity,
