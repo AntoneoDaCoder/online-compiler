@@ -28,14 +28,6 @@ public final class ManifestParser {
         return m;
     }
 
-    /**
-     * Разбирает JSON манифеста и фильтрует helpers / advancedTests по languageCode.
-     *
-     * @param json         исходная строка JSON (манифест)
-     * @param languageCode код языка, например "java" или "csharp" (case-insensitive). Если null или пустая строка - фильтрация не применяется.
-     * @return десериализованный и отфильтрованный ManifestDto
-     * @throws IllegalArgumentException при пустом JSON или отсутствии обязательных полей
-     */
     public static ManifestDto parse(String json, String languageCode) {
         if (json == null || json.trim().isEmpty()) {
             throw new IllegalArgumentException("Manifest is empty");
