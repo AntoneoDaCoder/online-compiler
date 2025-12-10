@@ -1,18 +1,33 @@
 package dto
 
-import java.time.LocalDateTime
-import java.util.UUID
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonFormat
+import com.fasterxml.jackson.annotation.JsonProperty
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+import java.time.OffsetDateTime
 
 @Serializable
 data class ProblemSolutionDto(
+    @JsonProperty("RequestId")
+    var RequestId: String? = null,
+
+    @JsonProperty("VersionId")
+    var VersionId: String? = null,
+
+    @JsonProperty("UserId")
+    var UserId: String? = null,
+
+    @JsonProperty("TestManifestJson")
+    var TestManifestJson: String? = null,
+
+    @JsonProperty("LanguageCode")
+    var LanguageCode: String? = null,
+
+    @JsonProperty("UserSolution")
+    var UserSolution: String? = null,
+
     @Contextual
-    val requestId: UUID,
-    val maxAllowedTimeInMilliseconds: Long,
-    val language: String = "",
-    val code: String = "",
-    val problem: Problem,
-    @Contextual
-    val sentAt: LocalDateTime
+    @JsonProperty("SentAt")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    var SentAt: OffsetDateTime? = null
 )

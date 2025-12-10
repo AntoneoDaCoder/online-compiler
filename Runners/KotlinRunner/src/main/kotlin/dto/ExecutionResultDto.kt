@@ -1,24 +1,36 @@
 package dto
 
+import com.fasterxml.jackson.annotation.JsonFormat
+import com.fasterxml.jackson.annotation.JsonProperty
 import enums.ExecutionStatus
-import java.time.Duration
-import java.time.LocalDateTime
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.Contextual
+import kotlinx.serialization.Serializable
+import java.time.OffsetDateTime
 
 @Serializable
 data class ExecutionResultDto(
-    @SerialName("Status")
-    val status: ExecutionStatus,
-    @SerialName("ExitCode")
-    val exitCode: Int = 0,
-    @SerialName("ConsoleOutput")
-    val consoleOutput: String = "",
+    @JsonProperty("Status")
+    var Status: ExecutionStatus? = null,
+
+    @JsonProperty("ExitCode")
+    var ExitCode: Int = 0,
+
+    @JsonProperty("ConsoleOutput")
+    var ConsoleOutput: String? = null,
+
+    @JsonProperty("PassedTests")
+    var PassedTests: Int = 0,
+
+    @JsonProperty("TotalTests")
+    var TotalTests: Int = 0,
+
+    @JsonProperty("RequestSentAt")
     @Contextual
-    @SerialName("RequestSentAt")
-    val requestSentAt: java.time.LocalDateTime,
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    var RequestSentAt: OffsetDateTime? = null,
+
+    @JsonProperty("ResponseSentAt")
     @Contextual
-    @SerialName("ResponseSentAt")
-    val responseSentAt: java.time.LocalDateTime
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    var ResponseSentAt: OffsetDateTime? = null
 )

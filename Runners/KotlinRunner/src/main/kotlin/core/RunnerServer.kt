@@ -24,7 +24,7 @@ import kotlinx.serialization.modules.SerializersModule
 import io.ktor.server.plugins.callloging.*
 import org.slf4j.event.Level
 import java.util.UUID
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import io.ktor.server.plugins.statuspages.*     // для StatusPages
 
 
@@ -40,7 +40,7 @@ class RunnerServer(
         encodeDefaults = true
         serializersModule = SerializersModule {
             contextual(UUID::class, UUIDSerializer)
-            contextual(LocalDateTime::class, LocalDateTimeSerializer)
+            contextual(OffsetDateTime::class, OffsetDateTimeSerializer)
         }
     }
 
@@ -74,9 +74,7 @@ class RunnerServer(
             routing {
                 post("/run") {
                     val request = call.receive<ProblemSolutionDto>()
-
-
-                    application.log.info("[Runner] Received request [Id:${request.requestId}]")
+                    application.log.info("[Runner] Received request [Id:${request.RequestId}]")
                     launch {
                         val response = runner.run(request, application.log) // передаем json в раннер
                         val jsonString = json.encodeToString(CodeResponseDto.serializer(), response)
@@ -101,12 +99,12 @@ class RunnerServer(
             // читаем тело ответа как текст
             val responseBody = httpResponse.bodyAsText()
 
-            println("[Runner] Sent response [Id:${response.requestId}], got HTTP ${httpResponse.status}")
+            println("[Runner] Sent response [Id:${response.RequestId}], got HTTP ${httpResponse.status}")
             if (responseBody.isNotBlank()) {
                 println("[Runner] Response body: $responseBody")
             }
         } catch (e: Exception) {
-            println("[Runner] Failed to send response [Id:${response.requestId}]: ${e.message}")
+            println("[Runner] Failed to send response [Id:${response.RequestId}]: ${e.message}")
         }
     }
 
