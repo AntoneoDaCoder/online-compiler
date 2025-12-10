@@ -22,18 +22,18 @@ namespace ServerAPIApp.Controllers
         [HttpPost("auth/login/internal")]
         public async Task<IActionResult> InternalLoginUserAsync([FromBody] InternalLoginUserCase request, CancellationToken cancellationToken = default)
         {
-            var accessToken = await _mediator.Send(request, cancellationToken);
+            var userData = await _mediator.Send(request, cancellationToken);
 
-            return StatusCode(200, accessToken);
+            return StatusCode(200, userData);
         }
 
         [AllowAnonymous]
         [HttpPost("auth/register")]
         public async Task<IActionResult> RegisterUserAsync([FromBody] RegisterUserCase request, CancellationToken cancellationToken = default)
         {
-            var accessToken = await _mediator.Send(request, cancellationToken);
+            var userData = await _mediator.Send(request, cancellationToken);
 
-            return StatusCode(201, accessToken);
+            return StatusCode(201, userData);
         }
 
         [Authorize(Policy = "DefaultAccess")]
@@ -49,6 +49,21 @@ namespace ServerAPIApp.Controllers
             var refreshedToken = await _mediator.Send(command, cancellationToken);
 
             return StatusCode(200, refreshedToken);
+        }
+
+        [Authorize(Policy = "DefaultAccess")]
+        [HttpPost("auth/logout")]
+        public async Task<IActionResult> LogoutUserAsync([FromBody] Guid userId, CancellationToken cancellationToken = default)
+        {
+            var token = HttpContext.GetBearerToken();
+
+            var parsedId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
+
+            var command = new LogoutUserCase(userId, parsedId);
+
+            await _mediator.Send(command, cancellationToken);
+
+            return StatusCode(204);
         }
     }
 }
