@@ -37,7 +37,10 @@ namespace ServerAPIApp.Core.Extensions
                    .AddRequirements(new RoleRequirement(["Admin"])))
             .AddPolicy("DefaultAccess", policy => policy
                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
-                   .AddRequirements(new RoleRequirement(["Admin", "User"])));
+                   .AddRequirements(new RoleRequirement(["Admin", "User"])))
+            .AddPolicy("EditorAccess", policy => policy
+                   .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                   .AddRequirements(new RoleRequirement(["Admin", "Editor"])));
 
 
             services.AddAuthentication(opt =>
