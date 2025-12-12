@@ -1,0 +1,45 @@
+﻿using ServerAPIApp.Domain.Entities;
+
+namespace ServerAPIApp.Contracts.DTOs
+{
+    public record ProblemDto(Guid Id, Guid? VersionLink, string Slug, string Title, string Status, string? Reason, IEnumerable<Guid> SupportedLanguageIds)
+    {
+        public static ProblemDto From(Guid id, Guid? versionLink, string slug, string title, string status, string? reason, IEnumerable<Guid> languageIds)
+        {
+            return new ProblemDto(id, versionLink, slug, title, status, reason, languageIds);
+        }
+
+        public static ProblemDto From(ProblemEntity entity)
+        {
+            var problemStatus = (entity.IsDeleted || entity.LastPublishedVersionId is null) ? "Unlisted" : "Listed";
+
+            string? reason = null;
+
+            IEnumerable<Guid> supportedLanguages = [];
+
+            if (entity.LastPublishedVersionId is null)
+                reason = "No version";
+            else
+            {
+                //EF Core sets this property to null if lastpublishedid is null, so if its not null there is actually such a version with languages in the db
+                supportedLanguages = entity.LastPublishedVersion!.SupportedLanguages.Select(x => x.LanguageId).ToList();
+            }
+
+            //lastpublishedid can be null if there is no version for this problem or it has been deleted, so to mitigate a shit ton of if-else, we check if
+            //its null and then check if it has been actually deleted
+            if (entity.IsDeleted)
+                reason = "Deleted";
+
+            return new ProblemDto
+                (
+                entity.Id,
+                entity.LastPublishedVersionId,
+                entity.Slug,
+                entity.Title,
+                problemStatus,
+                reason,
+                supportedLanguages
+                );
+        }
+    }
+}
