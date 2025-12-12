@@ -2,8 +2,8 @@
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.DAL.Contexts;
 using ServerAPIApp.Domain.Entities;
+using System.Linq.Expressions;
 using System.Threading;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace ServerAPIApp.DAL.Repositories
 {
@@ -25,6 +25,20 @@ namespace ServerAPIApp.DAL.Repositories
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
             return entry;
+        }
+
+        public async Task<List<ProblemEntity>?> GetFilteredWithLatestVersionsAsync
+            (Expression<Func<ProblemEntity, bool>> filter,
+            CancellationToken cancellationToken = default)
+        {
+            var entities = await _context.Problems
+                .AsNoTracking()
+                .Where(filter)
+                .Include(x => x.LastPublishedVersion)
+                .ThenInclude(x => x.SupportedLanguages)
+                .ToListAsync(cancellationToken);
+
+            return entities;
         }
 
         public async Task<ProblemEntity> CreateAsync

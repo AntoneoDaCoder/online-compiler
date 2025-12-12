@@ -1,4 +1,5 @@
 ﻿using ServerAPIApp.Domain.Entities;
+using System.Linq.Expressions;
 
 namespace ServerAPIApp.Contracts.Abstractions
 {
@@ -7,6 +8,9 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<ProblemEntity?> GetByIdAsync
          (Guid problemId,
          CancellationToken cancellationToken = default);
+        Task<List<ProblemEntity>?> GetFilteredWithLatestVersionsAsync
+            (Expression<Func<ProblemEntity, bool>> filter,
+            CancellationToken cancellationToken = default);
         Task<bool> UpdateAsync
         (ProblemEntity problem,
         CancellationToken cancellationToken = default);
