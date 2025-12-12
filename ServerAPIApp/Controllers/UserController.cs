@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ServerAPIApp.Core.UseCases.Users;
+using ServerAPIApp.Helpers;
 
 namespace ServerAPIApp.Controllers
 {
@@ -17,10 +18,14 @@ namespace ServerAPIApp.Controllers
         }
 
         [Authorize(Policy = "AdminAccess")]
-        [HttpPost("users/user/roles")]
-        public async Task<IActionResult> AddUserToRolesAsync([FromBody] AddUserToRolesCase dto, CancellationToken cancellationToken = default)
+        [HttpPost("users/{id:guid}/roles")]
+        public async Task<IActionResult> AddUserToRolesAsync([FromBody] IEnumerable<string> addedRoles, [FromRoute] Guid id, CancellationToken cancellationToken = default)
         {
-            var updatedRoles = await _mediator.Send(dto, cancellationToken);
+            var editorId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
+
+            var command = new AddUserToRolesCase(id, editorId, addedRoles);
+
+            var updatedRoles = await _mediator.Send(command, cancellationToken);
 
             //TODO: notify user and admins about role change
 
@@ -28,10 +33,14 @@ namespace ServerAPIApp.Controllers
         }
 
         [Authorize(Policy = "AdminAccess")]
-        [HttpDelete("users/user/roles")]
-        public async Task<IActionResult> AddUserToRolesAsync([FromBody] RemoveUserFromRolesCase dto, CancellationToken cancellationToken = default)
+        [HttpDelete("users/{id:guid}/roles")]
+        public async Task<IActionResult> RemoveUserFromRolesAsync([FromBody] IEnumerable<string> removedRoles, [FromRoute] Guid id, CancellationToken cancellationToken = default)
         {
-            var updatedRoles = await _mediator.Send(dto, cancellationToken);
+            var editorId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
+
+            var command = new RemoveUserFromRolesCase(id, editorId, removedRoles);
+
+            var updatedRoles = await _mediator.Send(command, cancellationToken);
 
             //TODO: notify user and admins about role change
 
