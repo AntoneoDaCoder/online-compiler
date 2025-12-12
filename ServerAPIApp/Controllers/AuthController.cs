@@ -55,8 +55,6 @@ namespace ServerAPIApp.Controllers
         [HttpPost("auth/logout")]
         public async Task<IActionResult> LogoutUserAsync([FromBody] Guid userId, CancellationToken cancellationToken = default)
         {
-            var token = HttpContext.GetBearerToken();
-
             var parsedId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
 
             var command = new LogoutUserCase(userId, parsedId);
