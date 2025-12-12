@@ -70,6 +70,13 @@ namespace ServerAPIApp.Core.Helpers
 
             return entity;
         }
+
+        public static IEnumerable<ProblemDto>? ToDto(this IEnumerable<ProblemEntity>? entities)
+        {
+            if (entities == null) return null;
+
+            return entities.Select(x => ProblemDto.From(x));
+        }
         #endregion
 
         #region SubmissionEntity related mapping
