@@ -7,11 +7,11 @@ up: minikube-start set-composite-config bake deploy serve
 
 rebuild:
 	@echo [93mBuilding images in parallel via Bake...[0m
-ifeq ($(COMPOSITE),1)
-	@powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File ./rebuild.ps1 -Mode composite
-else
+# ifeq ($(COMPOSITE),1)
+# 	@powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File ./rebuild.ps1 -Mode composite
+# else
 	@powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File ./rebuild.ps1 -Mode default
-endif
+# endif
 
 
 down:
@@ -33,63 +33,70 @@ minikube-start:
 # --- Сборка через Bake ---
 bake:
 	@echo [93mStarting parallel builds via Docker Bake...[0m
-ifeq ($(COMPOSITE),1)
-	@bake_wrapper.bat composite
-	@minikube -p minikube image load api-server:local
-	@minikube -p minikube image load composite-runner:local
-else
+# ifeq ($(COMPOSITE),1)
+# 	@bake_wrapper.bat composite
+# 	@minikube -p minikube image load api-server:local
+# 	@minikube -p minikube image load composite-runner:local
+# else
 	@bake_wrapper.bat default
 	@minikube -p minikube image load api-server:local
 	@minikube -p minikube image load csharp-runner:local
 	@minikube -p minikube image load java-runner:local
-	@minikube -p minikube image load postgresql-runner:local
-	@minikube -p minikube image load mssql-runner:local
 	@minikube -p minikube image load nodejs-runner:local
 	@minikube -p minikube image load kotlin-runner:local
 	@minikube -p minikube image load typescript-runner:local
-#   @minikube -p minikube image load swift-runner:local
-endif
+# endif
 	@echo [92mAll images have been loaded[0m
 	@echo [92mBuilds finished[0m
 
 
 # --- Деплой Kubernetes ресурсов ---
 deploy: bake set-composite-config
-	@echo [93mSetting up Postgre...[0m
+	@echo [93mSetting up PostgreSQL...[0m
 	@cd $(ROOT_DIR) && \
 	kubectl create ns postgresql || true && \
-	kubectl -n postgresql delete secret postgresql --ignore-not-found && \
-	kubectl -n postgresql create secret generic postgresql \
+	kubectl -n postgresql delete secret postgres-secret --ignore-not-found && \
+	kubectl -n postgresql create secret generic postgres-secret \
 	--from-literal=POSTGRES_USER=postgresadmin \
 	--from-literal=POSTGRES_PASSWORD=admin123 \
 	--from-literal=POSTGRES_DB=postgresdb \
-	--from-literal=REPLICATION_USER=replicationuser \
-	--from-literal=REPLICATION_PASSWORD=replicationPassword
-	@echo [92mDone![0m
+	--from-literal=POSTGRES_REPLICATION_USER=replicationuser \
+	--from-literal=POSTGRES_REPLICATION_PASSWORD=replicationPassword
+	@echo [92mPostgreSQL secret created![0m
 
 	@echo [93mDeploying PostgreSQL StatefulSet...[0m
 	@cd $(ROOT_DIR) && \
-	kubectl -n postgresql apply -f k8s/postgres-statefulset.yaml 
-# 	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=120s
-	@echo [92mDone![0m
+	kubectl -n postgresql apply -f k8s/postgres-config.yaml && \
+	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=120s
+	@echo [92mPostgreSQL deployed and ready![0m
 	
-
-	@echo [93mSetting up MSSQL...[0m
+	@echo [93mSetting up MinIO...[0m
 	@cd $(ROOT_DIR) && \
-	kubectl create ns mssql || true && \
-	kubectl -n mssql delete secret mssql --ignore-not-found && \
-	kubectl -n mssql create secret generic mssql \
-	--from-literal=SA_PASSWORD=Admin123! \
-	--from-literal=ACCEPT_EULA=Y \
-	--from-literal=MSSQL_PID=Developer
-	@echo [92mDone![0m
+	kubectl create ns minio || true && \
+	kubectl -n minio delete secret minio-secret --ignore-not-found && \
+	kubectl -n minio create secret generic minio-secret \
+	--from-literal=MINIO_ROOT_USER=minioadmin \
+	--from-literal=MINIO_ROOT_PASSWORD=minioadmin123 \
+	--from-literal=ACCESS_KEY=minioadmin \
+	--from-literal=SECRET_KEY=minioadmin123
+	@echo [92mMinIO secret created![0m
 
-	@echo [93mDeploying MSSQL StatefulSet...[0m
+	@echo [93mDeploying MinIO StatefulSet...[0m
 	@cd $(ROOT_DIR) && \
-	kubectl -n mssql apply -f k8s/mssql-statefulset.yaml
-	@echo [92mDone![0m
+	kubectl -n minio apply -f k8s/minio-config.yaml && \
+	kubectl -n minio wait --for=condition=ready pod -l app=minio --timeout=120s
+	@echo [92mMinIO deployed and ready![0m
 
-
+	@echo [93mChecking all dependencies are ready...[0m
+	@cd $(ROOT_DIR) && \
+	echo "Checking PostgreSQL..." && \
+	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=30s && \
+	echo "PostgreSQL is ready!" && \
+	echo "Checking MinIO..." && \
+	kubectl -n minio wait --for=condition=ready pod -l app=minio --timeout=30s && \
+	echo "MinIO is ready!"
+	@echo [92mAll dependencies are ready![0m
+	
 	@echo [93mDeploying API to Kubernetes[0m
 	@cd $(ROOT_DIR) && \
 	kubectl apply -f k8s/rbac.yaml && \
@@ -97,7 +104,7 @@ deploy: bake set-composite-config
 	kubectl rollout restart deployment api-server -n default && \
 	kubectl wait --for=condition=ready pod -l app=api-server --timeout=90s
 
-	@echo [92mDone![0m
+	@echo [92mAPI deployed successfully![0m
 
 
 # --- Портфорвардинг API ---
@@ -108,8 +115,8 @@ serve: deploy
 
 
 set-composite-config:
-ifeq ($(COMPOSITE),1)
-	@kubectl create configmap api-config --from-literal=UseComposite=true --dry-run=client -o yaml | kubectl apply -f -
-else
+# ifeq ($(COMPOSITE),1)
+# 	@kubectl create configmap api-config --from-literal=UseComposite=true --dry-run=client -o yaml | kubectl apply -f -
+# else
 	@kubectl create configmap api-config --from-literal=UseComposite=false --dry-run=client -o yaml | kubectl apply -f -
-endif
+# endif
