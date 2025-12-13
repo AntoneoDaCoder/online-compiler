@@ -1,0 +1,47 @@
+{
+  "entrypoint": "Solution",
+  "signature": {
+    "returnType": {
+      "kind": "array",
+      "items": {
+        "kind": "primitive",
+        "name": "string"
+      }
+    },
+    "parameters": [
+      {
+        "name": "items",
+        "type": {
+          "kind": "array",
+          "items": {
+            "kind": "primitive",
+            "name": "string"
+          }
+        }
+      }
+    ]
+  },
+  "sampleTests": [
+    {
+      "name": "test_with_duplicates",
+      "inputs": [["a", "b", "a", "c", "b"]],
+      "expected": ["a", "b", "c"],
+      "comparator": "seq_eq",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_all_unique",
+      "inputs": [["x", "y", "z"]],
+      "expected": ["x", "y", "z"],
+      "comparator": "seq_eq_sorted",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_contains_check",
+      "inputs": [["apple", "banana", "apple"]],
+      "expected": "banana",
+      "comparator": "contains",
+      "timeoutMs": 2000
+    }
+  ]
+}

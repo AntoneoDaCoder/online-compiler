@@ -1,0 +1,41 @@
+{
+  "entrypoint": "Solution",
+  "signature": {
+    "returnType": {
+      "kind": "primitive",
+      "name": "string"
+    },
+    "parameters": [
+      {
+        "name": "str",
+        "type": {
+          "kind": "primitive",
+          "name": "string"
+        }
+      }
+    ]
+  },
+  "sampleTests": [
+    {
+      "name": "test_hello",
+      "inputs": ["hello"],
+      "expected": "olleh",
+      "comparator": "eq",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_empty",
+      "inputs": [""],
+      "expected": "",
+      "comparator": "eq",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_palindrome",
+      "inputs": ["racecar"],
+      "expected": "racecar",
+      "comparator": "neq",
+      "timeoutMs": 2000
+    }
+  ]
+}

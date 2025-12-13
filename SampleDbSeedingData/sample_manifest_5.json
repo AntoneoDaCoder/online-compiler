@@ -1,0 +1,47 @@
+{
+  "entrypoint": "Solution",
+  "signature": {
+    "returnType": {
+      "kind": "array",
+      "items": {
+        "kind": "primitive",
+        "name": "int"
+      }
+    },
+    "parameters": [
+      {
+        "name": "arr",
+        "type": {
+          "kind": "array",
+          "items": {
+            "kind": "primitive",
+            "name": "int"
+          }
+        }
+      }
+    ]
+  },
+  "sampleTests": [
+    {
+      "name": "test_unsorted",
+      "inputs": [[5, 3, 8, 1, 2]],
+      "expected": [1, 2, 3, 5, 8],
+      "comparator": "seq_eq",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_already_sorted",
+      "inputs": [[1, 2, 3, 4, 5]],
+      "expected": [1, 2, 3, 4, 5],
+      "comparator": "seq_eq_sorted",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_contains_after_sort",
+      "inputs": [[9, 2, 7]],
+      "expected": 7,
+      "comparator": "contains",
+      "timeoutMs": 2000
+    }
+  ]
+}
