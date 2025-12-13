@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("http://0.0.0.0:8080");
+builder.WebHost.UseUrls("https://0.0.0.0:8080");
 
 builder.Services.AddControllers();
 
@@ -39,10 +39,16 @@ app.UseHttpsRedirection();
 
 app.UseCors();
 
+app.UseAuthentication();
+
+app.UseAuthorization();
+
 app.ConfigureMiddleware();
 
 app.MapControllers();
 
-app.MapHub<ResultHub>("/hubs/result");
+app.MapHub<UserHub>("/hubs/user");
+
+app.MapHub<AdminHub>("/hubs/admin");
 
 app.Run();
