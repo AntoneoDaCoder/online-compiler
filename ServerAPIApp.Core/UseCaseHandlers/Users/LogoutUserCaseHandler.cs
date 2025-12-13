@@ -27,7 +27,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
                 throw new ResourceNotFoundException("Resource not found");
 
             user.RefreshToken = null;
-            user.RefreshTokenExpiryTime = null;
+            user.RefreshTokenExpiryTime = DateTimeOffset.MinValue;
 
             var updRes = await _repo.UpdateAsync(user, cancellationToken);
 

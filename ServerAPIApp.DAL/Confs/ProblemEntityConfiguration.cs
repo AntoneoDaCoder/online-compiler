@@ -65,7 +65,7 @@ namespace ServerAPIApp.DAL.Confs
                 .HasForeignKey(x => x.ModifiedBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            b.Property(x => x.LastPublishedVersion)
+            b.Property(x => x.LastPublishedVersionId)
                 .HasColumnName("last_published_version");
 
             b.HasOne(x => x.LastPublishedVersion)

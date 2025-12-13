@@ -11,13 +11,13 @@ namespace ServerAPIApp.Contracts.DTOs
 
         public static ProblemDto From(ProblemEntity entity)
         {
-            var problemStatus = (entity.IsDeleted || entity.LastPublishedVersionId is null) ? "Unlisted" : "Listed";
+            var problemStatus = (entity.IsDeleted || entity.LastPublishedVersionId != Guid.Empty) ? "Unlisted" : "Listed";
 
             string? reason = null;
 
             IEnumerable<Guid> supportedLanguages = [];
 
-            if (entity.LastPublishedVersionId is null)
+            if (entity.LastPublishedVersionId ==Guid.Empty)
                 reason = "No version";
             else
             {

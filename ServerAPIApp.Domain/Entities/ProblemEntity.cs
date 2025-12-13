@@ -11,9 +11,9 @@
 
 
         public bool IsDeleted { get; set; } = false;
-        public DateTimeOffset? DeletionScheduledAt { get; set; }
-        public DateTimeOffset? DeletionDeadline { get; set; }
-        public Guid? InitiatorId { get; set; }
+        public DateTimeOffset DeletionScheduledAt { get; set; }
+        public DateTimeOffset DeletionDeadline { get; set; }
+        public Guid InitiatorId { get; set; } = Guid.Empty;
         public UserEntity? Initiator { get; set; }
 
 
@@ -21,8 +21,8 @@
         public Guid ModifiedBy { get; set; }
         public UserEntity? Editor { get; set; }
 
-        public Guid? LastPublishedVersionId { get; set; }
-        public ProblemVersionEntity? LastPublishedVersion {  get; set; }
+        public Guid LastPublishedVersionId { get; set; } = Guid.Empty;
+        public ProblemVersionEntity? LastPublishedVersion { get; set; }
 
         public ICollection<ProblemVersionEntity> Versions { get; set; } = new List<ProblemVersionEntity>();
     }

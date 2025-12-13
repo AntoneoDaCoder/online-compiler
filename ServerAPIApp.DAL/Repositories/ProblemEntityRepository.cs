@@ -133,8 +133,8 @@ namespace ServerAPIApp.DAL.Repositories
                .ExecuteUpdateAsync(s => s
                    .SetProperty(p => p.IsDeleted, false)
                    .SetProperty(p => p.InitiatorId, (Guid?)null)
-                   .SetProperty(p => p.DeletionScheduledAt, (DateTimeOffset?)null)
-                   .SetProperty(p => p.DeletionDeadline, (DateTimeOffset?)null)
+                   .SetProperty(p => p.DeletionScheduledAt, DateTimeOffset.MinValue)
+                   .SetProperty(p => p.DeletionDeadline, DateTimeOffset.MinValue)
                    .SetProperty(p => p.ModifiedAt, DateTimeOffset.UtcNow)
                    .SetProperty(p => p.ModifiedBy, initiatorId)
                , cancellationToken);

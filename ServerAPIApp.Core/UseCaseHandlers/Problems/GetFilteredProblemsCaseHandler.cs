@@ -33,7 +33,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 
         private static Expression<Func<ProblemEntity, bool>> BuildFilter(IEnumerable<string> roles)
         {
-            Expression<Func<ProblemEntity, bool>> filter = x => x.LastPublishedVersionId != null && !x.IsDeleted;
+            Expression<Func<ProblemEntity, bool>> filter = x => x.LastPublishedVersionId != Guid.Empty && !x.IsDeleted;
 
             if (roles.Any(x => _editorRoles.Contains(x)))
             {

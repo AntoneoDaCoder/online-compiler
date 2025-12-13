@@ -18,8 +18,8 @@ namespace ServerAPIApp.Core.Extensions
     {
         public static IServiceCollection RegisterServices(this IServiceCollection services, IConfiguration config)
         {
-            services.ConfigureDbContext();
-            services.ConfigureObjectStorage();
+            services.ConfigureDbContext(config);
+            services.ConfigureObjectStorage(config);
             services.ConfigureRepositories();
 
             var googleSection = config.GetSection("GoogleAuth");
@@ -75,7 +75,7 @@ namespace ServerAPIApp.Core.Extensions
 
             services.AddMediatR
                 (
-                cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly())
+                cfg => cfg.RegisterServicesFromAssembly(typeof(JwtTokenService).Assembly)
                 );
 
             return services;

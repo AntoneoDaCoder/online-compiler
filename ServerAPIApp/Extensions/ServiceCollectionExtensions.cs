@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Configs;
 using ServerAPIApp.Dispatchers;
-using ServerAPIApp.Notifiers;
+//using ServerAPIApp.Notifiers;
 using Microsoft.AspNetCore.Authorization;
 using ServerAPIApp.Middlewares;
 
@@ -26,7 +26,7 @@ namespace ServerAPIApp.Extensions
         {
             services.AddSignalR();
 
-            services.AddScoped<ISubmissionNotifier, SubmissionNotifier>();
+            //services.AddScoped<ISubmissionNotifier, SubmissionNotifier>();
 
             services.AddSingleton<IKubernetes>(sp =>
             {

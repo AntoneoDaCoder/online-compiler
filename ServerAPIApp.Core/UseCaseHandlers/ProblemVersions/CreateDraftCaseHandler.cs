@@ -10,6 +10,13 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 {
     public class CreateDraftCaseHandler : IRequestHandler<CreateVersionDraftCase, ProblemVersionEntity>
     {
+        private static readonly JsonSerializerOptions _opts = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            AllowTrailingCommas = true,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        };
+
         private IProblemVersionRepository _repo;
         private IObjectStorage _storage;
 
@@ -24,11 +31,13 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 
         public async Task<ProblemVersionEntity> Handle(CreateVersionDraftCase command, CancellationToken cancellationToken)
         {
-            var (draft, manifestJson) = command.ToEntity();
+            var (draft, manifest) = command.ToEntity();
 
-            if (manifestJson is not null)
+            if (manifest is not null)
             {
                 var key = $"problems/{draft.ProblemId}/versions/{draft.Id}/template.json";
+
+                var manifestJson = JsonSerializer.Serialize(manifest, _opts);
 
                 if (!await _storage.UploadStringAsync(_bucketName, key, manifestJson, cancellationToken: cancellationToken))
                     throw new ObjectStorageUploadException("Failed to save tests.");

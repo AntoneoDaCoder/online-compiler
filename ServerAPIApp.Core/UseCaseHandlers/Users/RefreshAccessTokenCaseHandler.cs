@@ -31,7 +31,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             if (user is null)
                 throw new ResourceNotFoundException("Resource not found");
 
-            if (user.RefreshToken is null || user.RefreshTokenExpiryTime is null || user.RefreshTokenExpiryTime < DateTimeOffset.UtcNow)
+            if (user.RefreshToken is null || user.RefreshTokenExpiryTime == DateTimeOffset.MinValue || user.RefreshTokenExpiryTime < DateTimeOffset.UtcNow)
                 throw new InvalidRefreshTokenException("Invalid refresh token, failed to issue access token");
 
             var now = DateTimeOffset.UtcNow;

@@ -86,19 +86,5 @@ namespace ServerAPIApp.DAL.Repositories
 
             await _context.SaveChangesAsync(cancellationToken);
         }
-
-        public async Task<List<ProblemVersionLanguage>> DeleteRangeAsync
-            (IEnumerable<ProblemVersionLanguage> range,
-            CancellationToken cancellationToken = default)
-        {
-            await _context.VersionLanguages
-                       .Where(x => x.VersionId == versionId && toRemove.Contains(x.LanguageId))
-                       .ExecuteDeleteAsync(cancellationToken);
-
-            var trackedRemoved = _context.VersionLanguages.Local
-                .Where(x => x.VersionId == versionId && toRemove.Contains(x.LanguageId))
-                .ToList();
-            foreach (var t in trackedRemoved) _context.Entry(t).State = EntityState.Detached;
-        }
     }
 }

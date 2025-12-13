@@ -3,7 +3,7 @@
     public interface IPublishable
     {
         bool IsPublished { get; set; }
-        Guid? PublishedBy { get; set; }
+        Guid PublishedBy { get; set; }
         UserEntity? Publisher { get; set; }
     }
 }

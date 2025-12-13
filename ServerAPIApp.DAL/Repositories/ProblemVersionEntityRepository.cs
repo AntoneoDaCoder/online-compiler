@@ -103,7 +103,7 @@ namespace ServerAPIApp.DAL.Repositories
                     SET version = {nextLatest},
                     is_draft = FALSE,
                     is_published = TRUE,
-                    published_by = {draft.PublishedBy!.Value},
+                    published_by = {draft.PublishedBy},
                     published_at = {now},
                     WHERE id = {draft.Id} AND is_draft = TRUE
                     ", cancellationToken);
@@ -123,7 +123,7 @@ namespace ServerAPIApp.DAL.Repositories
 
                 problem.LastPublishedVersionId = draft.Id;
                 problem.ModifiedAt = now;
-                problem.ModifiedBy = draft.PublishedBy!.Value;
+                problem.ModifiedBy = draft.PublishedBy;
 
                 await _context.SaveChangesAsync(cancellationToken);
                 await tx.CommitAsync(cancellationToken);
