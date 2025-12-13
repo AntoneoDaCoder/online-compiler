@@ -1,24 +1,23 @@
 ﻿using Google.Apis.Auth;
+using Microsoft.Extensions.Options;
 using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Core.Abstractions;
+using ServerAPIApp.Core.Configs;
 
 namespace ServerAPIApp.Core.Services
 {
     public class GoogleAuthTokenValidator : IGoogleAuthTokenValidator
     {
-        private IReadOnlyCollection<string> _allowedAudiences;
+        private IEnumerable<string> _allowedAudiences;
         private GoogleJsonWebSignature.ValidationSettings? _validationSettings;
 
-        public GoogleAuthTokenValidator(IEnumerable<string> allowedClientIds)
+        public GoogleAuthTokenValidator(IOptions<GoogleAllowedAudiences> allowedAudiences)
         {
-            _allowedAudiences = (allowedClientIds ?? Array.Empty<string>())
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Select(s => s.Trim())
-                .ToArray();
+            _allowedAudiences = allowedAudiences.Value.ClientIds;
 
             _validationSettings = new GoogleJsonWebSignature.ValidationSettings
             {
-                Audience = _allowedAudiences.Count > 0 ? _allowedAudiences.ToList() : null
+                Audience = _allowedAudiences.Any() ? _allowedAudiences : []
             };
         }
 
