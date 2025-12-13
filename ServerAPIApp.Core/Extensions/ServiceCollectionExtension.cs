@@ -22,9 +22,11 @@ namespace ServerAPIApp.Core.Extensions
             services.ConfigureObjectStorage();
             services.ConfigureRepositories();
 
-            //TODO:
-            // add google auth service registration here
-            //
+            var googleSection = config.GetSection("GoogleAuth");
+            var googleSettings = googleSection.Get<GoogleAllowedAudiences>();
+            services.Configure<GoogleAllowedAudiences>(googleSection);
+
+            services.AddScoped<IGoogleAuthTokenValidator, GoogleAuthTokenValidator>();
 
             var jwtSection = config.GetSection("JwtSettings");
             var jwtSettings = jwtSection.Get<JwtSettings>();

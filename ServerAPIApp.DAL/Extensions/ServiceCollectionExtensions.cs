@@ -11,11 +11,11 @@ namespace ServerAPIApp.DAL.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        public static void ConfigureDbContext(this IServiceCollection services)
+        public static void ConfigureDbContext(this IServiceCollection services, IConfiguration conf)
         {
             services.AddDbContext<BaseDbContext>
                 (
-                    options => options.UseNpgsql(Environment.GetEnvironmentVariable("CONNECTION_STRING"))
+                    options => options.UseNpgsql(conf.GetConnectionString("DbConnectionString"))
                 );
 
             services.AddIdentity<UserEntity, IdentityRole<Guid>>
@@ -48,17 +48,16 @@ namespace ServerAPIApp.DAL.Extensions
             services.AddScoped<IUserRepository, UserRepository>();
         }
 
-        public static void ConfigureObjectStorage(this IServiceCollection services)
+        public static void ConfigureObjectStorage(this IServiceCollection services, IConfiguration cfg)
         {
             services.AddSingleton<IObjectStorage>
                 (
                 sp =>
                 {
-                    var cfg = sp.GetRequiredService<IConfiguration>();
                     var endpoint = cfg["Minio:Endpoint"];
                     var access = cfg["Minio:AccessKey"];
                     var secret = cfg["Minio:SecretKey"];
-                    var useSsl = bool.Parse(cfg["Minio:UseSsl"] ?? "true");
+                    bool useSsl = bool.Parse(cfg["Minio:UseSsl"] ?? "true");
                     return new ObjectStorage(endpoint, access, secret, useSsl);
                 });
         }
