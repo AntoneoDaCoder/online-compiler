@@ -18,21 +18,27 @@
   "sampleTests": [
     {
       "name": "test_hello",
-      "inputs": ["hello"],
+      "inputs": [
+        "hello"
+      ],
       "expected": "olleh",
       "comparator": "eq",
       "timeoutMs": 2000
     },
     {
       "name": "test_empty",
-      "inputs": [""],
+      "inputs": [
+        ""
+      ],
       "expected": "",
       "comparator": "eq",
       "timeoutMs": 2000
     },
     {
       "name": "test_palindrome",
-      "inputs": ["racecar"],
+      "inputs": [
+        "racecar"
+      ],
       "expected": "racecar",
       "comparator": "neq",
       "timeoutMs": 2000

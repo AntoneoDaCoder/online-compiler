@@ -36,21 +36,45 @@
   "sampleTests": [
     {
       "name": "test_found",
-      "inputs": [[1, 2, 3, 4, 5], 3],
+      "inputs": [
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        3
+      ],
       "expected": 2,
       "comparator": "eq",
       "timeoutMs": 2000
     },
     {
       "name": "test_not_found",
-      "inputs": [[1, 2, 3], 5],
+      "inputs": [
+        [
+          1,
+          2,
+          3
+        ],
+        5
+      ],
       "expected": -1,
       "comparator": "eq",
       "timeoutMs": 2000
     },
     {
       "name": "test_first_occurrence",
-      "inputs": [[1, 2, 2, 3], 2],
+      "inputs": [
+        [
+          1,
+          2,
+          2,
+          3
+        ],
+        2
+      ],
       "expected": 1,
       "comparator": "eq",
       "timeoutMs": 2000

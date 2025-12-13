@@ -18,21 +18,27 @@
   "sampleTests": [
     {
       "name": "test_palindrome",
-      "inputs": ["racecar"],
+      "inputs": [
+        "racecar"
+      ],
       "expected": true,
       "comparator": "eq",
       "timeoutMs": 2000
     },
     {
       "name": "test_not_palindrome",
-      "inputs": ["hello"],
+      "inputs": [
+        "hello"
+      ],
       "expected": false,
       "comparator": "neq",
       "timeoutMs": 2000
     },
     {
       "name": "test_with_spaces",
-      "inputs": ["A man a plan a canal Panama"],
+      "inputs": [
+        "A man a plan a canal Panama"
+      ],
       "expected": true,
       "comparator": "eq",
       "timeoutMs": 2000

@@ -48,14 +48,18 @@
   "sampleTests": [
     {
       "name": "test_basic",
-      "inputs": ["Hello World"],
+      "inputs": [
+        "Hello World"
+      ],
       "expected": 3,
       "comparator": "eq",
       "timeoutMs": 2000
     },
     {
       "name": "test_all_vowels",
-      "inputs": ["aeiouAEIOU"],
+      "inputs": [
+        "aeiouAEIOU"
+      ],
       "expected": 10,
       "comparator": "eq",
       "timeoutMs": 2000
