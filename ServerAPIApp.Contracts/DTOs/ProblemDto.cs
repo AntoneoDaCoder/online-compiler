@@ -2,11 +2,11 @@
 
 namespace ServerAPIApp.Contracts.DTOs
 {
-    public record ProblemDto(Guid Id, Guid? VersionLink, string Slug, string Title, string Status, string? Reason, IEnumerable<Guid> SupportedLanguageIds)
+    public record ProblemDto(Guid Id, Guid? VersionLink, string Slug, string Title, string Status, string? Reason, UserProblemVersionDto? LatestVersion)
     {
-        public static ProblemDto From(Guid id, Guid? versionLink, string slug, string title, string status, string? reason, IEnumerable<Guid> languageIds)
+        public static ProblemDto From(Guid id, Guid? versionLink, string slug, string title, string status, string? reason, UserProblemVersionDto? latestVersion)
         {
-            return new ProblemDto(id, versionLink, slug, title, status, reason, languageIds);
+            return new ProblemDto(id, versionLink, slug, title, status, reason, latestVersion);
         }
 
         public static ProblemDto From(ProblemEntity entity)
@@ -38,7 +38,7 @@ namespace ServerAPIApp.Contracts.DTOs
                 entity.Title,
                 problemStatus,
                 reason,
-                supportedLanguages
+                UserProblemVersionDto.From(entity.LastPublishedVersion)
                 );
         }
     }

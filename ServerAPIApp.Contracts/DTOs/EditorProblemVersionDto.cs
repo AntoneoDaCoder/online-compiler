@@ -1,6 +1,5 @@
 ﻿using ServerAPIApp.Domain.Entities;
 using Shared.DTOs;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ServerAPIApp.Contracts.DTOs
 {
@@ -11,7 +10,8 @@ namespace ServerAPIApp.Contracts.DTOs
         public Guid CreatedBy { get; set; }
         public string Statement { get; set; }
         public int TotalTests { get; set; }
-        public IEnumerable<string> SupportedLanguages { get; set; } = Enumerable.Empty<string>();
+        public int Version { get; set; }
+        public IEnumerable<Guid> SupportedLanguages { get; set; } = [];
         public ManifestDto? TestManifest { get; set; }
 
         public static EditorProblemVersionDto From(ProblemVersionEntity entity, ManifestDto? manifest)
@@ -23,7 +23,8 @@ namespace ServerAPIApp.Contracts.DTOs
                 CreatedBy = entity.CreatedBy,
                 Statement = entity.Statement,
                 TotalTests = entity.TotalTests,
-                SupportedLanguages = entity.SupportedLanguages.Select(x => x.Language.Code).ToList(),
+                Version = entity.Version,
+                SupportedLanguages = entity.SupportedLanguages.Select(x => x.LanguageId).ToList(),
                 TestManifest = manifest
             };
 

@@ -2,13 +2,22 @@
 
 namespace ServerAPIApp.Contracts.DTOs
 {
-    public record UserProblemVersionDto(Guid ProblemId, string Statement, int TotalTests)
-    {
-        public static UserProblemVersionDto From(ProblemVersionEntity entity)
-        {
-            var dto = new UserProblemVersionDto(entity.ProblemId, entity.Statement, entity.TotalTests);
 
-            return dto;
+    //null checks are not necessary here because this dto appears only when problem has been published (so it has an active version)
+    public record UserProblemVersionDto(Guid VersionId, Guid ProblemId, string Statement, int TotalTests, IEnumerable<Guid> SupportedLanguages)
+    {
+        public static UserProblemVersionDto? From(ProblemVersionEntity? entity)
+        {
+            if (entity == null) return null;
+
+            return new UserProblemVersionDto
+                (
+                entity.Id,
+                entity.ProblemId,
+                entity.Statement,
+                entity.TotalTests,
+                entity.SupportedLanguages.Select(x => x.LanguageId).ToList()
+                );
         }
     }
 }
