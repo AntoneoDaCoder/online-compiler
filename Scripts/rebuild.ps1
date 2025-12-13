@@ -30,6 +30,7 @@ else {
         'api-server:local',
         'csharp-runner:local',
         'java-runner:local',
+        'db-seeder:local',
         'nodejs-runner:local',
         'kotlin-runner:local',
         'typescript-runner:local'

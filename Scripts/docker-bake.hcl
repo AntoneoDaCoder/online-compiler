@@ -1,5 +1,5 @@
 group "default" {
-  targets = ["api", "csharp", "java", "nodejs", "kotlin", "typescript"]
+  targets = ["api", "csharp", "java", "nodejs", "kotlin", "typescript","seeder"]
 }
 
 // group "composite" {
@@ -38,7 +38,19 @@ target "api" {
 //     shared = "Shared/"
 //   }
 // }
-
+target "seeder"{
+  dockerfile = "Dockerfile"
+  context    = "DbSeeder/"
+  tags = ["db-seeder:local"]
+  contexts = {
+    shared = "Shared/",
+    server-domain = "ServerAPIApp.Domain/"
+    server-dal = "ServerAPIApp.DAL/"
+    data-seed = "SampleDbSeedingData/"
+    server-contracts = "ServerAPIApp.Contracts/"
+    appsettings = "ServerAPIApp/appsettings.json"
+  }
+}
 
 target "csharp" {
   dockerfile = "Dockerfile"

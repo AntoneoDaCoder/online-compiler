@@ -39,6 +39,7 @@ bake:
 # 	@minikube -p minikube image load composite-runner:local
 # else
 	@bake_wrapper.bat default
+	@minikube -p minikube image load db-seeder:local
 	@minikube -p minikube image load api-server:local
 	@minikube -p minikube image load csharp-runner:local
 	@minikube -p minikube image load java-runner:local
