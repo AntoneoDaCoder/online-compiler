@@ -4,6 +4,7 @@ using ServerAPIApp.Core.UseCases.Problems;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
 using ServerAPIApp.Core.UseCases.Submissions;
 using ServerAPIApp.Domain.Entities;
+using Shared.DTOs;
 
 namespace ServerAPIApp.Core.Helpers
 {
@@ -106,9 +107,9 @@ namespace ServerAPIApp.Core.Helpers
         #endregion
 
         #region ProblemVersionEntity related mapping
-        public static (ProblemVersionEntity Entity, string? TestManifestJson) ToEntity(this CreateVersionDraftCase command)
+        public static (ProblemVersionEntity Entity, ManifestDto? TestManifest) ToEntity(this CreateVersionDraftCase command)
         {
-            var manifest = command.TestManifestJson;
+            var manifest = command.TestManifest;
 
             var draft = new ProblemVersionEntity()
             {
@@ -127,9 +128,9 @@ namespace ServerAPIApp.Core.Helpers
             return (draft, manifest);
         }
 
-        public static (ProblemVersionEntity Entity, string? TestManifestJson) ToEntity(this UpdateVersionDraftCase command)
+        public static (ProblemVersionEntity Entity, ManifestDto? TestManifest) ToEntity(this UpdateVersionDraftCase command)
         {
-            var manifest = command.TestManifestJson;
+            var manifest = command.TestManifest;
 
             var draft = new ProblemVersionEntity()
             {
