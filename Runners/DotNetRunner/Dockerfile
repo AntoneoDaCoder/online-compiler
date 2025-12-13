@@ -1,7 +1,7 @@
-FROM mcr.microsoft.com/dotnet/runtime:9.0-alpine AS base
+FROM mcr.microsoft.com/dotnet/runtime:10.0-alpine AS base
 WORKDIR /app
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 RUN useradd -u 1001 -m runneruser
@@ -9,6 +9,7 @@ RUN useradd -u 1001 -m runneruser
 COPY . "Runners/DotNetRunner/"
 COPY --from=runners-shared / "Runners/Runners.Shared/"
 COPY --from=shared / "Shared/"
+COPY --from=server-domain / "ServerAPIApp.Domain/"
 
 WORKDIR /src/Runners/DotNetRunner
 

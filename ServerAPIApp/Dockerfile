@@ -1,15 +1,17 @@
 ARG USE_COMPOSITE=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS base
 WORKDIR /app
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY --from=server-core / "ServerAPIApp.Core/"
+COPY --from=server-contracts / "ServerAPIApp.Contracts/"
+COPY --from=server-domain / "ServerAPIApp.Domain/"
+COPY --from=server-dal / "ServerAPIApp.DAL/"
+COPY --from=shared/ / "Shared/"
 COPY . "ServerAPIApp/"
-COPY --from=shared / "Shared/"
-
 
 RUN if [ "$USE_COMPOSITE" = "true" ]; then \
       sed -i 's/"UseComposite": false/"UseComposite": true/' ServerAPIApp/appsettings.json ; \
