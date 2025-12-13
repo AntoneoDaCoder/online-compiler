@@ -41,6 +41,20 @@ namespace ServerAPIApp.DAL.Repositories
             return entities;
         }
 
+        public async Task<ProblemEntity?> GetLatestVersionBySlugAsync
+            (string slug,
+            CancellationToken cancellationToken = default)
+        {
+            var entry = await _context.Problems
+                .AsNoTracking()
+                .Where(x => x.Slug == slug)
+                .Include(x => x.LastPublishedVersion)
+                .ThenInclude(x => x.SupportedLanguages)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            return entry;
+        }
+
         public async Task<ProblemEntity> CreateAsync
             (ProblemEntity entity,
             CancellationToken cancellationToken = default)

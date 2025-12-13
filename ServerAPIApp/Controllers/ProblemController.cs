@@ -78,7 +78,7 @@ namespace ServerAPIApp.Controllers
         }
 
         [Authorize(Policy = "EditorAccess")]
-        [HttpPatch("problems/unlisted/{id:guid}")]
+        [HttpPatch("problems/deleted/{id:guid}")]
         public async Task<IActionResult> RestoreDeletedProblemAsync([FromRoute] Guid id, CancellationToken cancellationToken = default)
         {
             var userId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
@@ -91,6 +91,19 @@ namespace ServerAPIApp.Controllers
             //TODO: notify all users that problem was restored (if it has a version), otherwise only editors and admins
 
             return StatusCode(201);
+        }
+
+
+        //if this method returns 404, on the client we shouldn't show any message just silently make an empty copy
+        [Authorize(Policy = "EditorAccess")]
+        [HttpGet("problems/{problemSlug:string}/latest-version")]
+        public async Task<IActionResult> GetLatestVersionBySlugAsync([FromRoute] string problemSlug, CancellationToken cancellationToken = default)
+        {
+            var command = new GetProblemLatestVersionCase(problemSlug);
+
+            var data = await _mediator.Send(command, cancellationToken);
+
+            return StatusCode(200, data);
         }
     }
 }

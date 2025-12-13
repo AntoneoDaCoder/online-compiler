@@ -11,6 +11,9 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<List<ProblemEntity>?> GetFilteredWithLatestVersionsAsync
             (Expression<Func<ProblemEntity, bool>> filter,
             CancellationToken cancellationToken = default);
+        Task<ProblemEntity?> GetLatestVersionBySlugAsync
+            (string slug,
+            CancellationToken cancellationToken = default);
         Task<bool> UpdateAsync
         (ProblemEntity problem,
         CancellationToken cancellationToken = default);
