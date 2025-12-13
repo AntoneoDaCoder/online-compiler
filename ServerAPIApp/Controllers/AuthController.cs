@@ -28,6 +28,15 @@ namespace ServerAPIApp.Controllers
         }
 
         [AllowAnonymous]
+        [HttpPost("auth/login/external")]
+        public async Task<IActionResult> ExternalLoginUserAsync([FromBody] ExternalLoginUserCase request, CancellationToken cancellationToken = default)
+        {
+            var userData = await _mediator.Send(request, cancellationToken);
+
+            return StatusCode(200, userData);
+        }
+
+        [AllowAnonymous]
         [HttpPost("auth/register")]
         public async Task<IActionResult> RegisterUserAsync([FromBody] RegisterUserCase request, CancellationToken cancellationToken = default)
         {
