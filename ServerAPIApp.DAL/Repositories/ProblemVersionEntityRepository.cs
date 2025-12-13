@@ -139,21 +139,14 @@ namespace ServerAPIApp.DAL.Repositories
             }
         }
 
-        public async Task<List<ProblemVersionEntity>?> GetFilteredAsync
-            (Guid problemId,
-            Expression<Func<ProblemVersionEntity, bool>>? filter = null,
+        public async Task<List<ProblemVersionEntity>?> GetFilteredWithLanguagesAsync
+            (Expression<Func<ProblemVersionEntity, bool>> filter,
             CancellationToken cancellationToken = default)
         {
-            var query = _context.ProblemVersions.AsNoTracking()
-                .Where(x => x.ProblemId == problemId);
-
-            if (filter is not null)
-            {
-                query = query.Where(filter);
-            }
-
-            var entries = await query
-                .Include(x => x.Creator)
+            var entries = await _context.ProblemVersions
+                .AsNoTracking()
+                .Where(filter)
+                .Include(x => x.SupportedLanguages)
                 .ToListAsync(cancellationToken);
 
             return entries;

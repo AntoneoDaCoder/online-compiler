@@ -12,9 +12,8 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<ProblemVersionEntity?> GetByIdWithLanguagesAsync
             (Guid versionId,
             CancellationToken cancellationToken = default);
-        Task<List<ProblemVersionEntity>?> GetFilteredAsync
-            (Guid problemId,
-            Expression<Func<ProblemVersionEntity, bool>>? filter = null,
+        Task<List<ProblemVersionEntity>?> GetFilteredWithLanguagesAsync
+            (Expression<Func<ProblemVersionEntity, bool>> filter,
             CancellationToken cancellationToken = default);
         Task<ProblemVersionEntity> CreateDraftAsync
             (ProblemVersionEntity draft,

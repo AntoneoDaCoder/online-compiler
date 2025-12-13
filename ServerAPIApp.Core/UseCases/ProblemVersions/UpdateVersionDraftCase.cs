@@ -3,5 +3,5 @@ using Shared.DTOs;
 
 namespace ServerAPIApp.Core.UseCases.ProblemVersions
 {
-    public record UpdateVersionDraftCase(Guid VersionId, Guid ProblemId, string Statement, int TotalTests, string? TestManifestJson) : IRequest;
+    public record UpdateVersionDraftCase(Guid VersionId, Guid ProblemId, string Statement, int TotalTests, ManifestDto? TestManifest) : IRequest;
 }
