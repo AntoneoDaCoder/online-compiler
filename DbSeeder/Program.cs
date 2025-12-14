@@ -1,22 +1,26 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using ServerAPIApp.Contracts.Abstractions;
+using ServerAPIApp.Core.Abstractions;
+using ServerAPIApp.Core.Configs;
+using ServerAPIApp.Core.Services;
 using ServerAPIApp.DAL.Contexts;
 using ServerAPIApp.DAL.Extensions;
 using ServerAPIApp.Domain.Entities;
+using ServerAPIApp.Domain.Exceptions.ConflictExceptions;
 using Shared.DTOs;
 using Shared.Helpers;
 using System.Text.Json;
-using ServerAPIApp.Core.UseCases.Users;
-using ServerAPIApp.Core.Services;
-using MediatR;
 
 class Program
 {
     private static bool _seedingFailed = false;
-    const string _bucketName = "xdd";
+    const string _bucketName = "manifestbucket";
+    private static Guid _adminId;
 
     private static Dictionary<string, string> _languages = new()
         {
@@ -169,18 +173,13 @@ class Program
     }
 
 
-    private static async Task SeedProblemsAsync(IServiceProvider sp, IEnumerable<LanguageEntity> languages)
+    private static async Task SeedProblemsAsync(IServiceProvider sp)
     {
         var problemData = ParseProblemsFromFile(@"SampleDbSeedingData/sample_problem_descriptions.json");
 
         if (problemData is null)
         {
             throw new ArgumentNullException("[Problem-Seeding][Error] Failed. Couldn't get problem samples. Problem seeding aborted");
-        }
-
-        if (!languages.Any())
-        {
-            throw new ArgumentNullException("[Problem-Seeding][Error] Failed. Couldn't get languages. Problem seeding aborted");
         }
 
         var sampleManifests = ParseAllManifestsFromDirectory(@"SampleDbSeedingData/sample_manifests");
@@ -194,6 +193,16 @@ class Program
         {
             var problemRepo = scope.ServiceProvider.GetRequiredService<IProblemRepository>();
             var storage = scope.ServiceProvider.GetRequiredService<IObjectStorage>();
+            // Получим DbContext напрямую для вставки версии и апдейта problem,
+            // т.к. репозиторий problemRepo может быть реализован так, что он делает SaveChanges внутри.
+            var db = scope.ServiceProvider.GetRequiredService<BaseDbContext>();
+
+            var languages = await db.Languages.ToListAsync();
+
+            if (!languages.Any())
+            {
+                throw new ArgumentNullException("[Problem-Seeding][Error] Failed. Couldn't get languages. Problem seeding aborted");
+            }
 
             foreach (var data in problemData)
             {
@@ -208,7 +217,6 @@ class Program
                 if (!sampleManifests.TryGetValue(data.ManifestKey, out var manifest))
                 {
                     Console.WriteLine($"[Problem-Seeding][Warning] No manifest found. Problem {data.Slug} will be added without manifest key.");
-
                     key = null;
                 }
                 else
@@ -220,14 +228,12 @@ class Program
                         if (!await storage.UploadStringAsync(_bucketName, key, manifestString))
                         {
                             Console.WriteLine($"[Problem-Seeding][Warning] Minio failed to accept manifest. Problem {data.Slug} will be added without manifest key.");
-
                             key = null;
                         }
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine($"[Problem-Seeding][Warning] Failed to publish manifest to Minio due to an exception. Problem {data.Slug} will be added without manifest key. Reason: " + ex);
-
                         key = null;
                     }
                 }
@@ -238,7 +244,6 @@ class Program
                 {
                     var entity = new ProblemVersionLanguage()
                     {
-                        Language = lang,
                         LanguageId = lang.Id,
                         VersionId = versionId
                     };
@@ -246,32 +251,48 @@ class Program
                     langCollection.Add(entity);
                 }
 
+                // 1) создаём версию-объект (но НЕ привязываем навигационно к problem)
                 var version = new ProblemVersionEntity()
                 {
                     Id = versionId,
-                    ProblemId = problemId,
+                    ProblemId = problemId, // указываем ProblemId, но соответствующая problem ещё не в БД — это ок, мы сохраним problem первым (ниже)
                     Statement = data.Statement,
                     Version = 0,
                     CreatedAt = DateTimeOffset.UtcNow,
+                    CreatedBy = _adminId,
                     IsPublished = true,
+                    PublishedBy = _adminId,
                     TestTemplateKey = key,
-                    TotalTests = (manifest is not null) ? manifest.SampleTests.Count + manifest.AdvancedTests.Count : 0,
-                    SupportedLanguages = langCollection
+                    TotalTests = (manifest is not null) ? manifest.SampleTests.Count + manifest.AdvancedTests.Count : 0
                 };
 
+                // 2) создаём problem без установки LastPublishedVersion / LastPublishedVersionId (чтобы избежать цикла)
                 var problemEntity = new ProblemEntity()
                 {
                     Id = problemId,
                     Slug = data.Slug,
                     Title = data.Title,
                     CreatedAt = DateTimeOffset.UtcNow,
-                    LastPublishedVersion = version,
-                    LastPublishedVersionId = versionId
+                    CreatedBy = _adminId
+                    // LastPublishedVersion и LastPublishedVersionId НЕ ставим сейчас
                 };
 
                 try
                 {
-                    await problemRepo.CreateAsync(problemEntity);
+                    // Сохраняем problem первым (через репозиторий, чтобы учесть логику репо)
+                    var createdProblem = await problemRepo.CreateAsync(problemEntity);
+
+                    // Затем сохраняем версию напрямую через DbContext (или через репозиторий версии, если он есть)
+                    // Убедимся, что version.ProblemId установлен на фактический createdProblem.Id
+                    version.ProblemId = createdProblem.Id;
+                    db.ProblemVersions.Add(version);
+                    await db.SaveChangesAsync();
+
+                    // После того как версия создана — обновляем problem: устанавливаем last_published_version (id) и сохраняем.
+                    createdProblem.LastPublishedVersionId = version.Id;
+                    // Если у вас есть навигационное свойство, не присваивайте объект навигации сразу — достаточно id
+                    db.Problems.Update(createdProblem);
+                    await db.SaveChangesAsync();
                 }
                 catch (Exception ex)
                 {
@@ -279,38 +300,187 @@ class Program
                 }
             }
         }
-
     }
+
 
     private static async Task SeedUsersAsync(IServiceProvider sp)
     {
         await using var scope = sp.CreateAsyncScope();
         {
-            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+            var prot = scope.ServiceProvider.GetRequiredService<ISecretProtector>();
+
+            IEnumerable<string> roles = ["User", "Admin", "Editor"];
+
+            foreach (var role in roles)
+            {
+                if (await repo.GetRoleByNameAsync(role) is not null)
+                    continue;
+
+                await repo.AddRoleAsync(role);
+            }
 
 
-            var command = new RegisterUserCase("antoneo228", "antonurbanovic@gmail.com", "abcd12345");
+            try
+            {
+                var name = "antoneo228";
+                var mail = "antonurbanovic@gmail.com";
+                var passw = "Abcd12345";
+                var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
 
-            var data = await mediator.Send(command);
+                var adminUsr = await repo.GetByHashedEmailAsync(emailHash);
 
-            var roles = new AddUserToRolesCase(data.UserId, Guid.Empty, ["Editor", "Admin"]);
+                if (adminUsr is not null)
+                {
+                    _adminId = adminUsr.Id;
+                }
+                else
+                {
+                    var newId = Guid.NewGuid();
 
-            await mediator.Send(roles);
+                    var now = DateTimeOffset.UtcNow;
 
+                    var newUser = new UserEntity()
+                    {
+                        Id = newId,
+                        CreatedAt = DateTimeOffset.UtcNow,
+                        Name = name,
+                        EmailHash = emailHash,
+                        EncryptedEmail = prot.Protect(mail),
+                        RefreshToken = null,
+                        RefreshTokenExpiryTime = DateTimeOffset.MinValue,
 
-            command = new RegisterUserCase("test_editor", "a@gmail.com", "abcd12345");
+                        SecurityStamp = newId.ToString(),
+                        ConcurrencyStamp = newId.ToString(),
+                        UserName = name,
+                        Email = newId.ToString(),
+                        NormalizedUserName = newId.ToString().ToUpperInvariant(),
+                        NormalizedEmail = newId.ToString().ToUpperInvariant(),
+                        EmailConfirmed = true,
+                        LockoutEnabled = true,
+                        AccessFailedCount = 0,
+                        TwoFactorEnabled = false,
+                        PhoneNumberConfirmed = false,
+                    };
 
-            data = await mediator.Send(command);
+                    var res = await repo.CreateAsync(newUser, passw);
 
-            roles = new AddUserToRolesCase(data.UserId, Guid.Empty, ["Editor"]);
+                    if (!res.Succeeded)
+                        Console.WriteLine(string.Join('\n', res.Errors));
 
-            await mediator.Send(roles);
+                    var roleRes = await repo.AddToRolesAsync(newUser, ["User", "Admin", "Editor"]);
 
+                    _adminId = newId;
+                }
+            }
+            catch (ConflictException)
+            {
 
-            command = new RegisterUserCase("generic_user", "b@gmail.com", "abcd12345");
+            }
 
-            data = await mediator.Send(command);
+            try
+            {
+                var name = "test_editor";
+                var mail = "a@gmail.com";
+                var passw = "Abcd12345";
+                var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
 
+                var editorUsr = await repo.GetByHashedEmailAsync(emailHash);
+
+                if (editorUsr is null)
+                {
+                    var newId = Guid.NewGuid();
+
+                    var now = DateTimeOffset.UtcNow;
+
+                    var newUser = new UserEntity()
+                    {
+                        Id = newId,
+                        CreatedAt = DateTimeOffset.UtcNow,
+                        CreatedBy = _adminId,
+                        Name = name,
+                        EmailHash = emailHash,
+                        EncryptedEmail = prot.Protect(mail),
+                        RefreshToken = null,
+                        RefreshTokenExpiryTime = DateTimeOffset.MinValue,
+
+                        SecurityStamp = newId.ToString(),
+                        ConcurrencyStamp = newId.ToString(),
+                        UserName = name,
+                        Email = newId.ToString(),
+                        NormalizedUserName = newId.ToString().ToUpperInvariant(),
+                        NormalizedEmail = newId.ToString().ToUpperInvariant(),
+                        EmailConfirmed = true,
+                        LockoutEnabled = true,
+                        AccessFailedCount = 0,
+                        TwoFactorEnabled = false,
+                        PhoneNumberConfirmed = false,
+                    };
+
+                    var res = await repo.CreateAsync(newUser, passw);
+
+                    if (!res.Succeeded)
+                        Console.WriteLine(string.Join('\n', res.Errors));
+
+                    var roleRes = await repo.AddToRolesAsync(newUser, ["User", "Editor"]);
+                }
+            }
+            catch (ConflictException)
+            {
+
+            }
+
+            try
+            {
+                var name = "generic_user";
+                var mail = "b@gmail.com";
+                var passw = "Abcd12345";
+                var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
+
+                var genUsr = await repo.GetByHashedEmailAsync(emailHash);
+
+                if (genUsr is null)
+                {
+                    var newId = Guid.NewGuid();
+
+                    var now = DateTimeOffset.UtcNow;
+
+                    var newUser = new UserEntity()
+                    {
+                        Id = newId,
+                        CreatedAt = DateTimeOffset.UtcNow,
+                        CreatedBy = _adminId,
+                        Name = name,
+                        EmailHash = emailHash,
+                        EncryptedEmail = prot.Protect(mail),
+                        RefreshToken = null,
+                        RefreshTokenExpiryTime = DateTimeOffset.MinValue,
+
+                        SecurityStamp = newId.ToString(),
+                        ConcurrencyStamp = newId.ToString(),
+                        UserName = name,
+                        Email = newId.ToString(),
+                        NormalizedUserName = newId.ToString().ToUpperInvariant(),
+                        NormalizedEmail = newId.ToString().ToUpperInvariant(),
+                        EmailConfirmed = true,
+                        LockoutEnabled = true,
+                        AccessFailedCount = 0,
+                        TwoFactorEnabled = false,
+                        PhoneNumberConfirmed = false,
+                    };
+
+                    var res = await repo.CreateAsync(newUser, passw);
+
+                    if (!res.Succeeded)
+                        Console.WriteLine(string.Join('\n', res.Errors));
+
+                    var roleRes = await repo.AddToRolesAsync(newUser, ["User"]);
+                }
+            }
+            catch (ConflictException)
+            {
+
+            }
         }
     }
 
@@ -330,10 +500,22 @@ class Program
                 services.ConfigureObjectStorage(confRoot);
                 services.ConfigureRepositories();
 
-                services.AddMediatR
-                (
-                    cfg => cfg.RegisterServicesFromAssembly(typeof(JwtTokenService).Assembly)
-                );
+                services.Configure<SecretProtectionOptions>(confRoot.GetSection("SecretProtector"));
+                services.AddSingleton<ISecretProtector>(sp =>
+                {
+                    var options = sp.GetRequiredService<IOptions<SecretProtectionOptions>>().Value;
+
+                    if (string.IsNullOrWhiteSpace(options.FixedKeyBase64))
+                        throw new InvalidOperationException("SecretProtector:FixedKeyBase64 must be set in configuration.");
+
+                    var key = Convert.FromBase64String(options.FixedKeyBase64);
+
+                    if (!string.Equals(options.Algorithm, "AesGcm", StringComparison.OrdinalIgnoreCase))
+                        throw new NotSupportedException($"Algorithm '{options.Algorithm}' is not supported.");
+
+                    return new SecretProtector(key);
+                });
+
             })
             .Build();
 
@@ -348,6 +530,7 @@ class Program
          * 3. seed problems and their latest versions - done
          * 4. seed users - done
          */
+
         var sp = BuildServiceProvider();
 
         try
@@ -360,6 +543,15 @@ class Program
             return 1;
         }
 
+        try
+        {
+            await SeedUsersAsync(sp);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("[User-Seeding][Error] Failed to seed users. Reason: " + ex);
+            _seedingFailed = true;
+        }
 
 
         IEnumerable<LanguageEntity> actualLanguages = [];
@@ -376,24 +568,13 @@ class Program
 
         try
         {
-            await SeedProblemsAsync(sp, actualLanguages);
+            await SeedProblemsAsync(sp);
         }
         catch (Exception ex)
         {
             Console.WriteLine("[Problem-Seeding][Error] Failed to seed problems. Reason: " + ex);
             _seedingFailed = true;
         }
-
-        try
-        {
-            await SeedUsersAsync(sp);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("[User-Seeding][Error] Failed to seed users. Reason: " + ex);
-            _seedingFailed = true;
-        }
-
 
         if (_seedingFailed)
         {

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ServerAPIApp.DAL.Contexts;
@@ -11,9 +12,11 @@ using ServerAPIApp.DAL.Contexts;
 namespace ServerAPIApp.DAL.Migrations
 {
     [DbContext(typeof(BaseDbContext))]
-    partial class BaseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251214002922_MadeFieldsNullable")]
+    partial class MadeFieldsNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -271,6 +274,9 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsDraft")
                         .HasColumnType("boolean")
                         .HasColumnName("is_draft");
@@ -288,9 +294,12 @@ namespace ServerAPIApp.DAL.Migrations
                     b.Property<Guid>("ProblemId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("PublishedBy")
+                    b.Property<Guid>("PublishedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("published_by");
+
+                    b.Property<Guid?>("PublisherId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Statement")
                         .IsRequired()
@@ -298,6 +307,7 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnName("statement");
 
                     b.Property<string>("TestTemplateKey")
+                        .IsRequired()
                         .HasMaxLength(1024)
                         .IsUnicode(false)
                         .HasColumnType("character varying(1024)")
@@ -319,7 +329,9 @@ namespace ServerAPIApp.DAL.Migrations
                     b.HasIndex("CreatedBy")
                         .HasDatabaseName("ix_problem_versions_createdby");
 
-                    b.HasIndex("PublishedBy");
+                    b.HasIndex("CreatorId");
+
+                    b.HasIndex("PublisherId");
 
                     b.HasIndex("ProblemId", "Version")
                         .IsUnique()
@@ -649,9 +661,7 @@ namespace ServerAPIApp.DAL.Migrations
                 {
                     b.HasOne("ServerAPIApp.Domain.Entities.UserEntity", "Creator")
                         .WithMany()
-                        .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .HasForeignKey("CreatorId");
 
                     b.HasOne("ServerAPIApp.Domain.Entities.ProblemEntity", "Problem")
                         .WithMany("Versions")
@@ -661,8 +671,7 @@ namespace ServerAPIApp.DAL.Migrations
 
                     b.HasOne("ServerAPIApp.Domain.Entities.UserEntity", "Publisher")
                         .WithMany()
-                        .HasForeignKey("PublishedBy")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("PublisherId");
 
                     b.Navigation("Creator");
 

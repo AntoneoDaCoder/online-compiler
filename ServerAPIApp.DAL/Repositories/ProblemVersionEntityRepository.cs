@@ -99,14 +99,15 @@ namespace ServerAPIApp.DAL.Repositories
                 var now = DateTimeOffset.UtcNow;
 
                 var updated = await _context.Database.ExecuteSqlInterpolatedAsync($@"
-                    UPDATE problem_versions
-                    SET version = {nextLatest},
-                    is_draft = FALSE,
-                    is_published = TRUE,
-                    published_by = {draft.PublishedBy},
-                    published_at = {now},
-                    WHERE id = {draft.Id} AND is_draft = TRUE
-                    ", cancellationToken);
+                            UPDATE problem_versions
+                            SET version = {nextLatest},
+                            is_draft = FALSE,
+                            is_published = TRUE,
+                            published_by = {draft.PublishedBy},
+                            published_at = {now}
+                            WHERE id = {draft.Id} AND is_draft = TRUE
+                        ", cancellationToken);
+
 
                 if (updated == 0)
                 {

@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using Minio.DataModel.Notification;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
@@ -16,7 +15,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
         private IObjectStorage _storage;
 
         //TODO: move this to config as well
-        const string _bucketName = "xdd";
+        const string _bucketName = "manifestbucket";
 
         public GetFilteredVersionsCaseHandler(IProblemVersionRepository repo, IObjectStorage storage)
         {

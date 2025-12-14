@@ -10,7 +10,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
         private IObjectStorage _storage;
 
         //TODO: move this to config as well
-        const string _bucketName = "xdd";
+        const string _bucketName = "manifestbucket";
 
         public DeleteDraftCaseHandler(IProblemVersionRepository repo, IObjectStorage storage)
         {

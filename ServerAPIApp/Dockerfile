@@ -10,7 +10,7 @@ COPY --from=server-core / "ServerAPIApp.Core/"
 COPY --from=server-contracts / "ServerAPIApp.Contracts/"
 COPY --from=server-domain / "ServerAPIApp.Domain/"
 COPY --from=server-dal / "ServerAPIApp.DAL/"
-COPY --from=shared/ / "Shared/"
+COPY --from=shared / "Shared/"
 COPY . "ServerAPIApp/"
 
 RUN if [ "$USE_COMPOSITE" = "true" ]; then \
@@ -28,6 +28,7 @@ RUN dotnet publish -c Release -o /app/publish \
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+COPY --from=build /src/ServerAPIApp/certs .
 
 USER 1001
 

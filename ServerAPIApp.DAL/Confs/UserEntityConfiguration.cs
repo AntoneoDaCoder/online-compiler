@@ -92,11 +92,11 @@ namespace ServerAPIApp.DAL.Confs
 
             builder.Property(u => u.CreatedAt)
              .HasColumnName("created_at")
-             .IsRequired();
+             .IsRequired(false);
 
             builder.Property(u => u.CreatedBy)
              .HasColumnName("created_by")
-             .IsRequired();
+             .IsRequired(false);
 
             builder.HasOne(u => u.Creator)
              .WithMany()
@@ -104,10 +104,12 @@ namespace ServerAPIApp.DAL.Confs
              .OnDelete(DeleteBehavior.Restrict);
 
             builder.Property(u => u.ModifiedAt)
-             .HasColumnName("modified_at");
+             .HasColumnName("modified_at")
+             .IsRequired(false);
 
             builder.Property(u => u.ModifiedBy)
-             .HasColumnName("modified_by");
+             .HasColumnName("modified_by")
+             .IsRequired(false);
 
             builder.HasOne(u => u.Editor)
              .WithMany()
@@ -119,13 +121,16 @@ namespace ServerAPIApp.DAL.Confs
              .IsRequired();
 
             builder.Property(u => u.DeletionScheduledAt)
-             .HasColumnName("deletion_scheduled_at");
+             .HasColumnName("deletion_scheduled_at")
+             .IsRequired(false);
 
             builder.Property(u => u.DeletionDeadline)
-             .HasColumnName("deletion_deadline");
+             .HasColumnName("deletion_deadline")
+             .IsRequired(false);
 
             builder.Property(u => u.InitiatorId)
-             .HasColumnName("initiator_id");
+             .HasColumnName("initiator_id")
+             .IsRequired(false);
 
             builder.HasOne(u => u.Initiator)
              .WithMany()

@@ -8,8 +8,8 @@ RUN useradd -u 1001 -m runneruser
 
 COPY . "Runners/TypeScriptRunner/"
 COPY --from=runners-shared / "Runners/Runners.Shared/"
-COPY --from=shared / "Shared/"
 COPY --from=server-domain / "ServerAPIApp.Domain/"
+COPY --from=shared / "Shared/"
 
 RUN dotnet restore "Runners/TypeScriptRunner/TypeScriptRunner.csproj"
 

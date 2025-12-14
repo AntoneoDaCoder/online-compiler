@@ -1,30 +1,24 @@
-# ConfigMap для PostgreSQL
+# corrected-postgres.yaml
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: postgres-config
   namespace: postgresql
-data: 
+data:
   pg_hba.conf: |+
     # TYPE  DATABASE        USER            ADDRESS                 METHOD
     host     replication     replicationuser         0.0.0.0/0        md5
-    # "local" is for Unix domain socket connections only
     local   all             all                                     trust
-    # IPv4 local connections:
     host    all             all             127.0.0.1/32            trust
-    # IPv6 local connections:
     host    all             all             ::1/128                 trust
-    # Allow replication connections from localhost, by a user with the
-    # replication privilege.
     local   replication     all                                     trust
     host    replication     all             127.0.0.1/32            trust
     host    replication     all             ::1/128                 trust
-
+    # Allow scram / md5 as configured by application (adjust if needed)
     host all all all scram-sha-256
-    
-    # Replication user access
     host replication replicationuser all md5
-    
+
   postgresql.conf: |+
     data_directory = '/data/pgdata'
     hba_file = '/config/pg_hba.conf'
@@ -41,20 +35,23 @@ data:
     datestyle = 'iso, mdy'
     timezone = 'Etc/UTC'
 
-    #locale settings
-    lc_messages = 'en_US.utf8'			# locale for system error message
-    lc_monetary = 'en_US.utf8'			# locale for monetary formatting
-    lc_numeric = 'en_US.utf8'			# locale for number formatting
-    lc_time = 'en_US.utf8'				# locale for time formatting
+    lc_messages = 'en_US.utf8'
+    lc_monetary = 'en_US.utf8'
+    lc_numeric = 'en_US.utf8'
+    lc_time = 'en_US.utf8'
 
     default_text_search_config = 'pg_catalog.english'
-    
+
     # Replication settings
     wal_level = replica
     max_wal_senders = 10
     wal_keep_size = 128MB
     hot_standby = on
-    
+
+  pg_ident.conf: |+
+    # minimal ident file (empty mapping)
+    # add mappings here if needed
+
   init-replication-user.sql: |+
     DO
     $do$
@@ -65,7 +62,6 @@ data:
     END
     $do$;
 ---
-# StatefulSet для PostgreSQL
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -83,15 +79,6 @@ spec:
         app: postgres
     spec:
       terminationGracePeriodSeconds: 30
-      initContainers:
-      - name: init-postgres
-        image: postgres:15.0
-        command: ["sh", "-c", "cp /config/*.conf /var/lib/postgresql/data/"]
-        volumeMounts:
-        - name: config
-          mountPath: /config
-        - name: data
-          mountPath: /var/lib/postgresql/data
       containers:
       - name: postgres
         image: postgres:15.0
@@ -139,7 +126,8 @@ spec:
             command:
             - sh
             - -c
-            - exec pg_isready -U postgres
+            - >
+              exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -148,7 +136,8 @@ spec:
             command:
             - sh
             - -c
-            - exec pg_isready -U postgres
+            - >
+              exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
@@ -169,12 +158,10 @@ spec:
       name: data
     spec:
       accessModes: ["ReadWriteOnce"]
-      storageClassName: "standard"
       resources:
         requests:
-          storage: 1Gi
+          storage: 2Gi
 ---
-# Service для PostgreSQL
 apiVersion: v1
 kind: Service
 metadata:

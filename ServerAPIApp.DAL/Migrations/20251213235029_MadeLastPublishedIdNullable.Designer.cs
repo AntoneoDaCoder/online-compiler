@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ServerAPIApp.DAL.Contexts;
@@ -11,9 +12,11 @@ using ServerAPIApp.DAL.Contexts;
 namespace ServerAPIApp.DAL.Migrations
 {
     [DbContext(typeof(BaseDbContext))]
-    partial class BaseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251213235029_MadeLastPublishedIdNullable")]
+    partial class MadeLastPublishedIdNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -195,15 +198,15 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
-                    b.Property<DateTimeOffset?>("DeletionDeadline")
+                    b.Property<DateTimeOffset>("DeletionDeadline")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deletion_deadline");
 
-                    b.Property<DateTimeOffset?>("DeletionScheduledAt")
+                    b.Property<DateTimeOffset>("DeletionScheduledAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deletion_scheduled_at");
 
-                    b.Property<Guid?>("InitiatorId")
+                    b.Property<Guid>("InitiatorId")
                         .HasColumnType("uuid")
                         .HasColumnName("initiator_id");
 
@@ -215,11 +218,11 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("last_published_version");
 
-                    b.Property<DateTimeOffset?>("ModifiedAt")
+                    b.Property<DateTimeOffset>("ModifiedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("modified_at");
 
-                    b.Property<Guid?>("ModifiedBy")
+                    b.Property<Guid>("ModifiedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("modified_by");
 
@@ -271,6 +274,9 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<Guid?>("CreatorId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsDraft")
                         .HasColumnType("boolean")
                         .HasColumnName("is_draft");
@@ -288,9 +294,12 @@ namespace ServerAPIApp.DAL.Migrations
                     b.Property<Guid>("ProblemId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("PublishedBy")
+                    b.Property<Guid>("PublishedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("published_by");
+
+                    b.Property<Guid?>("PublisherId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Statement")
                         .IsRequired()
@@ -298,6 +307,7 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnName("statement");
 
                     b.Property<string>("TestTemplateKey")
+                        .IsRequired()
                         .HasMaxLength(1024)
                         .IsUnicode(false)
                         .HasColumnType("character varying(1024)")
@@ -319,7 +329,9 @@ namespace ServerAPIApp.DAL.Migrations
                     b.HasIndex("CreatedBy")
                         .HasDatabaseName("ix_problem_versions_createdby");
 
-                    b.HasIndex("PublishedBy");
+                    b.HasIndex("CreatorId");
+
+                    b.HasIndex("PublisherId");
 
                     b.HasIndex("ProblemId", "Version")
                         .IsUnique()
@@ -345,6 +357,7 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnName("artifacts_key");
 
                     b.Property<string>("EntryPoint")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .IsUnicode(false)
                         .HasColumnType("character varying(256)")
@@ -430,19 +443,19 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("concurrency_stamp");
 
-                    b.Property<DateTimeOffset?>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<Guid?>("CreatedBy")
+                    b.Property<Guid>("CreatedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
-                    b.Property<DateTimeOffset?>("DeletionDeadline")
+                    b.Property<DateTimeOffset>("DeletionDeadline")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deletion_deadline");
 
-                    b.Property<DateTimeOffset?>("DeletionScheduledAt")
+                    b.Property<DateTimeOffset>("DeletionScheduledAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deletion_scheduled_at");
 
@@ -464,7 +477,7 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnType("text")
                         .HasColumnName("encrypted_email");
 
-                    b.Property<Guid?>("InitiatorId")
+                    b.Property<Guid>("InitiatorId")
                         .HasColumnType("uuid")
                         .HasColumnName("initiator_id");
 
@@ -480,11 +493,11 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("lockout_end");
 
-                    b.Property<DateTimeOffset?>("ModifiedAt")
+                    b.Property<DateTimeOffset>("ModifiedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("modified_at");
 
-                    b.Property<Guid?>("ModifiedBy")
+                    b.Property<Guid>("ModifiedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("modified_by");
 
@@ -624,7 +637,8 @@ namespace ServerAPIApp.DAL.Migrations
                     b.HasOne("ServerAPIApp.Domain.Entities.UserEntity", "Initiator")
                         .WithMany()
                         .HasForeignKey("InitiatorId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("ServerAPIApp.Domain.Entities.ProblemVersionEntity", "LastPublishedVersion")
                         .WithMany()
@@ -634,7 +648,8 @@ namespace ServerAPIApp.DAL.Migrations
                     b.HasOne("ServerAPIApp.Domain.Entities.UserEntity", "Editor")
                         .WithMany()
                         .HasForeignKey("ModifiedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Creator");
 
@@ -649,9 +664,7 @@ namespace ServerAPIApp.DAL.Migrations
                 {
                     b.HasOne("ServerAPIApp.Domain.Entities.UserEntity", "Creator")
                         .WithMany()
-                        .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .HasForeignKey("CreatorId");
 
                     b.HasOne("ServerAPIApp.Domain.Entities.ProblemEntity", "Problem")
                         .WithMany("Versions")
@@ -661,8 +674,7 @@ namespace ServerAPIApp.DAL.Migrations
 
                     b.HasOne("ServerAPIApp.Domain.Entities.UserEntity", "Publisher")
                         .WithMany()
-                        .HasForeignKey("PublishedBy")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("PublisherId");
 
                     b.Navigation("Creator");
 
@@ -714,17 +726,20 @@ namespace ServerAPIApp.DAL.Migrations
                     b.HasOne("ServerAPIApp.Domain.Entities.UserEntity", "Creator")
                         .WithMany()
                         .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("ServerAPIApp.Domain.Entities.UserEntity", "Initiator")
                         .WithMany()
                         .HasForeignKey("InitiatorId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("ServerAPIApp.Domain.Entities.UserEntity", "Editor")
                         .WithMany()
                         .HasForeignKey("ModifiedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Creator");
 

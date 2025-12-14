@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ServerAPIApp.Core.UseCases.Problems;
+using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Extensions;
 using ServerAPIApp.Helpers;
 
@@ -33,11 +34,11 @@ namespace ServerAPIApp.Controllers
 
         [Authorize(Policy = "EditorAccess")]
         [HttpPost("problems")]
-        public async Task<IActionResult> CreateProblemAsync([FromBody] string slug, [FromBody] string title, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> CreateProblemAsync([FromBody] ProblemUpdateDto dto, CancellationToken cancellationToken = default)
         {
             var userId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
 
-            var command = new CreateProblemCase(userId, title, slug);
+            var command = new CreateProblemCase(userId, dto.Title, dto.Slug);
 
             var data = await _mediator.Send(command, cancellationToken);
 
@@ -48,11 +49,11 @@ namespace ServerAPIApp.Controllers
 
         [Authorize(Policy = "EditorAccess")]
         [HttpPatch("problems/{id:guid}")]
-        public async Task<IActionResult> UpdateProblemAsync([FromRoute] Guid id, [FromBody] string title, [FromBody] string slug, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> UpdateProblemAsync([FromRoute] Guid id, [FromBody] ProblemUpdateDto dto, CancellationToken cancellationToken = default)
         {
             var userId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
 
-            var command = new UpdateProblemCase(id, userId, title, slug);
+            var command = new UpdateProblemCase(id, userId, dto.Title, dto.Slug);
 
             var data = await _mediator.Send(command, cancellationToken);
 

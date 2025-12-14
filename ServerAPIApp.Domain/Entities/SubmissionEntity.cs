@@ -2,12 +2,12 @@
 {
     public class SubmissionEntity : BaseEntity, ICreatable
     {
-        public Guid ProblemVersionId { get; set; }
+        public Guid ProblemVersionId { get; set; } = Guid.Empty;
         public ProblemVersionEntity? ProblemVersion { get; set; }
 
 
-        public DateTimeOffset CreatedAt { get; set; }
-        public Guid CreatedBy { get; set; } //index
+        public DateTimeOffset? CreatedAt { get; set; } = DateTimeOffset.MinValue;
+        public Guid? CreatedBy { get; set; } = Guid.Empty;//index
         public UserEntity? Creator { get; set; }
 
 

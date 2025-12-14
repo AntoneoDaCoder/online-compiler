@@ -13,8 +13,7 @@ namespace ServerAPIApp.Extensions
     {
         private static readonly string[] SupportedLanguages = new[]
         {
-            "csharp", /*"swift",*/ "java", "postgresql",
-            "mssql", "nodejs", "kotlin", "typescript"
+            "csharp", "java", "nodejs", "kotlin", "typescript"
         };
 
         public static void AddRoleHandler(this IServiceCollection services)

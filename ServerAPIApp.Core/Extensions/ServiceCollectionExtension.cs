@@ -2,12 +2,13 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using ServerAPIApp.Core.Abstractions;
+using ServerAPIApp.Core.AuthorizationRequirements;
 using ServerAPIApp.Core.Configs;
 using ServerAPIApp.Core.Services;
 using ServerAPIApp.DAL.Extensions;
-using ServerAPIApp.Core.AuthorizationRequirements;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text;
@@ -68,8 +69,23 @@ namespace ServerAPIApp.Core.Extensions
                 };
             });
 
-            services.AddDataProtection().SetApplicationName("ServerAPIApp");
-            services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
+            services.Configure<SecretProtectionOptions>(config.GetSection("SecretProtector"));
+            services.AddSingleton<ISecretProtector>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<SecretProtectionOptions>>().Value;
+
+                if (string.IsNullOrWhiteSpace(options.FixedKeyBase64))
+                    throw new InvalidOperationException("SecretProtector:FixedKeyBase64 must be set in configuration.");
+
+                var key = Convert.FromBase64String(options.FixedKeyBase64);
+
+                if (!string.Equals(options.Algorithm, "AesGcm", StringComparison.OrdinalIgnoreCase))
+                    throw new NotSupportedException($"Algorithm '{options.Algorithm}' is not supported.");
+
+                return new SecretProtector(key);
+            });
+
+            services.AddSingleton<ISecretProtector, SecretProtector>();
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             services.AddScoped<IJwtTokenService, JwtTokenService>();
 

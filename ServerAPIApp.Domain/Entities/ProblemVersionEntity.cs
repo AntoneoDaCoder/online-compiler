@@ -5,14 +5,14 @@
         public Guid ProblemId { get; set; } //send but don't render
         public ProblemEntity? Problem { get; set; } //don't send to ui
 
-        public DateTimeOffset CreatedAt { get; set; }
-        public Guid CreatedBy { get; set; } = Guid.Empty;
+        public DateTimeOffset? CreatedAt { get; set; } = DateTimeOffset.MinValue;
+        public Guid? CreatedBy { get; set; } = Guid.Empty;
         public UserEntity? Creator { get; set; } //don't send to ui
 
         public bool IsDraft { get; set; } = true;
 
         public bool IsPublished { get; set; } = false;
-        public Guid PublishedBy { get; set; } = Guid.Empty;
+        public Guid? PublishedBy { get; set; }
         public UserEntity? Publisher { get; set; } //don't send to ui
 
         public int Version { get; set; } //don't send to ui

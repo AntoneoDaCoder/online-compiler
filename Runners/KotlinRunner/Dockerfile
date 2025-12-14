@@ -1,4 +1,4 @@
-FROM gradle:9.2.1-jdk21-alpine AS build
+FROM gradle:8.7-jdk21-alpine AS build
 
 WORKDIR /app/Runners/KotlinRunner
 
@@ -10,7 +10,7 @@ COPY ./src ./src
 
 RUN gradle shadowJar --no-daemon
 
-FROM eclipse-temurin:21-jdk-alpine
+FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 

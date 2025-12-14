@@ -48,7 +48,8 @@ target "seeder"{
     server-dal = "ServerAPIApp.DAL/"
     data-seed = "SampleDbSeedingData/"
     server-contracts = "ServerAPIApp.Contracts/"
-    appsettings = "ServerAPIApp/appsettings.json"
+    server-core = "ServerAPIApp.Core/"
+    appsettings = "ServerAPIApp/"
   }
 }
 

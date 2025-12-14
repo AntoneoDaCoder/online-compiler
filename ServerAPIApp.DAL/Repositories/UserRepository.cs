@@ -232,6 +232,18 @@ namespace ServerAPIApp.DAL.Repositories
             return await _userManager.GetLoginsAsync(user);
         }
 
+        public async Task<IdentityResult> AddRoleAsync(string role, CancellationToken cancellationToken = default)
+        {
+            return await _roleManager.CreateAsync(new IdentityRole<Guid>(role));
+        }
+
+        public async Task<IdentityRole<Guid>?> GetRoleByNameAsync
+            (string role,
+                CancellationToken cancellationToken = default)
+        {
+            return await _roleManager.FindByNameAsync(role);
+        }
+
         //TODO: implement batch user delete. for now i'll keep one at a time deletion strategy (im fucking lazy wcyd)
     }
 }

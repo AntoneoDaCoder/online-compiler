@@ -14,7 +14,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
         private IObjectStorage _storage;
 
         //TODO: move this to config as well
-        const string _bucketName = "xdd";
+        const string _bucketName = "manifestbucket";
 
         public GetProblemLatestVersionCaseHandler(IProblemRepository repo, IObjectStorage storage)
         {

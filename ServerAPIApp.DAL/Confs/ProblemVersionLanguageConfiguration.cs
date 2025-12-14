@@ -35,7 +35,7 @@ namespace ServerAPIApp.DAL.Confs
                 .HasColumnName("entry_point")
                 .HasMaxLength(256)
                 .IsUnicode(false)
-                .IsRequired();
+                .IsRequired(false);
 
             builder.HasIndex(x => x.LanguageId).HasDatabaseName("ix_pvlang_languageid");
             builder.HasIndex(x => x.VersionId).HasDatabaseName("ix_pvlang_versionid");

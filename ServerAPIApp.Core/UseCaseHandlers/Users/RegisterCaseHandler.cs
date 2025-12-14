@@ -7,6 +7,7 @@ using ServerAPIApp.Domain.Entities;
 using ServerAPIApp.Domain.Exceptions.ConflictExceptions;
 using ServerAPIApp.Domain.Exceptions.UnauthorizedExceptions;
 using Shared.Helpers;
+using System.Xml.Linq;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Users
 {
@@ -50,6 +51,18 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
                 EncryptedEmail = _protector.Protect(command.Email),
                 RefreshToken = _tokenService.CreateNewRefreshToken(),
                 RefreshTokenExpiryTime = _tokenService.GetTokenExpirationTime(now),
+
+                SecurityStamp = newId.ToString(),
+                ConcurrencyStamp = newId.ToString(),
+                UserName = command.Name,
+                Email = newId.ToString(),
+                NormalizedUserName = newId.ToString().ToUpperInvariant(),
+                NormalizedEmail = newId.ToString().ToUpperInvariant(),
+                EmailConfirmed = true,
+                LockoutEnabled = true,
+                AccessFailedCount = 0,
+                TwoFactorEnabled = false,
+                PhoneNumberConfirmed = false,
             };
 
             var res = await _repo.CreateAsync(newUser, command.Password, cancellationToken);

@@ -7,6 +7,6 @@
         public Guid LanguageId { get; set; } //part of pk
         public LanguageEntity? Language { get; set; }
         public string? ArtifactsKey { get; set; }
-        public string EntryPoint { get; set; } = default!;
+        public string? EntryPoint { get; set; }
     }
 }

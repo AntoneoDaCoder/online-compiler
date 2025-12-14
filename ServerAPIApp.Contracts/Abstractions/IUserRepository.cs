@@ -68,6 +68,11 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<IList<UserLoginInfo>> GetUserLoginsAsync
             (UserEntity user,
             CancellationToken cancellationToken = default);
+        Task<IdentityResult> AddRoleAsync
+            (string role, CancellationToken cancellationToken = default);
+        Task<IdentityRole<Guid>?> GetRoleByNameAsync
+           (string role,
+               CancellationToken cancellationToken = default);
 
     }
 }

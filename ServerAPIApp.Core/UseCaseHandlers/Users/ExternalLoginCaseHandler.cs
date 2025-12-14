@@ -76,6 +76,18 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
                         EncryptedEmail = _protector.Protect(payload.Email),
                         RefreshToken = _tokenService.CreateNewRefreshToken(),
                         RefreshTokenExpiryTime = _tokenService.GetTokenExpirationTime(now),
+
+                        SecurityStamp = newId.ToString(),
+                        ConcurrencyStamp = newId.ToString(),
+                        UserName = payload.Name,
+                        Email = newId.ToString(),
+                        NormalizedUserName = newId.ToString().ToUpperInvariant(),
+                        NormalizedEmail = newId.ToString().ToUpperInvariant(),
+                        EmailConfirmed = true,
+                        LockoutEnabled = true,
+                        AccessFailedCount = 0,
+                        TwoFactorEnabled = false,
+                        PhoneNumberConfirmed = false,
                     };
 
                     var res = await _repo.CreateAsync(googleUser, newPswd.ToString(), cancellationToken);

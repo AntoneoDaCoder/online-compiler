@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Core.UseCases.Languages;
 using System.Globalization;
 
@@ -54,10 +55,10 @@ namespace ServerAPIApp.Controllers
 
         [Authorize(Policy = "AdminAccess")]
         [HttpPatch("languages/{id:guid}")]
-        public async Task<IActionResult> UpdateLanguageAsync([FromRoute] Guid id, [FromBody] string code, [FromBody] string displayName,
+        public async Task<IActionResult> UpdateLanguageAsync([FromRoute] Guid id, [FromBody] LanguageUpdateDto dto,
             CancellationToken cancellationToken = default)
         {
-            var command = new UpdateLanguageCase(id, displayName, code);
+            var command = new UpdateLanguageCase(id, dto.DisplayName, dto.Code);
 
             var updatedData = await _mediator.Send(command, cancellationToken);
 

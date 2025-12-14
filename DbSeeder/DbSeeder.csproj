@@ -8,6 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -21,7 +29,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ServerAPIApp.Contracts\ServerAPIApp.Contracts.csproj" />
     <ProjectReference Include="..\ServerAPIApp.Core\ServerAPIApp.Core.csproj" />
-    <ProjectReference Include="..\ServerAPIAPP.DAL\ServerAPIApp.DAL.csproj" />
+    <ProjectReference Include="..\ServerAPIApp.DAL\ServerAPIApp.DAL.csproj" />
     <ProjectReference Include="..\ServerAPIApp.Domain\ServerAPIApp.Domain.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>

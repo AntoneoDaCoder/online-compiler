@@ -18,15 +18,40 @@ namespace ServerAPIApp.DAL.Confs
                 .HasForeignKey(pv => pv.ProblemId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.Property(x => x.CreatedAt)
+                .HasColumnName("created_at")
+                .IsRequired();
 
-            builder.Property(x => x.CreatedAt).HasColumnName("created_at").IsRequired();
-            builder.Property(x => x.CreatedBy).HasColumnName("created_by").IsRequired();
+            builder.Property(x => x.CreatedBy)
+                .HasColumnName("created_by")
+                .IsRequired();
 
-            builder.Property(x => x.IsDraft).HasColumnName("is_draft").IsRequired();
-            builder.Property(x => x.IsPublished).HasColumnName("is_published").IsRequired();
-            builder.Property(x => x.PublishedBy).HasColumnName("published_by");
+            builder.HasOne(x => x.Creator)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Property(x => x.Version).HasColumnName("version").IsRequired();
+            builder.Property(x => x.IsDraft)
+                .HasColumnName("is_draft")
+                .IsRequired();
+
+            builder.Property(x => x.IsPublished)
+                .HasColumnName("is_published")
+                .IsRequired();
+
+            builder.Property(x => x.PublishedBy)
+                .HasColumnName("published_by")
+                .IsRequired(false);
+
+            builder.HasOne(x => x.Publisher)
+              .WithMany()
+              .HasForeignKey(x => x.PublishedBy)
+              .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Property(x => x.Version)
+                .HasColumnName("version")
+                .IsRequired();
+
             builder.Property(x => x.Statement)
                 .HasColumnName("statement")
                 .IsRequired()
@@ -38,7 +63,7 @@ namespace ServerAPIApp.DAL.Confs
                 .HasColumnName("test_template_key")
                 .HasMaxLength(1024)
                 .IsUnicode(false)
-                .IsRequired();
+                .IsRequired(false);
 
             builder.HasIndex(x => new { x.ProblemId, x.Version })
             .IsUnique()

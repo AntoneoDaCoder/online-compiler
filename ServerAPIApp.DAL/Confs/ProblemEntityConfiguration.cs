@@ -66,7 +66,8 @@ namespace ServerAPIApp.DAL.Confs
                 .OnDelete(DeleteBehavior.Restrict);
 
             b.Property(x => x.LastPublishedVersionId)
-                .HasColumnName("last_published_version");
+                .HasColumnName("last_published_version")
+                .IsRequired(false);
 
             b.HasOne(x => x.LastPublishedVersion)
                 .WithMany()
