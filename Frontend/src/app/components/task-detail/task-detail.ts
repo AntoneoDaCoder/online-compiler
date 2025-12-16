@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { Task } from '../../models/task.model';
@@ -14,7 +14,7 @@ import { ExecutionResultDto } from '../../models/executionResultDto.model';
   selector: 'app-task-detail',
   templateUrl: './task-detail.html',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [FormsModule, RouterModule],
   styleUrls: ['./task-detail.css']
 })
 export class TaskDetailComponent implements OnInit {
