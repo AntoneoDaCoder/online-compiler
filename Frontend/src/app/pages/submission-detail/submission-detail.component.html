@@ -1,0 +1,10 @@
+<div class="submission-detail layout" *ngIf="submission">
+    <h3>Сабмишн {{ submission.submissionId }}</h3>
+    <div>Slug: {{ submission.problemSlug }}</div>
+    <div>Язык: {{ submission.solutionLanguage }}</div>
+    <div>Код:</div>
+    <pre>{{ submission.solution }}</pre>
+    <div>Пройдено: {{ submission.numPassedTests }} / {{ submission.totalTests }}</div>
+    <button (click)="edit()">Изменить и отправить снова</button>
+    <app-sidebar></app-sidebar>
+</div>

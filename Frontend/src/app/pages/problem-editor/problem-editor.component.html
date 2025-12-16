@@ -1,0 +1,81 @@
+<div class="problem-editor layout">
+    <h3>Редактор задачи</h3>
+
+
+    <label>Точка входа</label>
+    <input [(ngModel)]="entryPoint" />
+
+
+    <label>Условие</label>
+    <textarea [(ngModel)]="model.statement" rows="10"></textarea>
+
+
+    <section class="helpers">
+        <h4>Хэлперы</h4>
+        <div *ngFor="let h of helpers; let i = index" class="helper-item">
+            <select [(ngModel)]="h.language">
+                <option *ngFor="let l of supportedLanguagesOptions" [value]="l.code">{{ l.displayName }}</option>
+            </select>
+            <textarea [(ngModel)]="h.code" rows="4"></textarea>
+            <button (click)="removeHelper(h.id)" [disabled]="helpers.length === 1">Удалить</button>
+        </div>
+        <button (click)="addHelper()">Добавить хэлпер</button>
+    </section>
+
+
+    <section class="simple-tests">
+        <h4>Обычные тесты</h4>
+        <div *ngFor="let t of simpleTests; let i = index">
+            <input placeholder="Имя теста" [(ngModel)]="t.name" />
+            <select [(ngModel)]="t.type">
+                <option value="primitive">Primitive</option>
+                <option value="array">Array</option>
+            </select>
+            <select *ngIf="t.type === 'primitive'" [(ngModel)]="t.primType">
+                <option value="bool">bool</option>
+                <option value="string">string</option>
+                <option value="int">int</option>
+                <option value="double">double</option>
+            </select>
+
+
+            <!-- часть шаблона -->
+            <div *ngIf="t.type === 'array'">
+                <p>Добавьте значения</p>
+
+                <!-- гарантируем, что ngFor использует либо массив, либо пустой список -->
+                <div *ngFor="let v of (t.values || []); let vi = index">
+                    <input [(ngModel)]="t.values[vi]" />
+                </div>
+
+                <button (click)="addArrayValue(t)">Добавить значение</button>
+            </div>
+
+
+
+
+            <button (click)="removeSimpleTest(i)">Удалить тест</button>
+        </div>
+        <button (click)="addSimpleTest()">Добавить тест</button>
+    </section>
+
+
+    <section class="adv-tests">
+        <h4>Advanced Tests</h4>
+        <div *ngFor="let a of advTests; let i = index">
+            <input placeholder="Имя" [(ngModel)]="a.name" />
+            <select [(ngModel)]="a.language">
+                <option *ngFor="let l of supportedLanguagesOptions" [value]="l.code">{{ l.displayName }}</option>
+            </select>
+            <textarea [(ngModel)]="a.source" rows="6"></textarea>
+            <button (click)="advTests.splice(i,1)">Удалить</button>
+        </div>
+        <button (click)="addAdvTest()">Добавить adv тест</button>
+    </section>
+
+
+    <div class="actions">
+        <button (click)="saveDraft()">Сохранить черновик</button>
+        <button (click)="cancel()">Отменить</button>
+    </div>
+</div>

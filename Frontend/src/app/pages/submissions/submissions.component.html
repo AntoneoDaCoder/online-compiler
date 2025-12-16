@@ -1,0 +1,13 @@
+<div class="submissions-page layout">
+    <h3>Мои сабмишны</h3>
+    <div *ngFor="let s of subs" class="submission-row">
+        <div>{{ s.id }}</div>
+        <div>{{ s.solutionLanguage }}</div>
+        <div>{{ s.passedTests }} / {{ s.totalTests }}</div>
+        <div>
+            <button [routerLink]="['/submissions', s.id]">Просмотр</button>
+            <button (click)="delete(s.id)">Удалить</button>
+        </div>
+    </div>
+    <app-sidebar></app-sidebar>
+</div>

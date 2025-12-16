@@ -1,0 +1,16 @@
+<div class="versions-page layout">
+    <h3>Версии задач</h3>
+
+    <div *ngFor="let v of filtered" class="version-card">
+        <div>ProblemId: {{ v.problemId }}</div>
+        <div>Version: {{ v.version }}</div>
+        <div>CreatedAt: {{ v.createdAt }}</div>
+        <div>
+            <button (click)="editVersion(v)">Изменить</button>
+            <button (click)="publishVersion(v.versionId || v.id)">Опубликовать</button>
+            <button (click)="deleteVersion(v.versionId || v.id)">Удалить</button>
+        </div>
+    </div>
+
+    <app-sidebar></app-sidebar>
+</div>

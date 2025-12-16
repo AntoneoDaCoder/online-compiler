@@ -1,0 +1,10 @@
+<nav class="sidebar">
+    <ul>
+        <li><a routerLink="/tasks">Список задач</a></li>
+        <li><a routerLink="/submissions">Мои сабмишны</a></li>
+        <li><a routerLink="/profile">Профиль</a></li>
+        <li><a routerLink="/code-editor">Редактор кода</a></li>
+        <li *ngIf="isEditorOrAdmin()"><a routerLink="/problem-editor">Редактор задачи</a></li>
+        <li *ngIf="isEditorOrAdmin()"><a routerLink="/versions">Версии</a></li>
+    </ul>
+</nav>

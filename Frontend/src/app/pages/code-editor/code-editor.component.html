@@ -1,0 +1,27 @@
+<div class="code-editor layout">
+    <div class="editor-left">
+        <label>Язык</label>
+        <select [(ngModel)]="selectedLang" (change)="onLangChange()">
+            <option value="" disabled>Выберите язык</option>
+            <option *ngFor="let l of supportedLanguages" [value]="l.code">{{ l.displayName || l.code }}</option>
+        </select>
+
+        <label>Код</label>
+        <textarea class="code-input" [(ngModel)]="code" rows="20"></textarea>
+
+        <button (click)="onSubmit()" [disabled]="!selectedLang || !problemVersionId">Отправить решение</button>
+    </div>
+
+    <div class="editor-right">
+        <div class="statement" style="overflow:auto; max-height:300px; border:1px solid #ddd; padding:8px;">
+            <h4>Условие</h4>
+            <div *ngIf="!problemVersionId">Выберите задачу для загрузки условия.</div>
+            <pre *ngIf="problemVersionId">{{ statement }}</pre>
+        </div>
+
+        <div class="result" style="margin-top:12px">
+            <h4>Результат</h4>
+            <pre>{{ result }}</pre>
+        </div>
+    </div>
+</div>
