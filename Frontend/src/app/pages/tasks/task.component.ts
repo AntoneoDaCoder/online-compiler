@@ -8,7 +8,7 @@ import { ApiService } from '../../core/services/api.service';
 import { SignalrService } from '../../core/services/signalr.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageDto, ProblemDto, UserProblemVersionDto } from '../../core/models/dtos';
-import { SidebarComponent } from '../../shared/sidebar.component';
+import { SidebarComponent } from '../../components/shared/sidebar.component';
 
 @Component({
     selector: 'app-tasks',

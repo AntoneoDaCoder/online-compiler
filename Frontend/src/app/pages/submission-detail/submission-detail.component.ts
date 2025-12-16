@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SidebarComponent } from '../../shared/sidebar.component';
+import { SidebarComponent } from '../../components/shared/sidebar.component';
 
 
 @Component({ selector: 'app-submission-detail', templateUrl: './submission-detail.component.html', imports: [CommonModule, FormsModule, SidebarComponent] })

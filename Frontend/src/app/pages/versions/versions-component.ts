@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
-import { SidebarComponent } from '../../shared/sidebar.component';
+import { SidebarComponent } from '../../components/shared/sidebar.component';
 
 @Component({
     selector: 'app-versions',

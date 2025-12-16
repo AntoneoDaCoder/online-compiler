@@ -17,8 +17,8 @@ if (environment.production) {
 
 bootstrapApplication(AppComponent, {
   providers: [
-    provideZoneChangeDetection(),provideRouter(routes),
-    provideHttpClient()
+    provideZoneChangeDetection(),
+    provideHttpClient(),
     provideRouter(appRoutes),
 
     // HttpClient + DI interceptors

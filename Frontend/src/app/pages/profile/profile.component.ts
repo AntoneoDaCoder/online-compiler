@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { AuthService } from '../../core/services/auth.service';
-import { SidebarComponent } from '../../shared/sidebar.component';
+import { SidebarComponent } from '../../components/shared/sidebar.component';
 
 
 @Component({ selector: 'app-profile', templateUrl: './profile.component.html', imports: [SidebarComponent] })
