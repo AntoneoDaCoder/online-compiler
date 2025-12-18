@@ -1,4 +1,28 @@
-# corrected-minio.yaml
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-minio-data
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  hostPath:
+    # ЗАМЕНИТЕ путь на ваш:
+    # macOS: /Users/youruser/minio-data
+    # Windows (Docker Desktop): /host_mnt/c/Users/youruser/minio-data
+    path: /mnt/host/c/users/anton/documents/minikube-volumes/minio
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minio
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -61,6 +85,8 @@ spec:
             secretKeyRef:
               name: minio-secret
               key: MINIO_ROOT_PASSWORD
+        - name: MINIO_BROWSER
+          value: "on"
         volumeMounts:
         - name: data
           mountPath: /data
@@ -86,11 +112,17 @@ spec:
   volumeClaimTemplates:
   - metadata:
       name: data
+      labels:
+        type: local
     spec:
       accessModes: ["ReadWriteOnce"]
       resources:
         requests:
-          storage: 2Gi
+          storage: 5Gi
+      storageClassName: manual
+      selector:
+        matchLabels:
+          type: local
 ---
 apiVersion: v1
 kind: Service

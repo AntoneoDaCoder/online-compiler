@@ -97,12 +97,16 @@ namespace ServerAPIApp.Controllers
 
         //if this method returns 404, on the client we shouldn't show any message just silently make an empty copy
         [Authorize(Policy = "EditorAccess")]
-        [HttpGet("problems/{problemSlug:string}/latest-version")]
+        [HttpGet("problems/{problemSlug}/latest-version")]
         public async Task<IActionResult> GetLatestVersionBySlugAsync([FromRoute] string problemSlug, CancellationToken cancellationToken = default)
         {
+            Console.WriteLine("[API] got slug: " + problemSlug);
+
             var command = new GetProblemLatestVersionCase(problemSlug);
 
             var data = await _mediator.Send(command, cancellationToken);
+
+            Console.WriteLine("[API] about to return data");
 
             return StatusCode(200, data);
         }

@@ -65,9 +65,8 @@ namespace ServerAPIApp.DAL.Confs
                 .IsUnicode(false)
                 .IsRequired(false);
 
-            builder.HasIndex(x => new { x.ProblemId, x.Version })
-            .IsUnique()
-            .HasDatabaseName("ux_problem_version_problemid_version");
+            builder.HasIndex(x => x.ProblemId)
+            .HasDatabaseName("ix_problem_version_problemid");
 
             builder.HasIndex(x => x.CreatedBy).HasDatabaseName("ix_problem_versions_createdby");
             builder.HasIndex(x => x.CreatedAt).HasDatabaseName("ix_problem_versions_createdat");

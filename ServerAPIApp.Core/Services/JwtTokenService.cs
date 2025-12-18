@@ -1,4 +1,6 @@
-﻿using ServerAPIApp.Core.Abstractions;
+﻿using Microsoft.Extensions.Options;
+using ServerAPIApp.Core.Abstractions;
+using ServerAPIApp.Core.Configs;
 using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
 using System.Globalization;
 using System.Security.Claims;
@@ -7,16 +9,18 @@ namespace ServerAPIApp.Core.Services
 {
     public class JwtTokenService : IJwtTokenService
     {
-        private const string RefreshTokenLifetimeKey = "REFRESH_TOKEN_LIFETIME";
+        private readonly JwtSettings _settings;
         private readonly TimeSpan _tokenLifetime;
 
         private readonly IJwtTokenGenerator _tokenGenerator;
 
-        public JwtTokenService(IJwtTokenGenerator generator)
+        public JwtTokenService(IJwtTokenGenerator generator, IOptionsMonitor<JwtSettings> monitor)
         {
             _tokenGenerator = generator;
 
-            string refreshTokenLifetime = Environment.GetEnvironmentVariable(RefreshTokenLifetimeKey)!;
+            _settings = monitor.CurrentValue;
+
+            string refreshTokenLifetime = _settings.RefreshTokenLifetime;
 
             if (!TimeSpan.TryParse(refreshTokenLifetime, CultureInfo.InvariantCulture, out _tokenLifetime))
                 throw new IncorrectTokenFormatException("Token service failed to parse token's lifetime. Incorrect data format (expected ISO 8601)");

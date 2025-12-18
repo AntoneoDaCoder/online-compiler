@@ -1,9 +1,5 @@
 package com.mems.helpers;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mems.manifest.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,18 +11,6 @@ import java.util.stream.Collectors;
  */
 public final class ManifestParser {
 
-    private static final ObjectMapper MAPPER = createMapper();
-
-    private static ObjectMapper createMapper() {
-        ObjectMapper m = new ObjectMapper();
-        // нечувствительность к регистру имён полей
-        m.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
-        // позволить хвостовые запятые
-        m.configure(JsonParser.Feature.ALLOW_TRAILING_COMMA, true);
-        // не падать при неизвестных полях
-        m.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        return m;
-    }
 
     public static ManifestDto parse(String json, String languageCode) {
         if (json == null || json.trim().isEmpty()) {
@@ -35,7 +19,7 @@ public final class ManifestParser {
 
         ManifestDto manifest;
         try {
-            manifest = MAPPER.readValue(json, ManifestDto.class);
+            manifest = JsonUtils.getObjectMapper().readValue(json, ManifestDto.class);
         } catch (Exception ex) {
             throw new IllegalArgumentException("Failed to deserialize manifest: " + ex.getMessage(), ex);
         }

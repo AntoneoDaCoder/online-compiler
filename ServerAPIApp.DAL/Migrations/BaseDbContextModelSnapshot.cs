@@ -319,11 +319,10 @@ namespace ServerAPIApp.DAL.Migrations
                     b.HasIndex("CreatedBy")
                         .HasDatabaseName("ix_problem_versions_createdby");
 
-                    b.HasIndex("PublishedBy");
+                    b.HasIndex("ProblemId")
+                        .HasDatabaseName("ix_problem_version_problemid");
 
-                    b.HasIndex("ProblemId", "Version")
-                        .IsUnique()
-                        .HasDatabaseName("ux_problem_version_problemid_version");
+                    b.HasIndex("PublishedBy");
 
                     b.ToTable("problem_versions", (string)null);
                 });

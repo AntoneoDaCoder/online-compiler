@@ -44,6 +44,7 @@ namespace Runners.Shared.Runners
                 Result = new ExecutionResultDto()
                 {
                     RequestSentAt = data.RequestDate,
+                    ResponseSentAt = DateTimeOffset.UtcNow,
                     TotalTests = data.TotalTests,
                 }
             };

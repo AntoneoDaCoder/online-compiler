@@ -54,10 +54,14 @@ class KotlinRunner {
 
         val compiledRes = compileToTmpDir(wrapped, logger)
 
+        val total = testManifest.sampleTests!!.size + testManifest.advancedTests!!.size;
+
         if (!compiledRes.first) {
             logger.info("[Runner] Compilation failed for request [Id:${solution.RequestId}]")
             return CodeResponseDto().apply {
-                RequestId = parseOrRandomUUID(solution.RequestId)
+                RequestId =solution.RequestId
+                UserId = solution.UserId
+                VersionId = solution.VersionId
                 Status = RequestStatus.Failed
                 Language = languageCode
                 UserSolution = solution.UserSolution
@@ -67,6 +71,8 @@ class KotlinRunner {
                     ConsoleOutput = "Compilation failed: ${compiledRes.second}"
                     RequestSentAt = solution.SentAt
                     ResponseSentAt = now
+                     this.PassedTests =0
+                    this.TotalTests = total
                 }
             }
         }
@@ -74,9 +80,7 @@ class KotlinRunner {
         logger.info("[Runner] Running tests for request [Id:${solution.RequestId}]")
         val (exitCode, output) = runTestsInProcess(logger)
 
-        // parse PassedTests
-        val matcher = passedRegex.matcher(output)
-        val passed = if (matcher.find()) matcher.group(1).toInt() else 0
+        val passed = parsePassedTests(output)
 
         // parse failures/timeouts/exceptions
         val failures = parseJUnitFailures(output)
@@ -93,7 +97,9 @@ class KotlinRunner {
         logger.info("[Runner] Finished request [Id:${solution.RequestId}] with status $status")
 
         return CodeResponseDto().apply {
-            RequestId = parseOrRandomUUID(solution.RequestId)
+            RequestId = solution.RequestId
+            UserId = solution.UserId
+            VersionId = solution.VersionId
             Status = reqStatus
             Language = languageCode
             UserSolution = solution.UserSolution
@@ -104,14 +110,10 @@ class KotlinRunner {
                 this.PassedTests = passed
                 this.RequestSentAt = solution.SentAt
                 this.ResponseSentAt = now
+                this.PassedTests = passed
+                this.TotalTests = total
             }
         }
-    }
-
-    private fun parseOrRandomUUID(s: String?): UUID = try {
-        if (s.isNullOrBlank()) UUID.randomUUID() else UUID.fromString(s)
-    } catch (ex: Exception) {
-        UUID.randomUUID()
     }
 
     fun compileToTmpDir(code: String, logger: Logger): Pair<Boolean,String?> {
@@ -270,4 +272,19 @@ class KotlinRunner {
         sb.appendLine(fullOut)
         return sb.toString()
     }
+
+    private val passedPatterns = listOf(
+        Pattern.compile("PassedTests\\s*[:=]\\s*(\\d+)", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("OK \\((\\d+) tests?\\)"), // JUnit summary
+        Pattern.compile("Tests run:\\s*(\\d+)", Pattern.CASE_INSENSITIVE) // другой формат
+    )
+
+    private fun parsePassedTests(output: String): Int {
+        for (p in passedPatterns) {
+            val m = p.matcher(output)
+            if (m.find()) return m.group(1).toInt()
+        }
+        return 0
+    }
+
 }

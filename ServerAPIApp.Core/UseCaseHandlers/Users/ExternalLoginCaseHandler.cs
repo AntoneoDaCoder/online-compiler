@@ -19,7 +19,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
 
         //TODO: move to config file
         private const string ProviderName = "Google";
-        private const string DefaultRole = "user";
+        private const string DefaultRole = "User";
 
         public ExternalLoginCaseHandler(IUserRepository repo, ISecretProtector protector, IJwtTokenService service, IGoogleAuthTokenValidator validator)
         {
@@ -70,7 +70,6 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
                     {
                         Id = newId,
                         CreatedAt = DateTimeOffset.UtcNow,
-                        CreatedBy = Guid.Empty,
                         Name = payload.Name,
                         EmailHash = hashedEmail,
                         EncryptedEmail = _protector.Protect(payload.Email),

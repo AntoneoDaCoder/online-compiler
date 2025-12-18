@@ -1,9 +1,6 @@
 package helpers
 
-import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.MapperFeature
-import com.fasterxml.jackson.databind.ObjectMapper
+import core.JsonUtils
 import manifest.ManifestDto
 import java.util.Locale
 
@@ -11,20 +8,6 @@ import java.util.Locale
  * Парсер манифеста: десериализует JSON в ManifestDto и фильтрует helpers/advancedTests по languageCode.
  */
 object ManifestParser {
-
-    private val MAPPER: ObjectMapper = createMapper()
-
-    private fun createMapper(): ObjectMapper {
-        val m = ObjectMapper()
-        // нечувствительность к регистру имён полей
-        m.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
-        // позволить хвостовые запятые
-        m.configure(JsonParser.Feature.ALLOW_TRAILING_COMMA, true)
-        // не падать при неизвестных полях
-        m.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        return m
-    }
-
     @JvmStatic
     fun parse(json: String?, languageCode: String?): ManifestDto {
         if (json == null || json.trim().isEmpty()) {
@@ -32,7 +15,7 @@ object ManifestParser {
         }
 
         val manifest: ManifestDto = try {
-            MAPPER.readValue(json, ManifestDto::class.java)
+            JsonUtils.objectMapper.readValue<ManifestDto>(json, ManifestDto::class.java)
         } catch (ex: Exception) {
             throw IllegalArgumentException("Failed to deserialize manifest: ${ex.message}", ex)
         } ?: throw IllegalArgumentException("Failed to deserialize manifest (null)")

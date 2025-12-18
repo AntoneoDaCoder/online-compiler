@@ -26,10 +26,10 @@ namespace Runners.Shared.Runners
                          "configProperties": {
                             "System.GC.Server": false
                     },
-                    "tfm": "net9.0",
+                    "tfm": "net10.0",
                     "framework": {
                         "name": "Microsoft.NETCore.App",
-                        "version": "9.0.0"
+                        "version": "10.0.1"
                         }
                     }
                 }
@@ -230,6 +230,7 @@ namespace Runners.Shared.Runners
                 Result = new ExecutionResultDto()
                 {
                     RequestSentAt = data.RequestDate,
+                    ResponseSentAt = DateTimeOffset.UtcNow,
                     TotalTests = data.TotalTests,
                 }
             };

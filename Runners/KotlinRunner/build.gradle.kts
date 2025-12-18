@@ -27,6 +27,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-annotations:2.15.2")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2") // OffsetDateTime
+    implementation("io.ktor:ktor-serialization-jackson:2.3.4")
 
     // JUnit needed at runtime (we invoke JUnitCore from generated code)
     implementation("junit:junit:4.13.2")
@@ -42,11 +43,9 @@ dependencies {
     implementation("io.ktor:ktor-client-core:2.3.12")
     implementation("io.ktor:ktor-client-cio:2.3.12")
     implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
 
     // Coroutines & Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 }
 
 application {

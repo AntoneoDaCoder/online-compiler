@@ -1,14 +1,14 @@
-// src/app/pages/tasks/task.component.ts
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 
 import { ApiService } from '../../core/services/api.service';
 import { SignalrService } from '../../core/services/signalr.service';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageDto, ProblemDto, UserProblemVersionDto } from '../../core/models/dtos';
 import { SidebarComponent } from '../../components/shared/sidebar.component';
+import { Subscription, switchMap } from 'rxjs';
 
 @Component({
     selector: 'app-tasks',
@@ -16,70 +16,66 @@ import { SidebarComponent } from '../../components/shared/sidebar.component';
     imports: [CommonModule, FormsModule, RouterModule, SidebarComponent],
     templateUrl: './task.component.html'
 })
-export class TasksComponent implements OnInit {
+export class TasksComponent implements OnInit,OnDestroy {
     languages: LanguageDto[] = [];
     problems: ProblemDto[] = [];
     filtered: ProblemDto[] = [];
+    userRoles: string[] = [];
 
-    // фильтры
+    private versionPublishedSubscription = new Subscription();
+
     filterSlug = '';
-    filterLang: string | null = null; // language id
     showOnlyPublished: 'all' | 'published' | 'unpublished' = 'all';
 
     constructor(
         private api: ApiService,
         private signalr: SignalrService,
-        public auth: AuthService
+        public auth: AuthService,
+        private router: Router
     ) { }
 
     ngOnInit() {
         this.loadInitial();
+        this.userRoles = this.auth.getRoles() || [];
 
-        // При инициализации можно стартовать SignalR если уже есть токен
-        try { this.signalr.startConnection(); } catch { /* ignore */ }
 
-        this.signalr.onUpdates().subscribe(payload => {
-            console.log('SignalR payload', payload);
-            // сюда можно вставить логику обновления состояния (например, merge)
+        this.versionPublishedSubscription = this.signalr.onVersionPublished.pipe(
+            switchMap(response => {
+                const versionId = response;
+                return this.api.getUserVersion(versionId);
+            })
+        ).subscribe(version => {
+            var found = this.problems.findIndex(p => p.id === version.problemId);
+            if (found > -1) {
+                this.problems[found].latestVersion = version;
+            }
         });
+    }
+
+    ngOnDestroy(): void {
+        this.versionPublishedSubscription.unsubscribe();
+    }
+
+    isAdminOrEditor(): boolean {
+        return this.userRoles.includes('Admin') || this.userRoles.includes('Editor');
     }
 
     loadInitial() {
-        this.api.getLanguages().subscribe(l => this.languages = l);
+        this.api.getLanguages().subscribe(l => this.languages = l || []);
         this.api.getProblems().subscribe(p => {
-            this.problems = p;
+            this.problems = p || [];
             this.applyFilters();
         });
+        this.userRoles = this.auth.getRoles() || [];
     }
 
-    // Метод вызываемый из шаблона
-    updateData() {
-        // Попробуем стартовать соединение и вызвать hub метод
-        try { this.signalr.startConnection(); } catch { /* ignore */ }
-
-        const promise = this.signalr.invoke('RequestPageData', { page: 'Tasks' });
-        if (promise) {
-            promise.then((res) => {
-                console.log('SignalR response', res);
-                // TODO: обработать res и обновить this.problems / this.languages
-            }).catch(err => console.error('SignalR invoke error', err));
-        } else {
-            console.warn('SignalR invoke returned undefined — соединение ещё не готово');
-        }
-    }
 
     applyFilters() {
         this.filtered = this.problems.filter(p => {
             if (this.filterSlug && !p.slug.includes(this.filterSlug)) return false;
 
-            if (this.filterLang) {
-                const latest = p.latestVersion as UserProblemVersionDto | undefined | null;
-                if (!latest) return false;
-                if (!latest.supportedLanguages || !latest.supportedLanguages.includes(this.filterLang)) return false;
-            }
-
             if (this.showOnlyPublished !== 'all') {
-                const isPublished = !!p.status && p.status.toLowerCase() !== 'no version' && p.status.toLowerCase() !== 'deleted';
+                const isPublished = this.isPublished(p);
                 if (this.showOnlyPublished === 'published' && !isPublished) return false;
                 if (this.showOnlyPublished === 'unpublished' && isPublished) return false;
             }
@@ -90,26 +86,42 @@ export class TasksComponent implements OnInit {
 
     clearFilters() {
         this.filterSlug = '';
-        this.filterLang = null;
         this.showOnlyPublished = 'all';
         this.applyFilters();
     }
 
-    onOpenProblem(problem: ProblemDto) {
-        const roles = this.auth.getRoles();
-        const isEditorOrAdmin = roles.includes('Editor') || roles.includes('Admin');
-        const hasPublished = problem.status && problem.status.toLowerCase() !== 'no version' && problem.status.toLowerCase() !== 'deleted';
-
-        if (isEditorOrAdmin && !hasPublished) {
-            // логика открытия редактора задачи
-            console.log('Open problem editor for', problem.id);
-        } else {
-            // логика открытия редактора кода
-            console.log('Open code editor for', problem.slug);
-        }
+    private isPublished(p: ProblemDto): boolean {
+        // Server may use literals like "Deleted", "no version", "Unlisted", "Listed" etc.
+        if (!p.status) return false;
+        const s = p.status.toLowerCase();
+        // treat as unpublished if explicit negative statuses
+        const unpublished = ['no version', 'deleted', 'unlisted'];
+        return !unpublished.includes(s);
     }
 
-    // Внутри класса TasksComponent
+    onOpenProblem(problem: ProblemDto) {
+
+        const versionId = problem.latestVersion?.versionId ?? '';
+        const mappedSupported: LanguageDto[] = [];
+        const supportedIds = problem.latestVersion?.supportedLanguages ?? [];
+        for (const id of supportedIds) {
+            const found = this.languages.find(x => String(x.id) === String(id));
+            if (found) mappedSupported.push(found);
+            else mappedSupported.push({ id, code: String(id), displayName: String(id) } as LanguageDto);
+        }
+
+        const state = {
+            versionId: versionId,
+            slug: problem.slug,
+            statement: problem.latestVersion?.statement ?? '',
+            supportedLanguages: mappedSupported,
+            title: problem.title
+        };
+
+        this.router.navigate(['/code-editor'], { state });
+    }
+
+
     formatSupportedLanguages(langIds?: string[] | null): string {
         if (!langIds || !this.languages || this.languages.length === 0) return '';
         return langIds
@@ -117,11 +129,7 @@ export class TasksComponent implements OnInit {
             .join(', ');
     }
 
-    getProblemActionLabel(p: ProblemDto): string {
-        const roles = this.auth.getRoles();
-        const isEditorOrAdmin = roles.includes('Editor') || roles.includes('Admin');
-        const hasPublished = !!p.status && p.status.toLowerCase() !== 'no version' && p.status.toLowerCase() !== 'deleted';
-        return (isEditorOrAdmin && !hasPublished) ? 'Изменить' : 'Решить';
+    onEditProblem(problem: ProblemDto) {
+        this.router.navigate(['/problems', problem.slug, 'edit']);
     }
-
 }

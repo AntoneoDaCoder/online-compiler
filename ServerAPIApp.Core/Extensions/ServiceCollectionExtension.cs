@@ -60,7 +60,7 @@ namespace ServerAPIApp.Core.Extensions
                     ValidateIssuer = true,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(
-                                                Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_SECRET")!)
+                                                Encoding.UTF8.GetBytes(jwtSettings.SecretKey)
                                                 ),
                     ValidateLifetime = true,
                     ValidIssuer = jwtSettings.ValidIssuer,
@@ -70,7 +70,7 @@ namespace ServerAPIApp.Core.Extensions
             });
 
             services.Configure<SecretProtectionOptions>(config.GetSection("SecretProtector"));
-            services.AddSingleton<ISecretProtector>(sp =>
+            services.AddSingleton(sp =>
             {
                 var options = sp.GetRequiredService<IOptions<SecretProtectionOptions>>().Value;
 
@@ -84,8 +84,8 @@ namespace ServerAPIApp.Core.Extensions
 
                 return new SecretProtector(key);
             });
+            services.AddSingleton<ISecretProtector>(sp => sp.GetRequiredService<SecretProtector>());
 
-            services.AddSingleton<ISecretProtector, SecretProtector>();
             services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             services.AddScoped<IJwtTokenService, JwtTokenService>();
 

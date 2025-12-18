@@ -1,6 +1,6 @@
 export const environment = {
     production: false,
-    apiBaseUrl: 'https://your.api',
-    googleAuthUrl: 'https://your.api/auth/google',
-    googleCallbackUrl: 'https://your.frontend/auth/google-callback'
+    apiBaseUrl: 'http://localhost:12345/api',
+    googleAuthUrl: 'http://your.api/auth/google',
+    googleClientId:'717102384710-q20cthgq8tn0798i470nn4eej67tcete.apps.googleusercontent.com'
 };

@@ -79,7 +79,7 @@ namespace ServerAPIApp.Controllers
 
             await _dispatcher.CompleteExecutionAsync(podResponse, cancellationToken);
 
-            await _notifier.NotifyCompletedAsync(podResponse, cancellationToken);
+            await _notifier.NotifyAsync(podResponse.UserId.ToString(), podResponse, cancellationToken);
 
             var createCommand = new CreateSubmissionCase(podResponse);
 

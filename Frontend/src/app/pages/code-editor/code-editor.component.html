@@ -1,27 +1,50 @@
-<div class="code-editor layout">
-    <div class="editor-left">
-        <label>Язык</label>
-        <select [(ngModel)]="selectedLang" (change)="onLangChange()">
-            <option value="" disabled>Выберите язык</option>
-            <option *ngFor="let l of supportedLanguages" [value]="l.code">{{ l.displayName || l.code }}</option>
-        </select>
+<div class="code-editor-page">
+    <div class="code-editor">
+        <div class="editor-left card">
+            <!-- Верх: селектор языков -->
+            <div class="controls">
+                <div class="field">
+                    <label class="label">Язык решения</label>
+                    <select [(ngModel)]="selectedLang" (change)="onLangChange()" class="select">
+                        <option value="" disabled>Выберите язык</option>
+                        <option *ngFor="let l of availableLangs" [value]="l.code">{{ l.displayName || l.code }}</option>
+                    </select>
+                </div>
+            </div>
 
-        <label>Код</label>
-        <textarea class="code-input" [(ngModel)]="code" rows="20"></textarea>
+            <!-- Центр: код — занимает всё доступное пространство -->
+            <div class="code-field">
+                <label class="label">Код</label>
+                <textarea class="code-input" [(ngModel)]="code" placeholder="// Введите код здесь..."></textarea>
+            </div>
 
-        <button (click)="onSubmit()" [disabled]="!selectedLang || !problemVersionId">Отправить решение</button>
-    </div>
-
-    <div class="editor-right">
-        <div class="statement" style="overflow:auto; max-height:300px; border:1px solid #ddd; padding:8px;">
-            <h4>Условие</h4>
-            <div *ngIf="!problemVersionId">Выберите задачу для загрузки условия.</div>
-            <pre *ngIf="problemVersionId">{{ statement }}</pre>
+            <!-- Низ: кнопка (фиксированная высота) -->
+            <div class="actions">
+                <button class="btn-primary" (click)="onSubmit()"
+                    [disabled]="!selectedLang || !problemVersionId">Отправить
+                    решение</button>
+            </div>
         </div>
 
-        <div class="result" style="margin-top:12px">
-            <h4>Результат</h4>
-            <pre>{{ result }}</pre>
+        <div class="editor-right">
+            <div class="card statement-card">
+                <div class="stmt-header">
+                    <div class="stmt-title">{{ displayHeading }}</div>
+                    <hr class="splitter" />
+                    <h4 class="stmt-subtitle">Условие</h4>
+                </div>
+
+                <div class="stmt-body">
+                    <div *ngIf="!problemVersionId" class="muted">Версия задачи не выбрана — откройте задачу и выберите
+                        версию.</div>
+                    <pre *ngIf="problemVersionId" class="statement-pre">{{ statement }}</pre>
+                </div>
+            </div>
+
+            <div class="card result-card">
+                <h4>Результат</h4>
+                <pre class="result-pre">{{ result }}</pre>
+            </div>
         </div>
     </div>
 </div>

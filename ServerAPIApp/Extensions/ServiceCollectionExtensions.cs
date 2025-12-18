@@ -1,11 +1,13 @@
 ﻿using k8s;
-using Microsoft.Extensions.Options;
-using ServerAPIApp.Contracts.Abstractions;
-using ServerAPIApp.Configs;
-using ServerAPIApp.Dispatchers;
-//using ServerAPIApp.Notifiers;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
+using ServerAPIApp.Configs;
+using ServerAPIApp.Contracts.Abstractions;
+using ServerAPIApp.Dispatchers;
+using ServerAPIApp.IdProviders;
 using ServerAPIApp.Middlewares;
+using ServerAPIApp.Notifiers;
 
 namespace ServerAPIApp.Extensions
 {
@@ -25,7 +27,11 @@ namespace ServerAPIApp.Extensions
         {
             services.AddSignalR();
 
-            //services.AddScoped<ISubmissionNotifier, SubmissionNotifier>();
+            services.AddSingleton<IUserIdProvider, JwtUserIdProvider>();
+
+            services.AddScoped<INotificationService, NotificationService>();
+
+            services.AddScoped<ISubmissionNotifier, SubmissionNotifier>();
 
             services.AddSingleton<IKubernetes>(sp =>
             {

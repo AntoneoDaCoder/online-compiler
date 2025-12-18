@@ -22,7 +22,8 @@ namespace ServerAPIApp.Contracts.Abstractions
             (ProblemVersionEntity draft,
             CancellationToken cancellationToken = default);
         Task<ProblemVersionEntity?> PublishDraftAsync
-            (ProblemVersionEntity draft,
+            (Guid draftId,
+            Guid publisherId,
             CancellationToken cancellationToken = default);
         Task<bool> DeleteDraftAsync
             (Guid draftId,

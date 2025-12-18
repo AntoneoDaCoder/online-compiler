@@ -1,8 +1,40 @@
 <div class="login">
-    <h2>Login</h2>
+    <h2>Логин</h2>
     <input [(ngModel)]="email" placeholder="Email" />
     <input [(ngModel)]="password" type="password" placeholder="Password" />
-    <button (click)="onLogin()">Login</button>
-    <button (click)="onGoogleLogin()">Login with Google</button>
-    <!-- регистрация: можно реализовать в отдельной форме -->
+
+
+    <div class="button-container">
+        <button class="btn-ghost" (click)="onLogin()">Login</button>
+        <button type="button" class="btn-ghost" (click)="onRegisterToggle()">Зарегистрироваться</button>
+    </div>
+
+
+    <!-- Контейнер для стандартной кнопки GSI -->
+    <div id="g_id_signin" style="margin-top:12px;"></div>
+
+
+    <form (ngSubmit)="onRegisterSubmit()" #regForm="ngForm" *ngIf="showRegister" novalidate>
+        <h3 class="title" style="margin:0 0 12px 0;">Регистрация</h3>
+
+
+        <label for="name">Имя</label>
+        <input id="name" name="name" type="text" required [(ngModel)]="name" class="code-input" />
+
+
+        <label for="regEmail" style="margin-top:12px;">Почта</label>
+        <input id="regEmail" name="regEmail" type="email" required [(ngModel)]="regEmail" class="code-input" />
+
+
+        <label for="regPassword" style="margin-top:12px;">Пароль</label>
+        <input id="regPassword" name="regPassword" type="password" required minlength="6" [(ngModel)]="regPassword"
+            class="code-input" />
+
+
+        <div class="row" style="margin-top:16px; justify-content:flex-end;">
+            <button type="button" class="btn-ghost" (click)="onCancelRegister()">Отмена</button>
+            <button type="submit" class="btn-primary"
+                [disabled]="regForm.invalid || loading">Зарегистрироваться</button>
+        </div>
+    </form>
 </div>

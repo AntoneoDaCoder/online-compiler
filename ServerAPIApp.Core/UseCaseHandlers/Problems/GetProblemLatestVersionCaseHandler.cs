@@ -32,6 +32,8 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
             if (problem.LastPublishedVersion is null)
                 throw new ResourceNotFoundException("Problem doesn't have a published version");
 
+            Console.WriteLine("[API] Found problem");
+
             var key = $"problems/{problem.Id}/versions/{problem.LastPublishedVersion.Id}/template.json";
 
             var manifestString = await _storage.GetStringAsync(_bucketName, key, cancellationToken);

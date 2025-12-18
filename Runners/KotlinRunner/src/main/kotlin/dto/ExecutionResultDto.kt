@@ -3,34 +3,29 @@ package dto
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonProperty
 import enums.ExecutionStatus
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.Serializable
 import java.time.OffsetDateTime
 
-@Serializable
 data class ExecutionResultDto(
-    @JsonProperty("Status")
+    @field:JsonProperty("Status")
     var Status: ExecutionStatus? = null,
 
-    @JsonProperty("ExitCode")
+    @field:JsonProperty("ExitCode")
     var ExitCode: Int = 0,
 
-    @JsonProperty("ConsoleOutput")
+    @field:JsonProperty("ConsoleOutput")
     var ConsoleOutput: String? = null,
 
-    @JsonProperty("PassedTests")
+    @field:JsonProperty("PassedTests")
     var PassedTests: Int = 0,
 
-    @JsonProperty("TotalTests")
+    @field:JsonProperty("TotalTests")
     var TotalTests: Int = 0,
 
-    @JsonProperty("RequestSentAt")
-    @Contextual
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    @field:JsonProperty("RequestSentAt")
+    @field:JsonFormat(shape = JsonFormat.Shape.STRING)
     var RequestSentAt: OffsetDateTime? = null,
 
-    @JsonProperty("ResponseSentAt")
-    @Contextual
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    @field:JsonProperty("ResponseSentAt")
+    @field:JsonFormat(shape = JsonFormat.Shape.STRING)
     var ResponseSentAt: OffsetDateTime? = null
 )

@@ -1,26 +1,16 @@
 <div class="tasks-page layout">
     <div class="tasks-main">
-        <section class="filters">
+        <section class="filters card">
             <input placeholder="Фильтр по slug" [(ngModel)]="filterSlug" (input)="applyFilters()" />
-
-
-            <select [(ngModel)]="filterLang" (change)="applyFilters()">
-                <option [ngValue]="null">Все языки</option>
-                <option *ngFor="let l of languages" [ngValue]="l.id">{{ l.displayName }}</option>
-            </select>
-
-
             <select [(ngModel)]="showOnlyPublished" (change)="applyFilters()">
                 <option value="all">Все</option>
                 <option value="published">Опубликованные</option>
                 <option value="unpublished">Неопубликованные</option>
             </select>
-
-
-            <button (click)="clearFilters()">Очистить</button>
-            <button (click)="updateData()">Обновить (SignalR)</button>
+            <div class="row">
+                <button (click)="clearFilters()">Очистить</button>
+            </div>
         </section>
-
 
         <section class="problems-list">
             <div *ngFor="let p of filtered" class="problem-card">
@@ -30,33 +20,26 @@
                         <span *ngIf="p.latestVersion">
                             {{ formatSupportedLanguages(p.latestVersion.supportedLanguages) }}
                         </span>
-
                     </div>
                 </div>
 
-
                 <div class="problem-meta">
-                    <div *ngIf="p.status && (auth.getRoles().includes('Admin') || auth.getRoles().includes('Editor'))"
+                    <div *ngIf="(auth.getRoles().includes('Admin') || auth.getRoles().includes('Editor'))"
                         class="status">
-                        <span>Статус: {{ p.status }}</span>
+                        <span>Статус: {{ p.status || '—' }}</span>
                         <span *ngIf="p.reason">Причина: {{ p.reason }}</span>
                     </div>
 
-
                     <div class="actions">
-                        <button (click)="onOpenProblem(p)">
-                            {{ getProblemActionLabel(p) }}
-                        </button>
-
+                        <button class="btn-solve" (click)="onOpenProblem(p)">Решить</button>
+                        <button *ngIf="isAdminOrEditor()" class="btn-edit" (click)="onEditProblem(p)">Изменить</button>
                     </div>
                 </div>
             </div>
 
-
-            <div *ngIf="filtered.length === 0">Нет задач по текущим фильтрам.</div>
+            <div *ngIf="filtered.length === 0" class="muted small">Нет задач по текущим фильтрам.</div>
         </section>
     </div>
-
 
     <app-sidebar class="tasks-sidebar"></app-sidebar>
 </div>

@@ -1,78 +1,197 @@
 <div class="problem-editor layout">
     <h3>Редактор задачи</h3>
 
-
     <label>Точка входа</label>
     <input [(ngModel)]="entryPoint" />
 
-
     <label>Условие</label>
-    <textarea [(ngModel)]="model.statement" rows="10"></textarea>
+    <textarea [(ngModel)]="model.statement" rows="10"
+        [class.invalid]="!model.statement || model.statement.trim().length < 5"></textarea>
 
+    <!-- Signature -->
+    <section class="signature">
+        <h4>Signature (параметры)</h4>
 
+        <div *ngFor="let p of parameters; let pi = index" class="param-card">
+            <div class="param-row">
+                <input [(ngModel)]="p.name" placeholder="Имя параметра" />
+
+                <label>Тип</label>
+                <!-- bind uiType to the select and use ngModelChange to call the handler -->
+                <select [(ngModel)]="p.uiType"
+                    (ngModelChange)="onParameterTypeChange(pi, { kind: $event, name: p.uiPrim || 'string' })">
+                    <option value="primitive">primitive</option>
+                    <option value="array">array</option>
+                </select>
+
+                <label>Примитив</label>
+                <!-- bind uiPrim and notify on change -->
+                <select [(ngModel)]="p.uiPrim"
+                    (ngModelChange)="onParameterTypeChange(pi, { kind: p.uiType === 'array' ? 'array' : 'primitive', name: $event })">
+                    <option value="string">string</option>
+                    <option value="int">int</option>
+                    <option value="double">double</option>
+                    <option value="bool">bool</option>
+                </select>
+
+                <button (click)="removeParameter(pi)">Удалить</button>
+            </div>
+        </div>
+
+        <button (click)="addParameter()">Добавить параметр</button>
+    </section>
+
+    <!-- Helpers -->
     <section class="helpers">
         <h4>Хэлперы</h4>
         <div *ngFor="let h of helpers; let i = index" class="helper-item">
-            <select [(ngModel)]="h.language">
+            <select [(ngModel)]="h.languageCode">
                 <option *ngFor="let l of supportedLanguagesOptions" [value]="l.code">{{ l.displayName }}</option>
             </select>
-            <textarea [(ngModel)]="h.code" rows="4"></textarea>
+            <textarea [(ngModel)]="h.inline" rows="4"></textarea>
             <button (click)="removeHelper(h.id)" [disabled]="helpers.length === 1">Удалить</button>
         </div>
         <button (click)="addHelper()">Добавить хэлпер</button>
     </section>
 
-
+    <!-- Sample tests -->
     <section class="simple-tests">
         <h4>Обычные тесты</h4>
-        <div *ngFor="let t of simpleTests; let i = index">
-            <input placeholder="Имя теста" [(ngModel)]="t.name" />
-            <select [(ngModel)]="t.type">
-                <option value="primitive">Primitive</option>
-                <option value="array">Array</option>
-            </select>
-            <select *ngIf="t.type === 'primitive'" [(ngModel)]="t.primType">
-                <option value="bool">bool</option>
-                <option value="string">string</option>
-                <option value="int">int</option>
-                <option value="double">double</option>
-            </select>
 
+        <div *ngFor="let t of simpleTests; let i = index" class="simple-test-card"
+            [class.row-mode]="t.showInputsEditor">
+            <div class="simple-test-main">
+                <input placeholder="Имя теста" [(ngModel)]="t.name" [class.invalid]="t.invalidName" />
 
-            <!-- часть шаблона -->
-            <div *ngIf="t.type === 'array'">
-                <p>Добавьте значения</p>
-
-                <!-- гарантируем, что ngFor использует либо массив, либо пустой список -->
-                <div *ngFor="let v of (t.values || []); let vi = index">
-                    <input [(ngModel)]="t.values[vi]" />
+                <div class="row">
+                    <label>Компаратор</label>
+                    <select [(ngModel)]="t.comparator" (ngModelChange)="onComparatorChange(t, $event, i)">
+                        <option *ngFor="let c of comparatorOptions" [value]="c.value">{{ c.label }}</option>
+                    </select>
                 </div>
 
-                <button (click)="addArrayValue(t)">Добавить значение</button>
+                <div class="actions-inline">
+                    <button (click)="removeSimpleTest(i)" [disabled]="simpleTests.length === 1">Удалить тест</button>
+                    <button (click)="toggleInputsEditor(t)">{{ t.showInputsEditor ? 'Скрыть входы' : 'Добавить входные
+                        данные' }}</button>
+                </div>
             </div>
 
+            <!-- inputs editor -->
+            <div class="inputs-editor" *ngIf="t.showInputsEditor">
+                <h5>Входные данные</h5>
 
+                <div *ngIf="parameters.length === 0" class="no-params">
+                    <p class="small-muted">Сигнатура пуста — единичный вход</p>
+                    <div>
+                        <input [(ngModel)]="t.inputs[0]" [class.invalid]="t.invalidInputs" />
+                    </div>
+                </div>
 
+                <div *ngFor="let p of parameters; let pi = index" class="param-input">
+                    <label>{{ p.name }}</label>
 
-            <button (click)="removeSimpleTest(i)">Удалить тест</button>
+                    <!-- primitive param -->
+                    <div *ngIf="p.uiType === 'primitive'">
+                        <select *ngIf="p.uiPrim === 'bool'" [(ngModel)]="t.inputs[pi]"
+                            [class.invalid]="t.invalidInputs">
+                            <option [ngValue]="true">true</option>
+                            <option [ngValue]="false">false</option>
+                        </select>
+                        <input *ngIf="p.uiPrim !== 'bool'" [(ngModel)]="t.inputs[pi]"
+                            [class.invalid]="t.invalidInputs" />
+                    </div>
+
+                    <!-- array param -->
+                    <div *ngIf="p.uiType === 'array'">
+                        <div *ngFor="let el of (t.inputs[pi] || []); let ei = index" class="array-row">
+                            <select *ngIf="p.uiPrim === 'bool'" [(ngModel)]="t.inputs[pi][ei]"
+                                [class.invalid]="t.invalidValues && t.invalidValues[ei]">
+                                <option [ngValue]="true">true</option>
+                                <option [ngValue]="false">false</option>
+                            </select>
+                            <input *ngIf="p.uiPrim !== 'bool'" [(ngModel)]="t.inputs[pi][ei]"
+                                [class.invalid]="t.invalidValues && t.invalidValues[ei]" />
+                            <div class="pm-buttons">
+                                <button class="small" (click)="addArrayElementForParam(t, pi, p.uiPrim)">+</button>
+                                <button class="small" (click)="removeArrayElementForParam(t, pi, ei)"
+                                    [disabled]="(t.inputs[pi]?.length || 0) <= 1">-</button>
+                            </div>
+                        </div>
+                        <div *ngIf="!(t.inputs[pi] && t.inputs[pi].length)">
+                            <div class="array-row">
+                                <input [(ngModel)]="t.inputs[pi][0]" />
+                                <div class="pm-buttons">
+                                    <button class="small" (click)="addArrayElementForParam(t, pi, p.uiPrim)">+</button>
+                                    <button class="small" [disabled]="true">-</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Expected -->
+                <div class="expected-row">
+                    <label>Expected</label>
+
+                    <!-- array expected -->
+                    <div *ngIf="returnType?.kind === 'array'">
+                        <div *ngFor="let ev of (t.expected || []); let evi = index" class="array-row">
+                            <input [(ngModel)]="t.expected[evi]" />
+                            <div class="pm-buttons">
+                                <button class="small" (click)="addExpectedElement(t)">+</button>
+                                <button class="small" (click)="removeExpectedElement(t, evi)"
+                                    [disabled]="(t.expected?.length || 0) <= 1">-</button>
+                            </div>
+                        </div>
+                        <div *ngIf="!(t.expected && t.expected.length)">
+                            <div class="array-row">
+                                <!-- bind to element directly; ensure TS initializes t.expected=[] when opening editor -->
+                                <input [(ngModel)]="t.expected[0]" />
+                                <div class="pm-buttons">
+                                    <button class="small" (click)="addExpectedElement(t)">+</button>
+                                    <button class="small" [disabled]="true">-</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- primitive expected -->
+                    <div *ngIf="returnType && returnType.kind !== 'array'">
+                        <select *ngIf="returnType.name?.toLowerCase() === 'bool'" [(ngModel)]="t.expected">
+                            <option [ngValue]="true">true</option>
+                            <option [ngValue]="false">false</option>
+                        </select>
+                        <input *ngIf="returnType.name?.toLowerCase() !== 'bool'" [(ngModel)]="t.expected" />
+                    </div>
+
+                    <div *ngIf="!returnType">
+                        <input [(ngModel)]="t.expected" />
+                    </div>
+                </div>
+            </div>
         </div>
+
         <button (click)="addSimpleTest()">Добавить тест</button>
     </section>
 
-
+    <!-- Advanced tests -->
     <section class="adv-tests">
         <h4>Advanced Tests</h4>
-        <div *ngFor="let a of advTests; let i = index">
+        <div *ngFor="let a of advTests; let i = index" class="adv-test-card">
             <input placeholder="Имя" [(ngModel)]="a.name" />
-            <select [(ngModel)]="a.language">
+            <select [(ngModel)]="a.languageCode">
                 <option *ngFor="let l of supportedLanguagesOptions" [value]="l.code">{{ l.displayName }}</option>
             </select>
             <textarea [(ngModel)]="a.source" rows="6"></textarea>
-            <button (click)="advTests.splice(i,1)">Удалить</button>
+            <button (click)="removeAdvTest(i)" [disabled]="advTests.length === 1">Удалить</button>
         </div>
         <button (click)="addAdvTest()">Добавить adv тест</button>
     </section>
 
+    <div class="errors" *ngIf="errors && errors.length">
+        <div *ngFor="let e of errors" class="error-item">{{ e }}</div>
+    </div>
 
     <div class="actions">
         <button (click)="saveDraft()">Сохранить черновик</button>

@@ -1,4 +1,28 @@
-# corrected-postgres.yaml
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-postgres-data
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  hostPath:
+    # ЗАМЕНИТЕ путь на ваш:
+    # macOS: /Users/youruser/docker-postgres
+    # Windows (Docker Desktop): /host_mnt/c/Users/youruser/docker-postgres
+    path: /mnt/host/c/users/anton/documents/minikube-volumes/postgres
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgresql
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -161,6 +185,10 @@ spec:
       resources:
         requests:
           storage: 2Gi
+      storageClassName: manual
+      selector:
+        matchLabels:
+          type: local
 ---
 apiVersion: v1
 kind: Service

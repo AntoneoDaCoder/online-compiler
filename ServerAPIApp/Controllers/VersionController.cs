@@ -1,9 +1,11 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
 using ServerAPIApp.Helpers;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ServerAPIApp.Controllers
 {
@@ -12,10 +14,12 @@ namespace ServerAPIApp.Controllers
     public class VersionController : ControllerBase
     {
         private IMediator _mediator;
+        private INotificationService _notifier;
 
-        public VersionController(IMediator mediator)
+        public VersionController(IMediator mediator, INotificationService service)
         {
             _mediator = mediator;
+            _notifier = service;
         }
 
 
@@ -30,6 +34,28 @@ namespace ServerAPIApp.Controllers
             return StatusCode(200, data);
         }
 
+        [Authorize(Policy = "DefaultAccess")]
+        [HttpGet("versions/{id:guid}")]
+        public async Task<IActionResult> GetVersionByIdAsync([FromRoute] Guid id, CancellationToken cancellationToken = default)
+        {
+            var command = new GetPublishedByIdCase(id);
+
+            var data = await _mediator.Send(command, cancellationToken);
+
+            return StatusCode(200, data);
+        }
+
+
+        [Authorize(Policy = "EditorAccess")]
+        [HttpGet("versions/{id:guid}/as-editor")]
+        public async Task<IActionResult> GetEditorVersionByIdAsync([FromRoute] Guid id, CancellationToken cancellationToken = default)
+        {
+            var command = new GetEditorVersionCase(id);
+
+            var data = await _mediator.Send(command, cancellationToken);
+
+            return StatusCode(200, data);
+        }
 
         [Authorize(Policy = "EditorAccess")]
         [HttpPost("problems/{problemId:guid}/versions")]
@@ -41,9 +67,9 @@ namespace ServerAPIApp.Controllers
 
             var data = await _mediator.Send(command, cancellationToken);
 
-            //TODO: notify editors and admins about draft creation
+            await _notifier.NotifyGroupAsync("Editors", "DraftCreated", data, cancellationToken);
 
-            return StatusCode(201, data);
+            return StatusCode(201);
         }
 
         [Authorize(Policy = "EditorAccess")]
@@ -54,11 +80,11 @@ namespace ServerAPIApp.Controllers
 
             var command = new UpdateVersionDraftCase(draftId, problemId, dto.Statement, dto.TotalTests, dto.TestManifest);
 
-            var data = _mediator.Send(command, cancellationToken);
+            await _mediator.Send(command, cancellationToken);
 
-            //TODO: notify editors and admins about draft update
+            await _notifier.NotifyGroupAsync("Editors", "DraftUpdated", draftId, cancellationToken);
 
-            return StatusCode(200, data);
+            return StatusCode(200);
         }
 
         [Authorize(Policy = "EditorAccess")]
@@ -69,7 +95,7 @@ namespace ServerAPIApp.Controllers
 
             await _mediator.Send(command, cancellationToken);
 
-            //TODO: notify editors and admins about draft deletion
+            await _notifier.NotifyGroupAsync("Editors", "DraftDeleted", draftId, cancellationToken);
 
             return StatusCode(204);
         }
@@ -82,10 +108,9 @@ namespace ServerAPIApp.Controllers
 
             var command = new PublishVersionDraftCase(draftId, userId);
 
-            //TODO: get data for USERS and EDITORS
             await _mediator.Send(command, cancellationToken);
 
-            //TODO: notify USERS that problem has been created so problem component updates itself, notify EDITORS that problem has been updated (if it wasn't present create new, otherwise update existing)
+            await _notifier.NotifyGroupAsync("Users", "VersionPublished", draftId, cancellationToken);
 
             return StatusCode(200);
         }

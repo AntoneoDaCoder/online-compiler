@@ -27,7 +27,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Submissions
 
         private static Expression<Func<SubmissionEntity, bool>> BuildFilter(Guid id, IEnumerable<string>? languages, bool? isSuccessful)
         {
-            Expression<Func<SubmissionEntity, bool>> filter = entity => entity.Id == id;
+            Expression<Func<SubmissionEntity, bool>> filter = entity => entity.CreatedBy == id;
 
             if (languages is not null && languages.Any())
             {

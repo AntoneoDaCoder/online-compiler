@@ -1,46 +1,44 @@
 using ServerAPIApp.Core.Extensions;
 using ServerAPIApp.Extensions;
 using System.Security.Cryptography.X509Certificates;
-
-//using ServerAPIApp.Hubs;
+using ServerAPIApp.Hubs;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.WebHost.UseUrls("https://0.0.0.0:8080");
+builder.WebHost.UseUrls("http://0.0.0.0:8080");
 
-builder.WebHost.ConfigureKestrel(serverOptions =>
+//builder.WebHost.ConfigureKestrel(serverOptions =>
+//{
+//    serverOptions.ConfigureHttpsDefaults(httpsOptions =>
+//    {
+//        // .NET 5+ поддерживает PEM
+//        var cert = X509Certificate2.CreateFromPemFile(
+//            "cert.crt",
+//            "key.key"
+//        );
+//        httpsOptions.ServerCertificate = cert;
+//    });
+//});
+
+builder.Services.AddCors(options =>
 {
-    serverOptions.ConfigureHttpsDefaults(httpsOptions =>
+    options.AddPolicy("DevCors", policy =>
     {
-        // .NET 5+ поддерживает PEM
-        var cert = X509Certificate2.CreateFromPemFile(
-            "cert.crt",
-            "key.key"
-        );
-        httpsOptions.ServerCertificate = cert;
+        policy
+            .WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()
+            .SetPreflightMaxAge(TimeSpan.FromSeconds(5));
     });
 });
-
-builder.Services.AddControllers();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
-
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        policy
-            .WithOrigins("http://localhost:4200")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
-});
 
 builder.Services.RegisterServices(builder.Configuration);
 
@@ -50,9 +48,11 @@ builder.Services.AddRoleHandler();
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
-app.UseCors();
+app.UseRouting();
+
+app.UseCors("DevCors");
 
 app.UseAuthentication();
 
@@ -62,8 +62,6 @@ app.ConfigureMiddleware();
 
 app.MapControllers();
 
-//app.MapHub<UserHub>("/hubs/user");
-
-//app.MapHub<AdminHub>("/hubs/admin");
+app.MapHub<UserHub>("/api/hubs/user");
 
 app.Run();

@@ -18,20 +18,19 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
         public async Task Handle(PublishVersionDraftCase command, CancellationToken cancellationToken)
         {
             var entity = await _repo.GetByIdAsync(command.DraftId, isDraft: true, cancellationToken);
-           
+
             if (entity is null)
                 throw new ResourceNotFoundException("Resource not found");
 
             if (string.IsNullOrEmpty(entity.TestTemplateKey))
                 throw new DraftPublishException($"Can't publish {command.DraftId} without tests");
 
-            entity.IsPublished = true;
-            entity.PublishedBy = command.PublisherId;
-
-            var res = await _repo.PublishDraftAsync(entity, cancellationToken);
+            // НЕ менять entity.IsPublished / entity.PublishedBy здесь.
+            var res = await _repo.PublishDraftAsync(command.DraftId, command.PublisherId, cancellationToken);
 
             if (res is null)
                 throw new DraftPublishException($"Failed to publish {command.DraftId}");
         }
+
     }
 }

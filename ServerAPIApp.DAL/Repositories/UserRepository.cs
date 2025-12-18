@@ -96,7 +96,7 @@ namespace ServerAPIApp.DAL.Repositories
                 from r in rj.DefaultIfEmpty()
                 select new { User = u, Role = r.Name };
 
-            var rows = await query.AsNoTracking().ToListAsync(cancellationToken);
+            var rows = await query.ToListAsync(cancellationToken);
 
             if (rows.Count == 0)
                 return (null, null);
@@ -122,7 +122,7 @@ namespace ServerAPIApp.DAL.Repositories
                 from r in rj.DefaultIfEmpty()
                 select new { User = u, Role = r.Name };
 
-            var rows = await query.AsNoTracking().ToListAsync(cancellationToken);
+            var rows = await query.ToListAsync(cancellationToken);
 
             if (rows.Count == 0)
                 return (null, null);

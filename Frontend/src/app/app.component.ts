@@ -1,22 +1,27 @@
-import { Component, OnInit } from '@angular/core';
-import { SignalrService } from './core/services/signalr.service';
+import { Component } from '@angular/core';
+import { Router, RouterOutlet } from '@angular/router';
+import { CommonModule, Location } from '@angular/common';
 import { AuthService } from './core/services/auth.service';
-import { RouterOutlet } from '@angular/router';
-
 
 @Component({
     selector: 'app-root',
-    imports: [RouterOutlet],
-    templateUrl: './app.component.html'
+    templateUrl: './app.component.html',
+    imports: [RouterOutlet, CommonModule]
 })
-export class AppComponent implements OnInit {
-    constructor(private signalr: SignalrService, private auth: AuthService) { }
+export class AppComponent {
+    constructor(private router: Router, private auth: AuthService, private location: Location) { }
 
+    showBack(): boolean {
+        const url = this.router.url || '/';
+        // don't show back on login or main tasks page
+        return !(url === '/' || url.startsWith('/login') || url.startsWith('/tasks'));
+    }
 
-    ngOnInit() {
-        // Если пользователь уже залогинен — стартуем SignalR соединение
-        if (this.auth.isLoggedIn()) {
-            this.signalr.startConnection();
-        }
+    logout() {
+        this.auth.logout();
+    }
+
+    goBack() {
+        this.location.back();
     }
 }

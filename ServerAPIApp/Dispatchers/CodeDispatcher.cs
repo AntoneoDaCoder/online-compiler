@@ -139,7 +139,7 @@ namespace ServerAPIApp.Dispatchers
 
                             if (requestData.NumRetries > MaxRetries)
                             {
-                                await notifier.NotifyFailedAsync(requestData.Body.RequestId, "Exceeded maximum number of retries", cancellationToken);
+                                await notifier.NotifyAsync(requestData.UserId.ToString(), "Exceeded maximum number of retries", cancellationToken);
 
                                 continue;
                             }

@@ -1,7 +1,20 @@
-<div class="profile layout">
-    <h3>Профиль</h3>
-    <div>Имя: {{ name }}</div>
-    <div>Id: {{ id }}</div>
-    <div>Роли: {{ roles.join(', ') }}</div>
+<div class="profile-page">
+    <div class="profile-card card">
+
+
+        <div class="profile-body">
+            <div class="profile-title">
+                <div style="min-width:0">
+                    <h3 title="{{ name }}">{{ name }}</h3>
+                    <div class="profile-id muted">Id: {{ id }}</div>
+                </div>
+            </div>
+
+            <div class="roles" aria-label="Роли пользователя">
+                <span class="tag">{{ roles.join(', ') }}</span>
+            </div>
+        </div>
+    </div>
+
     <app-sidebar></app-sidebar>
 </div>

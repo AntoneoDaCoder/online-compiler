@@ -19,7 +19,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
 
 
         //TODO: move it outta here later
-        private const string DefaultRole = "user";
+        private const string DefaultRole = "User";
 
         public RegisterCaseHandler(IUserRepository repo, IJwtTokenService service, ISecretProtector protector)
         {
@@ -45,7 +45,6 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             {
                 Id = newId,
                 CreatedAt = DateTimeOffset.UtcNow,
-                CreatedBy = Guid.Empty,
                 Name = command.Name,
                 EmailHash = emailHash,
                 EncryptedEmail = _protector.Protect(command.Email),

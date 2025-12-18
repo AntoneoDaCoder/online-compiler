@@ -1,10 +1,25 @@
-<div class="submission-detail layout" *ngIf="submission">
-    <h3>Сабмишн {{ submission.submissionId }}</h3>
-    <div>Slug: {{ submission.problemSlug }}</div>
-    <div>Язык: {{ submission.solutionLanguage }}</div>
-    <div>Код:</div>
-    <pre>{{ submission.solution }}</pre>
-    <div>Пройдено: {{ submission.numPassedTests }} / {{ submission.totalTests }}</div>
-    <button (click)="edit()">Изменить и отправить снова</button>
-    <app-sidebar></app-sidebar>
+<div class="submission-page">
+    <div class="submission-detail card" *ngIf="submission">
+        <div class="header">
+            <h3>Submission: {{ submission.submissionId }}</h3>
+            <div style="margin-top: 1%;"><strong>Жетон задачи:</strong> {{ submission.problemSlug }}</div>
+            <div class="status"><strong>Пройдено тестов/всего:</strong> {{ submission.numPassedTests }}/{{
+                submission.totalTests }}</div>
+            <div><strong>Язык решения:</strong> {{langDisplayName}}</div>
+        </div>
+
+        <div class="body">
+            <div class="code-field">
+                <strong style="margin-bottom: 0.5%;display: block;">Код</strong>
+                <textarea class="code-input" [(ngModel)]="submission.solution"></textarea>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button (click)="onEditVersion()">Изменить</button>
+            <button (click)="onDeleteSubmission()">Удалить</button>
+        </div>
+        <div *ngIf="!submission" class="muted">Загрузка сабмишна...</div>
+    </div>
+    <app-sidebar class="tasks-sidebar"></app-sidebar>
 </div>

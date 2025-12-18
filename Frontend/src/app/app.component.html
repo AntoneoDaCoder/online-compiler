@@ -1,17 +1,16 @@
-<div class="app-shell">
-    <header class="app-header">
+<header class="app-header">
+    <div class="left">
         <a routerLink="/tasks" class="logo">Judge Frontend</a>
-        <nav class="top-nav">
-            <a routerLink="/profile">Профиль</a>
-            <a (click)="void 0">Выйти</a>
-        </nav>
-    </header>
+    </div>
 
+    <div class="center"></div>
 
-    <main class="app-main">
-        <router-outlet></router-outlet>
-    </main>
+    <div class="right">
+        <button *ngIf="showBack()" class="btn-ghost" (click)="goBack()">Назад</button>
+        <button class="btn-ghost" (click)="logout()">Выйти</button>
+    </div>
+</header>
 
-
-    <footer class="app-footer">© Ваш проект</footer>
-</div>
+<main class="app-main container">
+    <router-outlet></router-outlet>
+</main>

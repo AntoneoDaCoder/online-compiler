@@ -2,32 +2,29 @@ package dto
 
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonProperty
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.Serializable
 import java.time.OffsetDateTime
+import java.util.UUID
 
-@Serializable
 data class ProblemSolutionDto(
-    @JsonProperty("RequestId")
-    var RequestId: String? = null,
+    @field:JsonProperty("requestId")
+    var RequestId: UUID? = null,
 
-    @JsonProperty("VersionId")
-    var VersionId: String? = null,
+    @field:JsonProperty("versionId")
+    var VersionId: UUID? = null,
 
-    @JsonProperty("UserId")
-    var UserId: String? = null,
+    @field:JsonProperty("userId")
+    var UserId: UUID? = null,
 
-    @JsonProperty("TestManifestJson")
+    @field:JsonProperty("testManifestJson")
     var TestManifestJson: String? = null,
 
-    @JsonProperty("LanguageCode")
+    @field:JsonProperty("languageCode")
     var LanguageCode: String? = null,
 
-    @JsonProperty("UserSolution")
+    @field:JsonProperty("userSolution")
     var UserSolution: String? = null,
 
-    @Contextual
-    @JsonProperty("SentAt")
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    @field:JsonProperty("sentAt")
+    @field:JsonFormat(shape = JsonFormat.Shape.STRING)
     var SentAt: OffsetDateTime? = null
 )

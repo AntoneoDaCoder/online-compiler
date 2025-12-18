@@ -1,16 +1,62 @@
-<div class="versions-page layout">
-    <h3>Версии задач</h3>
+<div class="tasks-page layout">
+    <div class="tasks-main">
+        <section class="filters card">
+            <input placeholder="Фильтр по problem slug" [(ngModel)]="filterSlug" (input)="applyFilters()" />
 
-    <div *ngFor="let v of filtered" class="version-card">
-        <div>ProblemId: {{ v.problemId }}</div>
-        <div>Version: {{ v.version }}</div>
-        <div>CreatedAt: {{ v.createdAt }}</div>
-        <div>
-            <button (click)="editVersion(v)">Изменить</button>
-            <button (click)="publishVersion(v.versionId || v.id)">Опубликовать</button>
-            <button (click)="deleteVersion(v.versionId || v.id)">Удалить</button>
-        </div>
+            <select [(ngModel)]="showOnlyPublished" (change)="applyFilters()">
+                <option value="all">Все</option>
+                <option value="published">Опубликованные</option>
+                <option value="unpublished">Неопубликованные</option>
+            </select>
+
+            <div class="row">
+                <button (click)="clearFilters()">Очистить</button>
+            </div>
+        </section>
+
+        <section class="problems-list">
+            <div *ngFor="let v of filtered" class="problem-card">
+                <div class="problem-main">
+                    <div class="title">
+                        <!-- показываем идентификатор версии и при возможности заголовок задачи -->
+                        <span *ngIf="v.problem">{{ v.problem.title }} <small class="slug">({{ v.problem.slug
+                                }})</small></span>
+                        <span *ngIf="!v.problem">Problem ID: {{ v.version.problemId }}</span>
+                        <div class="version-id">Version: {{ v.versionKey }}</div>
+                    </div>
+
+                    <div class="langs">
+                        <span *ngIf="v.version.supportedLanguages">
+                            {{ formatSupportedLanguages(v.version.supportedLanguages) }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="problem-meta">
+                    <div class="status">
+                        <span>Статус: {{ v.isPublished ? 'Опубликована' : 'Неопубликована' }}</span>
+                    </div>
+
+                    <div class="actions">
+                        <button *ngIf="v.isPublished" class="btn-solve" (click)="onOpenVersion(v)">
+                            Открыть
+                        </button>
+
+
+                        <button *ngIf="v.isPublished" class="btn-edit" (click)="editVersion(v)">Изменить</button>
+
+                        <ng-container *ngIf="!v.isPublished">
+                            <button class="btn-publish" (click)="publishVersion(v)">Опубликовать</button>
+                            <button class="btn-edit" (click)="editVersion(v)">Изменить</button>
+                            <button class="btn-delete" (click)="deleteVersion(v)">Удалить</button>
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="filtered.length === 0" class="muted small">Нет версий по текущим фильтрам.</div>
+        </section>
     </div>
 
-    <app-sidebar></app-sidebar>
+    <app-sidebar class="tasks-sidebar"></app-sidebar>
 </div>

@@ -8,5 +8,10 @@ namespace ServerAPIApp.Extensions
         {
             return user.Claims.Where(claim => claim.Type == ClaimTypes.Role).Select(c => c.Value).ToList();
         }
+
+        public static string? GetStringUserId(this ClaimsPrincipal user)
+        {
+            return user.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value;
+        }
     }
 }

@@ -5,10 +5,14 @@ import { SidebarComponent } from '../../components/shared/sidebar.component';
 
 @Component({ selector: 'app-profile', templateUrl: './profile.component.html', imports: [SidebarComponent] })
 export class ProfileComponent {
-    name = localStorage.getItem('user_name');
-    id = localStorage.getItem('user_id');
-    roles = JSON.parse(localStorage.getItem('user_roles') || '[]');
+    name = ''
+    id = ''
+    roles: String[] = [];
 
 
-    constructor(private auth: AuthService) { }
+    constructor(private auth: AuthService) {
+        this.name = auth.getName();
+        this.id = auth.getId();
+        this.roles = auth.getRoles();
+    }
 }

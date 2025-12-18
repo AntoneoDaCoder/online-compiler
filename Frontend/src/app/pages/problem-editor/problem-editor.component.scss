@@ -1,0 +1,208 @@
+/* Scoped styles для .problem-editor — без глобальных сбросов */
+.problem-editor {
+    width: 50%;
+    min-width: 360px;
+    margin: 40px auto;
+    background: #fff;
+    padding: 22px;
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* basic inputs inside the component only */
+.problem-editor input,
+.problem-editor textarea,
+.problem-editor select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+}
+
+.problem-editor textarea {
+    resize: vertical;
+}
+
+/* sections stacked vertically with separators */
+.problem-editor section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #e6ecf1;
+}
+
+.problem-editor section:last-of-type {
+    border-bottom: none;
+}
+
+/* helper / adv / sample cards */
+.helper-item,
+.adv-test-card,
+.simple-test-card {
+    background: #fbfdff;
+    border: 1px solid #eef3f6;
+    padding: 12px;
+    border-radius: 8px;
+    display: flex;
+    width: 90%;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* when inputs editor is open — render card as row so right panel appears to the right */
+.simple-test-card.row-mode {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+/* main area inside simple test card */
+.simple-test-main {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 240px;
+}
+
+/* inline rows and small groups */
+.row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.actions-inline {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+/* inputs editor panel (right) */
+.inputs-editor {
+    width: 360px;
+    flex: 0 0 360px;
+    margin-left: 12px;
+    background: #ffffff;
+    border: 1px solid #e8eef6;
+    padding: 12px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* array row with small +/- buttons */
+.array-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.pm-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pm-buttons .small {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: none;
+    background: #2563eb;
+    /* синие кнопки */
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* section-level action buttons */
+.problem-editor section>button,
+.helper-item>button,
+.adv-test-card>button,
+.simple-test-card .actions-inline>button {
+    background: #2563eb;
+    /* синий */
+    color: #fff;
+    border: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.problem-editor .actions button {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* delete disabled look */
+button[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* invalid highlighting */
+input.invalid,
+textarea.invalid,
+select.invalid {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.06);
+}
+
+.array-row input.invalid,
+.array-row select.invalid {
+    border-color: #ef4444;
+}
+
+/* errors list */
+.errors {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.error-item {
+    color: #b91c1c;
+    background: #fff5f5;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #fecaca;
+}
+
+/* small helper text */
+.small-muted {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* responsive: on narrow screens make editor full width and stack inputs editor under the card */
+@media (max-width: 880px) {
+    .problem-editor {
+        width: 92%;
+        margin: 18px auto;
+    }
+
+    .simple-test-card.row-mode {
+        flex-direction: column;
+    }
+
+    .inputs-editor {
+        width: 100%;
+        margin-left: 0;
+        flex-basis: auto;
+    }
+}

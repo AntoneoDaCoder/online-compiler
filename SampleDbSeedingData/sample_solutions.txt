@@ -563,7 +563,7 @@ module.exports = { Solution };
 
 // C#
 public class Solution {
-    public static int[] MergeArrays(int[] arr1, int[] arr2) {
+    public static int[] Solution(int[] arr1, int[] arr2) {
         List<int> list = new List<int>();
         if (arr1 != null) list.AddRange(arr1);
         if (arr2 != null) list.AddRange(arr2);
@@ -576,7 +576,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Solution {
-    public static int[] mergeArrays(int[] arr1, int[] arr2) {
+    public static int[] Solution(int[] arr1, int[] arr2) {
         List<Integer> list = new ArrayList<>();
         if (arr1 != null) {
             for (int num : arr1) list.add(num);
@@ -591,7 +591,7 @@ public class Solution {
 // Kotlin
 class Solution {
     companion object {
-        fun mergeArrays(arr1: IntArray?, arr2: IntArray?): IntArray {
+        fun Solution(arr1: IntArray?, arr2: IntArray?): IntArray {
             val list = mutableListOf<Int>()
             arr1?.forEach { list.add(it) }
             arr2?.forEach { list.add(it) }
@@ -602,7 +602,7 @@ class Solution {
 
 // TypeScript
 export class Solution {
-    static mergeArrays(arr1: number[] | null, arr2: number[] | null): number[] {
+    exports.Solution = async function(arr1: number[] | null, arr2: number[] | null): Promise<number[]>  {
         const result: number[] = [];
         if (arr1) result.push(...arr1);
         if (arr2) result.push(...arr2);
@@ -612,7 +612,7 @@ export class Solution {
 
 // Node.js
 class Solution {
-    static mergeArrays(arr1, arr2) {
+     exports.Solution = async function(arr1, arr2) {
         const result = [];
         if (arr1) result.push(...arr1);
         if (arr2) result.push(...arr2);

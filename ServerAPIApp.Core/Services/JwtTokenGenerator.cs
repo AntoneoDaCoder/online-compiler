@@ -11,13 +11,11 @@ namespace ServerAPIApp.Core.Services
 {
     public class JwtTokenGenerator : IJwtTokenGenerator
     {
-        private const string JwtSecretKey = "JWT_SECRET";
-
         private readonly JwtSettings _jwtSettings;
 
-        public JwtTokenGenerator(IOptions<JwtSettings> jwtSettings)
+        public JwtTokenGenerator(IOptionsMonitor<JwtSettings> jwtSettings)
         {
-            _jwtSettings = jwtSettings.Value;
+            _jwtSettings = jwtSettings.CurrentValue;
         }
 
         public string GenerateAccessToken(IEnumerable<string> roles, Guid userId)
@@ -49,7 +47,7 @@ namespace ServerAPIApp.Core.Services
                 ValidateIssuer = true,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(
-                   Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable(JwtSecretKey)!)),
+                   Encoding.UTF8.GetBytes(_jwtSettings.SecretKey)),
                 ValidateLifetime = false,
                 ValidIssuer = _jwtSettings.ValidIssuer,
                 ValidAudience = _jwtSettings.ValidAudience,
@@ -69,9 +67,9 @@ namespace ServerAPIApp.Core.Services
             throw new SecurityTokenException("Invalid token");
         }
 
-        private static SigningCredentials GetSigningCredentials()
+        private SigningCredentials GetSigningCredentials()
         {
-            var key = Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable(JwtSecretKey)!);
+            var key = Encoding.UTF8.GetBytes(_jwtSettings.SecretKey);
 
             var secret = new SymmetricSecurityKey(key);
 

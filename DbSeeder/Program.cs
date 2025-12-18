@@ -193,6 +193,7 @@ class Program
         {
             var problemRepo = scope.ServiceProvider.GetRequiredService<IProblemRepository>();
             var storage = scope.ServiceProvider.GetRequiredService<IObjectStorage>();
+            var problemLanguageRepo = scope.ServiceProvider.GetRequiredService<IProblemVersionLanguageRepository>();
             // Получим DbContext напрямую для вставки версии и апдейта problem,
             // т.к. репозиторий problemRepo может быть реализован так, что он делает SaveChanges внутри.
             var db = scope.ServiceProvider.GetRequiredService<BaseDbContext>();
@@ -238,19 +239,6 @@ class Program
                     }
                 }
 
-                var langCollection = new List<ProblemVersionLanguage>();
-
-                foreach (var lang in languages)
-                {
-                    var entity = new ProblemVersionLanguage()
-                    {
-                        LanguageId = lang.Id,
-                        VersionId = versionId
-                    };
-
-                    langCollection.Add(entity);
-                }
-
                 // 1) создаём версию-объект (но НЕ привязываем навигационно к problem)
                 var version = new ProblemVersionEntity()
                 {
@@ -261,9 +249,10 @@ class Program
                     CreatedAt = DateTimeOffset.UtcNow,
                     CreatedBy = _adminId,
                     IsPublished = true,
+                    IsDraft = false,
                     PublishedBy = _adminId,
                     TestTemplateKey = key,
-                    TotalTests = (manifest is not null) ? manifest.SampleTests.Count + manifest.AdvancedTests.Count : 0
+                    TotalTests = (manifest is not null) ? manifest.SampleTests.Count + manifest.AdvancedTests.Count : 0,
                 };
 
                 // 2) создаём problem без установки LastPublishedVersion / LastPublishedVersionId (чтобы избежать цикла)
@@ -293,6 +282,19 @@ class Program
                     // Если у вас есть навигационное свойство, не присваивайте объект навигации сразу — достаточно id
                     db.Problems.Update(createdProblem);
                     await db.SaveChangesAsync();
+
+                    foreach (var lang in languages)
+                    {
+                        var entity = new ProblemVersionLanguage()
+                        {
+                            LanguageId = lang.Id,
+                            VersionId = versionId
+                        };
+
+                        await problemLanguageRepo.CreateAsync(entity);
+                    }
+
+
                 }
                 catch (Exception ex)
                 {
