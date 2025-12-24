@@ -2,7 +2,7 @@
     <div class="tasks-main">
         <section class="filters card">
             <input placeholder="Фильтр по slug" [(ngModel)]="filterSlug" (input)="applyFilters()" />
-            <select [(ngModel)]="showOnlyPublished" (change)="applyFilters()">
+            <select *ngIf="adminOrEditor" [(ngModel)]="showOnlyPublished" (change)="applyFilters()">
                 <option value="all">Все</option>
                 <option value="published">Опубликованные</option>
                 <option value="unpublished">Неопубликованные</option>

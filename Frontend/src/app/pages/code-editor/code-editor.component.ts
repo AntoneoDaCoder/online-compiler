@@ -4,9 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { LanguageDto } from '../../core/models/dtos';
-import { parse, v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { SignalrService } from '../../core/services/signalr.service';
+import { NgZone } from '@angular/core';
 
 @Component({
     selector: 'app-code-editor',
@@ -35,7 +36,8 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
         (private api: ApiService,
             private route: ActivatedRoute,
             private router: Router,
-            private signalr: SignalrService) { }
+            private signalr: SignalrService,
+            private ngZone: NgZone) { }
 
     get displayHeading(): string {
         // Формат: Task-<slug>. <Title>
@@ -90,46 +92,46 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
 
         this.codeResponseSubscription.add(
             this.signalr.onCodeResponse$.subscribe(response => {
+                this.ngZone.run(() => {
+                    const parseDateTimeOffset = (dtOffset: any): Date => {
+                        if (!dtOffset) return new Date();
 
-                const parseDateTimeOffset = (dtOffset: any): Date => {
-                    if (!dtOffset) return new Date();
-
-                    // Если это уже строка (ISO)
-                    if (typeof dtOffset === 'string') {
-                        return new Date(dtOffset);
-                    }
-
-                    // Если это объект DateTimeOffset
-                    if (typeof dtOffset === 'object' && dtOffset.DateTime) {
-                        // Комбинируем DateTime и Offset
-                        let dateStr = dtOffset.DateTime;
-
-                        // Добавляем смещение если есть
-                        if (dtOffset.Offset) {
-                            dateStr += dtOffset.Offset;
-                        } else {
-                            dateStr += 'Z'; // UTC по умолчанию
+                        // Если это уже строка (ISO)
+                        if (typeof dtOffset === 'string') {
+                            return new Date(dtOffset);
                         }
 
-                        return new Date(dateStr);
-                    }
+                        // Если это объект DateTimeOffset
+                        if (typeof dtOffset === 'object' && dtOffset.DateTime) {
+                            // Комбинируем DateTime и Offset
+                            let dateStr = dtOffset.DateTime;
 
-                    console.error('Неизвестный формат даты:', dtOffset);
-                    return new Date();
-                };
+                            // Добавляем смещение если есть
+                            if (dtOffset.Offset) {
+                                dateStr += dtOffset.Offset;
+                            } else {
+                                dateStr += 'Z'; // UTC по умолчанию
+                            }
 
-                const requestSentAt = parseDateTimeOffset(response.result.requestSentAt);
-                const responseSentAt = parseDateTimeOffset(response.result.responseSentAt);
+                            return new Date(dateStr);
+                        }
 
-                const elapsedSeconds = (responseSentAt.getTime() - requestSentAt.getTime()) / 1000;
+                        console.error('Неизвестный формат даты:', dtOffset);
+                        return new Date();
+                    };
 
-                this.result = `Status: ${response.result.status}\n\r` +
-                    `Tests passed: ${response.result.passedTests}/${response.result.totalTests}\n\r` +
-                    `Elapsed time: ${elapsedSeconds} sec\n\r`
-                if (response.result.consoleOutput !== null)
-                    this.result += `Console output: \n\r${response.result.consoleOutput}`
-            }
-            )
+                    const requestSentAt = parseDateTimeOffset(response.result.requestSentAt);
+                    const responseSentAt = parseDateTimeOffset(response.result.responseSentAt);
+
+                    const elapsedSeconds = (responseSentAt.getTime() - requestSentAt.getTime()) / 1000;
+
+                    this.result = `Status: ${response.result.status}\n\r` +
+                        `Tests passed: ${response.result.passedTests}/${response.result.totalTests}\n\r` +
+                        `Elapsed time: ${elapsedSeconds} sec\n\r`
+                    if (response.result.consoleOutput !== null)
+                        this.result += `Console output: \n\r${response.result.consoleOutput}`
+                })
+            })
         )
     }
 

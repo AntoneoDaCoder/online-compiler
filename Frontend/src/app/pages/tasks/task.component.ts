@@ -16,11 +16,12 @@ import { Subscription, switchMap } from 'rxjs';
     imports: [CommonModule, FormsModule, RouterModule, SidebarComponent],
     templateUrl: './task.component.html'
 })
-export class TasksComponent implements OnInit,OnDestroy {
+export class TasksComponent implements OnInit, OnDestroy {
     languages: LanguageDto[] = [];
     problems: ProblemDto[] = [];
     filtered: ProblemDto[] = [];
     userRoles: string[] = [];
+    adminOrEditor = false;
 
     private versionPublishedSubscription = new Subscription();
 
@@ -37,7 +38,8 @@ export class TasksComponent implements OnInit,OnDestroy {
     ngOnInit() {
         this.loadInitial();
         this.userRoles = this.auth.getRoles() || [];
-
+        if (this.userRoles.find(x => x === "Admin" || x === "Editor"))
+            this.adminOrEditor = true;
 
         this.versionPublishedSubscription = this.signalr.onVersionPublished.pipe(
             switchMap(response => {

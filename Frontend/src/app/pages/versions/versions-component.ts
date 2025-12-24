@@ -57,8 +57,10 @@ export class VersionsComponent implements OnInit, OnDestroy {
 
         this.draftCreatedSubscription.add(
             this.signalr.onDraftCreated.subscribe(response => {
-                this.versions.push(response);
-                this.applyFilters();
+                this.ngZone.run(() => {
+                    this.versions.push(response);
+                    this.applyFilters();
+                })
             }))
 
         this.draftUpdatedSubscription = this.signalr.onDraftUpdated.pipe(
@@ -67,15 +69,17 @@ export class VersionsComponent implements OnInit, OnDestroy {
                 return this.api.getVersionAsEditor(versionId);
             })
         ).subscribe(version => {
-            var found = this.versions.findIndex(v => v.versionId === version.versionId);
-            if (found > -1) {
-                this.versions[found] = version;
-                this.applyFilters();
-            }
-            else {
-                this.versions.push(version);
-                this.applyFilters();
-            }
+            this.ngZone.run(() => {
+                var found = this.versions.findIndex(v => v.versionId === version.versionId);
+                if (found > -1) {
+                    this.versions[found] = version;
+                    this.applyFilters();
+                }
+                else {
+                    this.versions.push(version);
+                    this.applyFilters();
+                }
+            })
         });
 
         this.draftDeletedSubscription.add(
@@ -90,11 +94,13 @@ export class VersionsComponent implements OnInit, OnDestroy {
 
         this.draftPublishedSubcription.add(
             this.signalr.onVersionPublished.subscribe(response => {
-                var found = this.versions.findIndex(v => v.versionId === response);
-                if (found > -1) {
-                    this.versions[found].isPublished = true;
-                    this.applyFilters();
-                }
+                this.ngZone.run(() => {
+                    var found = this.versions.findIndex(v => v.versionId === response);
+                    if (found > -1) {
+                        this.versions[found].isPublished = true;
+                        this.applyFilters();
+                    }
+                })
             }
             )
         )
