@@ -34,6 +34,9 @@ namespace ServerAPIApp.Core.Extensions
 
             services.Configure<JwtSettings>(jwtSection);
 
+            var keycloakConf = config.GetSection("KeycloakConfiguration");
+            services.Configure<KeycloakConfiguration>(keycloakConf);
+
             services.AddAuthorizationBuilder()
             .AddPolicy("AdminAccess", policy => policy
                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
