@@ -14,6 +14,7 @@
         public string Solution { get; set; } = "Sample solution";
         public int PassedTests { get; set; }
         public int TotalTests { get; set; }
+        //why not language entity lol????
         public string SolutionLanguage { get; set; } = "Sample language";
     }
 }

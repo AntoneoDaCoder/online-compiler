@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ServerAPIApp.Domain.Entities;
 using System.Reflection;
 
 namespace ServerAPIApp.DAL.Contexts
 {
-    public sealed class BaseDbContext : IdentityDbContext<UserEntity, IdentityRole<Guid>, Guid>
+    public sealed class BaseDbContext : DbContext
     {
         public BaseDbContext(DbContextOptions<BaseDbContext> options) : base(options) { }
 
@@ -15,10 +13,12 @@ namespace ServerAPIApp.DAL.Contexts
         public DbSet<ProblemVersionEntity> ProblemVersions { get; set; }
         public DbSet<ProblemVersionLanguage> VersionLanguages { get; set; }
         public DbSet<SubmissionEntity> Submissions { get; set; }
+        public DbSet<UserEntity> Users { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
             base.OnModelCreating(builder);
         }
     }

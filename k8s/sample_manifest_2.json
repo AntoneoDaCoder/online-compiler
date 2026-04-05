@@ -1,0 +1,62 @@
+{
+  "entrypoint": "Solution",
+  "signature": {
+    "returnType": {
+      "kind": "primitive",
+      "name": "int"
+    },
+    "parameters": [
+      {
+        "name": "arr",
+        "type": {
+          "kind": "array",
+          "items": {
+            "kind": "primitive",
+            "name": "int"
+          }
+        }
+      }
+    ]
+  },
+  "sampleTests": [
+    {
+      "name": "test_positive",
+      "inputs": [
+        [
+          5,
+          3,
+          9,
+          1,
+          7
+        ]
+      ],
+      "expected": 9,
+      "comparator": "eq",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_negative",
+      "inputs": [
+        [
+          -5,
+          -3,
+          -9
+        ]
+      ],
+      "expected": -3,
+      "comparator": "eq",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_single",
+      "inputs": [
+        [
+          42
+        ]
+      ],
+      "expected": 42,
+      "comparator": "eq",
+      "timeoutMs": 2000
+    }
+  ]
+}

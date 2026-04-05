@@ -81,7 +81,8 @@ namespace ServerAPIApp.DAL.Confs
 
             b.HasIndex(x => x.Slug).IsUnique().HasDatabaseName("ux_problems_slug");
             b.HasIndex(x => x.CreatedBy).HasDatabaseName("ix_problems_createdby");
-            b.HasIndex(x => x.IsDeleted).HasDatabaseName("ix_problems_isdeleted");
+
+            //REDO MIGRATIONS!!!!!!! (deleted boolean index)
         }
     }
 }

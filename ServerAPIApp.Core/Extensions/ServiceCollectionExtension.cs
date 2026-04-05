@@ -1,17 +1,21 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using FluentValidation;
+using MediatR;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.AuthorizationRequirements;
 using ServerAPIApp.Core.Configs;
+using ServerAPIApp.Core.PipelineBehaviours;
 using ServerAPIApp.Core.Services;
+using ServerAPIApp.Core.UseCaseHandlers.Users;
 using ServerAPIApp.DAL.Extensions;
-using System.Reflection;
-using System.Security.Claims;
-using System.Text;
+using ServerAPIApp.Domain.Constants;
 
 namespace ServerAPIApp.Core.Extensions
 {
@@ -23,30 +27,17 @@ namespace ServerAPIApp.Core.Extensions
             services.ConfigureObjectStorage(config);
             services.ConfigureRepositories();
 
-            var googleSection = config.GetSection("GoogleAuth");
-            var googleSettings = googleSection.Get<GoogleAllowedAudiences>();
-            services.Configure<GoogleAllowedAudiences>(googleSection);
-
-            services.AddScoped<IGoogleAuthTokenValidator, GoogleAuthTokenValidator>();
-
-            var jwtSection = config.GetSection("JwtSettings");
-            var jwtSettings = jwtSection.Get<JwtSettings>();
-
-            services.Configure<JwtSettings>(jwtSection);
-
-            var keycloakConf = config.GetSection("KeycloakConfiguration");
-            services.Configure<KeycloakConfiguration>(keycloakConf);
 
             services.AddAuthorizationBuilder()
             .AddPolicy("AdminAccess", policy => policy
                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
-                   .AddRequirements(new RoleRequirement(["Admin"])))
+                   .AddRequirements(new RoleRequirement([UserRelatedConstants.AdminRoleName])))
             .AddPolicy("DefaultAccess", policy => policy
                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
-                   .AddRequirements(new RoleRequirement(["Admin", "User"])))
+                   .AddRequirements(new RoleRequirement([UserRelatedConstants.AdminRoleName, UserRelatedConstants.DefaultUserRole])))
             .AddPolicy("EditorAccess", policy => policy
                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
-                   .AddRequirements(new RoleRequirement(["Admin", "Editor"])));
+                   .AddRequirements(new RoleRequirement([UserRelatedConstants.AdminRoleName, UserRelatedConstants.EditorRoleName])));
 
 
             services.AddAuthentication(opt =>
@@ -55,47 +46,79 @@ namespace ServerAPIApp.Core.Extensions
                 opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 opt.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
             })
-            .AddJwtBearer(options =>
+            .AddJwtBearer
+              (
+              options =>
+              {
+                  options.Authority = "http://keycloak-server:8081/realms/clinic-app-realm";
+                  //options.Audience = keycloakSettings.ClientId;
+                  options.Audience = "account"; //TODO: CHANGE IT LATER 
+                  options.RequireHttpsMetadata = false;
+                  options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
+                  {
+                      ValidateIssuer = true,
+                      ValidateAudience = true,
+                      ValidateLifetime = true,
+                      ValidateIssuerSigningKey = true,
+                      ValidIssuer = "http://keycloak-server:8081/realms/clinic-app-realm",
+                      ValidAudience = "account",
+                  };
+
+                  options.Events = new JwtBearerEvents
+                  {
+                      OnMessageReceived = context =>
+                      {
+                          string? accessToken = null;
+
+                          if (context.Request.Cookies.TryGetValue("access_token", out var cookieToken) && !string.IsNullOrEmpty(cookieToken))
+                          {
+                              accessToken = cookieToken;
+                          }
+                          else
+                          {
+                              var header = context.Request.Headers["Authorization"].FirstOrDefault();
+                              if (!string.IsNullOrEmpty(header))
+                              {
+                                  accessToken = header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                                      ? header.Substring("Bearer ".Length).Trim()
+                                      : header.Trim();
+                              }
+                          }
+
+                          context.Token = accessToken;
+
+                          return Task.CompletedTask;
+                      },
+                      OnAuthenticationFailed = ctx =>
+                      {
+                          var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("JwtAuth");
+                          logger.LogError(ctx.Exception, "OnAuthenticationFailed");
+                          return Task.CompletedTask;
+                      }
+                  };
+              }
+              );
+
+            services.AddScoped<IClaimsTransformation, KeycloakClaimTransformer>();
+
+            var keycloakConf = config.GetSection("KeycloakConfiguration");
+            services.Configure<KeycloakConfiguration>(keycloakConf);
+            var keycloakSettings = keycloakConf.Get<KeycloakConfiguration>();
+
+            services.AddHttpClient<IExternalAuthService, KeycloakService>((sp, client) =>
             {
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateAudience = true,
-                    ValidateIssuer = true,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                                                Encoding.UTF8.GetBytes(jwtSettings.SecretKey)
-                                                ),
-                    ValidateLifetime = true,
-                    ValidIssuer = jwtSettings.ValidIssuer,
-                    ValidAudience = jwtSettings.ValidAudience,
-                    RoleClaimType = ClaimTypes.Role,
-                };
+                client.BaseAddress = new Uri(keycloakSettings.BaseUrl);
             });
 
-            services.Configure<SecretProtectionOptions>(config.GetSection("SecretProtector"));
-            services.AddSingleton(sp =>
-            {
-                var options = sp.GetRequiredService<IOptions<SecretProtectionOptions>>().Value;
-
-                if (string.IsNullOrWhiteSpace(options.FixedKeyBase64))
-                    throw new InvalidOperationException("SecretProtector:FixedKeyBase64 must be set in configuration.");
-
-                var key = Convert.FromBase64String(options.FixedKeyBase64);
-
-                if (!string.Equals(options.Algorithm, "AesGcm", StringComparison.OrdinalIgnoreCase))
-                    throw new NotSupportedException($"Algorithm '{options.Algorithm}' is not supported.");
-
-                return new SecretProtector(key);
-            });
-            services.AddSingleton<ISecretProtector>(sp => sp.GetRequiredService<SecretProtector>());
-
-            services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
-            services.AddScoped<IJwtTokenService, JwtTokenService>();
 
             services.AddMediatR
                 (
-                cfg => cfg.RegisterServicesFromAssembly(typeof(JwtTokenService).Assembly)
+                cfg => cfg.RegisterServicesFromAssembly(typeof(AddUserToRolesCaseHandler).Assembly)
                 );
+
+            //services.AddValidatorsFromAssembly(typeof(RegisterUserValidator).Assembly);
+
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
 
             return services;
         }

@@ -1,15 +1,15 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace ServerAPIApp.Contracts.DTOs
+namespace ServerAPIApp.Contracts.DTOs.Auth
 {
-    public record KeycloakRoleDto
+    public record ExternalRoleDto
     {
         [JsonPropertyName("id")]
         public string Id { get; } = string.Empty;
         [JsonPropertyName("name")]
         public string RoleName { get; } = string.Empty;
 
-        public KeycloakRoleDto(string id, string roleName)
+        public ExternalRoleDto(string id, string roleName)
         {
             Id = id;
             RoleName = roleName;

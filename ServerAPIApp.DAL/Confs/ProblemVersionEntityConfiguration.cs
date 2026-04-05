@@ -65,8 +65,7 @@ namespace ServerAPIApp.DAL.Confs
                 .IsUnicode(false)
                 .IsRequired(false);
 
-            builder.HasIndex(x => x.ProblemId)
-            .HasDatabaseName("ix_problem_version_problemid");
+            //REMOVED PROBLEMID INDEX BC EF CORE GENERATES IT AUTOMATICALLY
 
             builder.HasIndex(x => x.CreatedBy).HasDatabaseName("ix_problem_versions_createdby");
             builder.HasIndex(x => x.CreatedAt).HasDatabaseName("ix_problem_versions_createdat");
