@@ -1,93 +1,41 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import Keycloak from 'keycloak-js';
 import { environment } from '../../environment';
-import { LoginDataDto } from '../models/dtos';
-import { tap } from 'rxjs/operators';
-import { Subject } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-    private tokenKey = 'access_token'; // оставлено для совместимости имён, но не используется
+  private keycloak: Keycloak = new Keycloak({
+    url: environment.keycloakUrl,
+    realm: environment.keycloakRealm,
+    clientId: environment.keycloakClientId,
+  });
 
-    // in-memory storage (per-tab, lives while page is open)
-    private _accessToken: string | null = null;
-    private _userId: string = '';
-    private _userName: string = '';
-    private _userRoles: string[] = [];
+  private initPromise?: Promise<boolean>;
 
-    private loginSubject = new Subject<void>();
-    private logoutSubject = new Subject<void>();
-
-    public onLogin$ = this.loginSubject.asObservable();
-    public onLogout$ = this.logoutSubject.asObservable();
-
-    constructor(
-        private http: HttpClient,
-        private router: Router
-    ) { }
-
-    login(email: string, password: string) {
-        return this.http.post<LoginDataDto>(`${environment.apiBaseUrl}/auth/login/internal`, { email, password }).pipe(
-            tap(dto => this.handleLogin(dto))
-        );
+  private init(): Promise<boolean> {
+    if (!this.initPromise) {
+      this.initPromise = this.keycloak.init({
+        onLoad: 'check-sso',
+        pkceMethod: 'S256',
+        checkLoginIframe: false,
+      });
     }
 
-    register(email: string, password: string, name: string) {
-        return this.http.post<LoginDataDto>(`${environment.apiBaseUrl}/auth/register`, { email, password, name }).pipe(
-            tap(dto => this.handleLogin(dto))
-        );
-    }
+    return this.initPromise;
+  }
 
-    handleLogin(dto: LoginDataDto) {
-        // save in-memory (per-tab)
-        this._accessToken = dto.accessToken ?? null;
-        this._userName = dto.name ?? '';
-        this._userId = dto.userId ?? '';
-        this._userRoles = dto.roles ? [...dto.roles] : [];
+  async login(redirectUri: string = window.location.href): Promise<void> {
+    await this.init();
+      return await this.keycloak.login({ redirectUri });
+  }
 
-        this.loginSubject.next();
+  async register(redirectUri: string = window.location.href): Promise<void> {
+    await this.init();
+      return await this.keycloak.register({ redirectUri });
+  }
 
-        // navigate to main page
-        this.router.navigate(['/tasks']);
-    }
-
-    logout() {
-        // clear in-memory
-        this._accessToken = null;
-        this._userName = '';
-        this._userId = '';
-        this._userRoles = [];
-
-        // close signalr connection
-        this.logoutSubject.next();
-
-        this.router.navigate(['/login']);
-    }
-
-    getToken(): string | null {
-        return this._accessToken;
-    }
-
-    getId(): string {
-        return this._userId ?? '';
-    }
-
-    getName(): string {
-        return this._userName ?? '';
-    }
-
-    getRoles(): string[] {
-        return Array.isArray(this._userRoles) ? [...this._userRoles] : [];
-    }
-
-    isLoggedIn(): boolean {
-        return !!this.getToken();
-    }
-
-    externalLogin(idToken: string) {
-        return this.http.post<LoginDataDto>(`${environment.apiBaseUrl}/auth/login/external`, { idToken }).pipe(
-            tap(dto => this.handleLogin(dto))
-        );
-    }
+  async logout(redirectUri: string = window.location.origin): Promise<void> {
+    await this.init();
+      return await this.keycloak.logout({ redirectUri });
+  }
 }
