@@ -1,4 +1,3 @@
----
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -9,13 +8,10 @@ spec:
   capacity:
     storage: 2Gi
   accessModes:
-  - ReadWriteOnce
+    - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: manual
   hostPath:
-    # ЗАМЕНИТЕ путь на ваш:
-    # macOS: /Users/youruser/docker-postgres
-    # Windows (Docker Desktop): /host_mnt/c/Users/youruser/docker-postgres
     path: /mnt/host/c/users/anton/documents/minikube-volumes/postgres
     type: DirectoryOrCreate
 ---
@@ -32,16 +28,10 @@ metadata:
 data:
   pg_hba.conf: |+
     # TYPE  DATABASE        USER            ADDRESS                 METHOD
-    host     replication     replicationuser         0.0.0.0/0        md5
     local   all             all                                     trust
     host    all             all             127.0.0.1/32            trust
     host    all             all             ::1/128                 trust
-    local   replication     all                                     trust
-    host    replication     all             127.0.0.1/32            trust
-    host    replication     all             ::1/128                 trust
-    # Allow scram / md5 as configured by application (adjust if needed)
-    host all all all scram-sha-256
-    host replication replicationuser all md5
+    host    all             all             all                     scram-sha-256
 
   postgresql.conf: |+
     data_directory = '/data/pgdata'
@@ -66,25 +56,8 @@ data:
 
     default_text_search_config = 'pg_catalog.english'
 
-    # Replication settings
-    wal_level = replica
-    max_wal_senders = 10
-    wal_keep_size = 128MB
-    hot_standby = on
-
   pg_ident.conf: |+
-    # minimal ident file (empty mapping)
-    # add mappings here if needed
-
-  init-replication-user.sql: |+
-    DO
-    $do$
-    BEGIN
-      IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'replicationuser') THEN
-        CREATE USER replicationuser WITH REPLICATION PASSWORD '${REPLICATION_PASSWORD}';
-      END IF;
-    END
-    $do$;
+    # empty
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -104,91 +77,75 @@ spec:
     spec:
       terminationGracePeriodSeconds: 30
       containers:
-      - name: postgres
-        image: postgres:15.0
-        args: ["-c", "config_file=/config/postgresql.conf"]
-        ports:
-        - containerPort: 5432
-          name: database
-        env:
-        - name: PGDATA
-          value: "/data/pgdata"
-        - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_USER
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_PASSWORD
-        - name: POSTGRES_DB
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_DB
-        - name: POSTGRES_REPLICATION_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_REPLICATION_USER
-        - name: POSTGRES_REPLICATION_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: POSTGRES_REPLICATION_PASSWORD
-        volumeMounts:
+        - name: postgres
+          image: postgres:15.0
+          args: ["-c", "config_file=/config/postgresql.conf"]
+          ports:
+            - containerPort: 5432
+              name: database
+          env:
+            - name: PGDATA
+              value: "/data/pgdata"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: keycloak
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
         - name: config
-          mountPath: /config
-          readOnly: true
-        - name: data
-          mountPath: /data
-          readOnly: false
-        livenessProbe:
-          exec:
-            command:
-            - sh
-            - -c
-            - >
-              exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-        readinessProbe:
-          exec:
-            command:
-            - sh
-            - -c
-            - >
-              exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 3
+          configMap:
+            name: postgres-config
+            defaultMode: 0644
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "100m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-      volumes:
-      - name: config
-        configMap:
-          name: postgres-config
-          defaultMode: 0644
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 2Gi
-      storageClassName: manual
-      selector:
-        matchLabels:
-          type: local
+            storage: 2Gi
+        storageClassName: manual
+        selector:
+          matchLabels:
+            type: local
 ---
 apiVersion: v1
 kind: Service
@@ -199,9 +156,9 @@ metadata:
     app: postgres
 spec:
   ports:
-  - port: 5432
-    targetPort: 5432
-    name: postgres
+    - port: 5432
+      targetPort: 5432
+      name: postgres
   clusterIP: None
   selector:
     app: postgres

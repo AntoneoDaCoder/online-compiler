@@ -20,43 +20,44 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
 
         public async Task<IEnumerable<string>> Handle(AddUserToRolesCase command, CancellationToken cancellationToken)
         {
-            var desiredRoles = command.RolesToAdd.Select(r => r.ToLowerInvariant());
+            //var desiredRoles = command.RolesToAdd.Select(r => r.ToLowerInvariant());
 
-            var (user, existingRoles) = await _repo.GetByIdWithRolesAsync(command.UserId, cancellationToken);
+            //var (user, existingRoles) = await _repo.GetByIdWithRolesAsync(command.UserId, cancellationToken);
 
-            if (user is null)
-                throw new ResourceNotFoundException("Resource not found");
+            //if (user is null)
+            //    throw new ResourceNotFoundException("Resource not found");
 
-            //highly unlikely, but anyway will keep this as fallback logic
-            if (existingRoles is null)
-            {
-                existingRoles = [];
-            }
+            ////highly unlikely, but anyway will keep this as fallback logic
+            //if (existingRoles is null)
+            //{
+            //    existingRoles = [];
+            //}
 
-            if (existingRoles.Count == 0 || !existingRoles.Contains(DefaultRole))
-            {
-                desiredRoles = desiredRoles.Append(DefaultRole);
-            }
+            //if (existingRoles.Count == 0 || !existingRoles.Contains(DefaultRole))
+            //{
+            //    desiredRoles = desiredRoles.Append(DefaultRole);
+            //}
 
-            var rolesToAdd = desiredRoles.Except(existingRoles);
+            //var rolesToAdd = desiredRoles.Except(existingRoles);
 
-            if (!rolesToAdd.Any())
-                throw new RoleUpdateException("Roles were not provided");
+            //if (!rolesToAdd.Any())
+            //    throw new RoleUpdateException("Roles were not provided");
 
-            var res = await _repo.AddToRolesAsync(user, rolesToAdd, cancellationToken);
+            //var res = await _repo.AddToRolesAsync(user, rolesToAdd, cancellationToken);
 
-            if (!res.Succeeded)
-                throw new RoleUpdateException("Failed to update user's roles");
+            //if (!res.Succeeded)
+            //    throw new RoleUpdateException("Failed to update user's roles");
 
-            user.ModifiedAt = DateTimeOffset.UtcNow;
-            user.ModifiedBy = command.EditorId;
+            //user.ModifiedAt = DateTimeOffset.UtcNow;
+            //user.ModifiedBy = command.EditorId;
 
-            var updRes = await _repo.UpdateAsync(user, cancellationToken);
+            //var updRes = await _repo.UpdateAsync(user, cancellationToken);
 
-            if (!updRes.Succeeded)
-                throw new EntityUpdateException("Failed to update user's data");
+            //if (!updRes.Succeeded)
+            //    throw new EntityUpdateException("Failed to update user's data");
 
-            return existingRoles.Union(rolesToAdd);
+            //return existingRoles.Union(rolesToAdd);
+            return [];
         }
     }
 }

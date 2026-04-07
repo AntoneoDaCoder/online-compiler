@@ -304,186 +304,186 @@ class Program
     }
 
 
-    private static async Task SeedUsersAsync(IServiceProvider sp)
-    {
-        await using var scope = sp.CreateAsyncScope();
-        {
-            var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-            var prot = scope.ServiceProvider.GetRequiredService<ISecretProtector>();
+    //private static async Task SeedUsersAsync(IServiceProvider sp)
+    //{
+    //    await using var scope = sp.CreateAsyncScope();
+    //    {
+    //        var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+    //        var prot = scope.ServiceProvider.GetRequiredService<ISecretProtector>();
 
-            IEnumerable<string> roles = ["User", "Admin", "Editor"];
+    //        IEnumerable<string> roles = ["User", "Admin", "Editor"];
 
-            foreach (var role in roles)
-            {
-                if (await repo.GetRoleByNameAsync(role) is not null)
-                    continue;
+    //        foreach (var role in roles)
+    //        {
+    //            if (await repo.GetRoleByNameAsync(role) is not null)
+    //                continue;
 
-                await repo.AddRoleAsync(role);
-            }
+    //            await repo.AddRoleAsync(role);
+    //        }
 
 
-            try
-            {
-                var name = "antoneo228";
-                var mail = "antonurbanovic@gmail.com";
-                var passw = "Abcd12345";
-                var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
+    //        try
+    //        {
+    //            var name = "antoneo228";
+    //            var mail = "antonurbanovic@gmail.com";
+    //            var passw = "Abcd12345";
+    //            var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
 
-                var adminUsr = await repo.GetByHashedEmailAsync(emailHash);
+    //            var adminUsr = await repo.GetByHashedEmailAsync(emailHash);
 
-                if (adminUsr is not null)
-                {
-                    _adminId = adminUsr.Id;
-                }
-                else
-                {
-                    var newId = Guid.NewGuid();
+    //            if (adminUsr is not null)
+    //            {
+    //                _adminId = adminUsr.Id;
+    //            }
+    //            else
+    //            {
+    //                var newId = Guid.NewGuid();
 
-                    var now = DateTimeOffset.UtcNow;
+    //                var now = DateTimeOffset.UtcNow;
 
-                    var newUser = new UserEntity()
-                    {
-                        Id = newId,
-                        CreatedAt = DateTimeOffset.UtcNow,
-                        Name = name,
-                        EmailHash = emailHash,
-                        EncryptedEmail = prot.Protect(mail),
-                        RefreshToken = null,
-                        RefreshTokenExpiryTime = DateTimeOffset.MinValue,
+    //                var newUser = new UserEntity()
+    //                {
+    //                    Id = newId,
+    //                    CreatedAt = DateTimeOffset.UtcNow,
+    //                    Name = name,
+    //                    EmailHash = emailHash,
+    //                    EncryptedEmail = prot.Protect(mail),
+    //                    RefreshToken = null,
+    //                    RefreshTokenExpiryTime = DateTimeOffset.MinValue,
 
-                        SecurityStamp = newId.ToString(),
-                        ConcurrencyStamp = newId.ToString(),
-                        UserName = name,
-                        Email = newId.ToString(),
-                        NormalizedUserName = newId.ToString().ToUpperInvariant(),
-                        NormalizedEmail = newId.ToString().ToUpperInvariant(),
-                        EmailConfirmed = true,
-                        LockoutEnabled = true,
-                        AccessFailedCount = 0,
-                        TwoFactorEnabled = false,
-                        PhoneNumberConfirmed = false,
-                    };
+    //                    SecurityStamp = newId.ToString(),
+    //                    ConcurrencyStamp = newId.ToString(),
+    //                    UserName = name,
+    //                    Email = newId.ToString(),
+    //                    NormalizedUserName = newId.ToString().ToUpperInvariant(),
+    //                    NormalizedEmail = newId.ToString().ToUpperInvariant(),
+    //                    EmailConfirmed = true,
+    //                    LockoutEnabled = true,
+    //                    AccessFailedCount = 0,
+    //                    TwoFactorEnabled = false,
+    //                    PhoneNumberConfirmed = false,
+    //                };
 
-                    var res = await repo.CreateAsync(newUser, passw);
+    //                var res = await repo.CreateAsync(newUser, passw);
 
-                    if (!res.Succeeded)
-                        Console.WriteLine(string.Join('\n', res.Errors));
+    //                if (!res.Succeeded)
+    //                    Console.WriteLine(string.Join('\n', res.Errors));
 
-                    var roleRes = await repo.AddToRolesAsync(newUser, ["User", "Admin", "Editor"]);
+    //                var roleRes = await repo.AddToRolesAsync(newUser, ["User", "Admin", "Editor"]);
 
-                    _adminId = newId;
-                }
-            }
-            catch (ConflictException)
-            {
+    //                _adminId = newId;
+    //            }
+    //        }
+    //        catch (ConflictException)
+    //        {
 
-            }
+    //        }
 
-            try
-            {
-                var name = "test_editor";
-                var mail = "a@gmail.com";
-                var passw = "Abcd12345";
-                var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
+    //        try
+    //        {
+    //            var name = "test_editor";
+    //            var mail = "a@gmail.com";
+    //            var passw = "Abcd12345";
+    //            var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
 
-                var editorUsr = await repo.GetByHashedEmailAsync(emailHash);
+    //            var editorUsr = await repo.GetByHashedEmailAsync(emailHash);
 
-                if (editorUsr is null)
-                {
-                    var newId = Guid.NewGuid();
+    //            if (editorUsr is null)
+    //            {
+    //                var newId = Guid.NewGuid();
 
-                    var now = DateTimeOffset.UtcNow;
+    //                var now = DateTimeOffset.UtcNow;
 
-                    var newUser = new UserEntity()
-                    {
-                        Id = newId,
-                        CreatedAt = DateTimeOffset.UtcNow,
-                        CreatedBy = _adminId,
-                        Name = name,
-                        EmailHash = emailHash,
-                        EncryptedEmail = prot.Protect(mail),
-                        RefreshToken = null,
-                        RefreshTokenExpiryTime = DateTimeOffset.MinValue,
+    //                var newUser = new UserEntity()
+    //                {
+    //                    Id = newId,
+    //                    CreatedAt = DateTimeOffset.UtcNow,
+    //                    CreatedBy = _adminId,
+    //                    Name = name,
+    //                    EmailHash = emailHash,
+    //                    EncryptedEmail = prot.Protect(mail),
+    //                    RefreshToken = null,
+    //                    RefreshTokenExpiryTime = DateTimeOffset.MinValue,
 
-                        SecurityStamp = newId.ToString(),
-                        ConcurrencyStamp = newId.ToString(),
-                        UserName = name,
-                        Email = newId.ToString(),
-                        NormalizedUserName = newId.ToString().ToUpperInvariant(),
-                        NormalizedEmail = newId.ToString().ToUpperInvariant(),
-                        EmailConfirmed = true,
-                        LockoutEnabled = true,
-                        AccessFailedCount = 0,
-                        TwoFactorEnabled = false,
-                        PhoneNumberConfirmed = false,
-                    };
+    //                    SecurityStamp = newId.ToString(),
+    //                    ConcurrencyStamp = newId.ToString(),
+    //                    UserName = name,
+    //                    Email = newId.ToString(),
+    //                    NormalizedUserName = newId.ToString().ToUpperInvariant(),
+    //                    NormalizedEmail = newId.ToString().ToUpperInvariant(),
+    //                    EmailConfirmed = true,
+    //                    LockoutEnabled = true,
+    //                    AccessFailedCount = 0,
+    //                    TwoFactorEnabled = false,
+    //                    PhoneNumberConfirmed = false,
+    //                };
 
-                    var res = await repo.CreateAsync(newUser, passw);
+    //                var res = await repo.CreateAsync(newUser, passw);
 
-                    if (!res.Succeeded)
-                        Console.WriteLine(string.Join('\n', res.Errors));
+    //                if (!res.Succeeded)
+    //                    Console.WriteLine(string.Join('\n', res.Errors));
 
-                    var roleRes = await repo.AddToRolesAsync(newUser, ["User", "Editor"]);
-                }
-            }
-            catch (ConflictException)
-            {
+    //                var roleRes = await repo.AddToRolesAsync(newUser, ["User", "Editor"]);
+    //            }
+    //        }
+    //        catch (ConflictException)
+    //        {
 
-            }
+    //        }
 
-            try
-            {
-                var name = "generic_user";
-                var mail = "b@gmail.com";
-                var passw = "Abcd12345";
-                var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
+    //        try
+    //        {
+    //            var name = "generic_user";
+    //            var mail = "b@gmail.com";
+    //            var passw = "Abcd12345";
+    //            var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
 
-                var genUsr = await repo.GetByHashedEmailAsync(emailHash);
+    //            var genUsr = await repo.GetByHashedEmailAsync(emailHash);
 
-                if (genUsr is null)
-                {
-                    var newId = Guid.NewGuid();
+    //            if (genUsr is null)
+    //            {
+    //                var newId = Guid.NewGuid();
 
-                    var now = DateTimeOffset.UtcNow;
+    //                var now = DateTimeOffset.UtcNow;
 
-                    var newUser = new UserEntity()
-                    {
-                        Id = newId,
-                        CreatedAt = DateTimeOffset.UtcNow,
-                        CreatedBy = _adminId,
-                        Name = name,
-                        EmailHash = emailHash,
-                        EncryptedEmail = prot.Protect(mail),
-                        RefreshToken = null,
-                        RefreshTokenExpiryTime = DateTimeOffset.MinValue,
+    //                var newUser = new UserEntity()
+    //                {
+    //                    Id = newId,
+    //                    CreatedAt = DateTimeOffset.UtcNow,
+    //                    CreatedBy = _adminId,
+    //                    Name = name,
+    //                    EmailHash = emailHash,
+    //                    EncryptedEmail = prot.Protect(mail),
+    //                    RefreshToken = null,
+    //                    RefreshTokenExpiryTime = DateTimeOffset.MinValue,
 
-                        SecurityStamp = newId.ToString(),
-                        ConcurrencyStamp = newId.ToString(),
-                        UserName = name,
-                        Email = newId.ToString(),
-                        NormalizedUserName = newId.ToString().ToUpperInvariant(),
-                        NormalizedEmail = newId.ToString().ToUpperInvariant(),
-                        EmailConfirmed = true,
-                        LockoutEnabled = true,
-                        AccessFailedCount = 0,
-                        TwoFactorEnabled = false,
-                        PhoneNumberConfirmed = false,
-                    };
+    //                    SecurityStamp = newId.ToString(),
+    //                    ConcurrencyStamp = newId.ToString(),
+    //                    UserName = name,
+    //                    Email = newId.ToString(),
+    //                    NormalizedUserName = newId.ToString().ToUpperInvariant(),
+    //                    NormalizedEmail = newId.ToString().ToUpperInvariant(),
+    //                    EmailConfirmed = true,
+    //                    LockoutEnabled = true,
+    //                    AccessFailedCount = 0,
+    //                    TwoFactorEnabled = false,
+    //                    PhoneNumberConfirmed = false,
+    //                };
 
-                    var res = await repo.CreateAsync(newUser, passw);
+    //                var res = await repo.CreateAsync(newUser, passw);
 
-                    if (!res.Succeeded)
-                        Console.WriteLine(string.Join('\n', res.Errors));
+    //                if (!res.Succeeded)
+    //                    Console.WriteLine(string.Join('\n', res.Errors));
 
-                    var roleRes = await repo.AddToRolesAsync(newUser, ["User"]);
-                }
-            }
-            catch (ConflictException)
-            {
+    //                var roleRes = await repo.AddToRolesAsync(newUser, ["User"]);
+    //            }
+    //        }
+    //        catch (ConflictException)
+    //        {
 
-            }
-        }
-    }
+    //        }
+    //    }
+    //}
 
     static IServiceProvider BuildServiceProvider()
     {
@@ -500,23 +500,6 @@ class Program
                 services.ConfigureDbContext(confRoot);
                 services.ConfigureObjectStorage(confRoot);
                 services.ConfigureRepositories();
-
-                services.Configure<SecretProtectionOptions>(confRoot.GetSection("SecretProtector"));
-                services.AddSingleton<ISecretProtector>(sp =>
-                {
-                    var options = sp.GetRequiredService<IOptions<SecretProtectionOptions>>().Value;
-
-                    if (string.IsNullOrWhiteSpace(options.FixedKeyBase64))
-                        throw new InvalidOperationException("SecretProtector:FixedKeyBase64 must be set in configuration.");
-
-                    var key = Convert.FromBase64String(options.FixedKeyBase64);
-
-                    if (!string.Equals(options.Algorithm, "AesGcm", StringComparison.OrdinalIgnoreCase))
-                        throw new NotSupportedException($"Algorithm '{options.Algorithm}' is not supported.");
-
-                    return new SecretProtector(key);
-                });
-
             })
             .Build();
 
@@ -544,15 +527,15 @@ class Program
             return 1;
         }
 
-        try
-        {
-            await SeedUsersAsync(sp);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("[User-Seeding][Error] Failed to seed users. Reason: " + ex);
-            _seedingFailed = true;
-        }
+        //try
+        //{
+        //    await SeedUsersAsync(sp);
+        //}
+        //catch (Exception ex)
+        //{
+        //    Console.WriteLine("[User-Seeding][Error] Failed to seed users. Reason: " + ex);
+        //    _seedingFailed = true;
+        //}
 
 
         IEnumerable<LanguageEntity> actualLanguages = [];

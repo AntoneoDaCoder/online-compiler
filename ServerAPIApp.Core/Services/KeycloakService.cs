@@ -134,10 +134,9 @@ namespace ServerAPIApp.Core.Services
         {
             var formData = new Dictionary<string, string>
             {
-                ["client_id"] = "admin-cli",
-                ["grant_type"] = "password",
-                ["username"] = _configuration.AdminEmail,
-                ["password"] = _configuration.AdminPassword
+                ["client_id"] = _configuration.ApiClientId,
+                ["grant_type"] = "client_credentials",
+                ["client_secret"] = _configuration.ApiClientSecret,
             };
 
             var content = new FormUrlEncodedContent(formData);

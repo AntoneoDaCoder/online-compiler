@@ -5,9 +5,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.AuthorizationRequirements;
 using ServerAPIApp.Core.Configs;
@@ -40,6 +37,15 @@ namespace ServerAPIApp.Core.Extensions
                    .AddRequirements(new RoleRequirement([UserRelatedConstants.AdminRoleName, UserRelatedConstants.EditorRoleName])));
 
 
+            var keycloakConf = config.GetSection("KeycloakConfiguration");
+            services.Configure<KeycloakConfiguration>(keycloakConf);
+            var keycloakSettings = keycloakConf.Get<KeycloakConfiguration>();
+
+            services.AddHttpClient<IExternalAuthService, KeycloakService>((sp, client) =>
+            {
+                client.BaseAddress = new Uri(keycloakSettings.BaseUrl);
+            });
+
             services.AddAuthentication(opt =>
             {
                 opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -50,9 +56,8 @@ namespace ServerAPIApp.Core.Extensions
               (
               options =>
               {
-                  options.Authority = "http://keycloak-server:8081/realms/clinic-app-realm";
-                  //options.Audience = keycloakSettings.ClientId;
-                  options.Audience = "account"; //TODO: CHANGE IT LATER 
+                  options.Authority = keycloakSettings.BaseUrl + "/realms/" + keycloakSettings.Realm;
+                  options.Audience = keycloakSettings.FrontEndClientId;
                   options.RequireHttpsMetadata = false;
                   options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                   {
@@ -60,56 +65,13 @@ namespace ServerAPIApp.Core.Extensions
                       ValidateAudience = true,
                       ValidateLifetime = true,
                       ValidateIssuerSigningKey = true,
-                      ValidIssuer = "http://keycloak-server:8081/realms/clinic-app-realm",
-                      ValidAudience = "account",
-                  };
-
-                  options.Events = new JwtBearerEvents
-                  {
-                      OnMessageReceived = context =>
-                      {
-                          string? accessToken = null;
-
-                          if (context.Request.Cookies.TryGetValue("access_token", out var cookieToken) && !string.IsNullOrEmpty(cookieToken))
-                          {
-                              accessToken = cookieToken;
-                          }
-                          else
-                          {
-                              var header = context.Request.Headers["Authorization"].FirstOrDefault();
-                              if (!string.IsNullOrEmpty(header))
-                              {
-                                  accessToken = header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-                                      ? header.Substring("Bearer ".Length).Trim()
-                                      : header.Trim();
-                              }
-                          }
-
-                          context.Token = accessToken;
-
-                          return Task.CompletedTask;
-                      },
-                      OnAuthenticationFailed = ctx =>
-                      {
-                          var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("JwtAuth");
-                          logger.LogError(ctx.Exception, "OnAuthenticationFailed");
-                          return Task.CompletedTask;
-                      }
+                      ValidIssuer = keycloakSettings.BaseUrl + "/realms/" + keycloakSettings.Realm,
+                      ValidAudience = keycloakSettings.FrontEndClientId
                   };
               }
               );
 
             services.AddScoped<IClaimsTransformation, KeycloakClaimTransformer>();
-
-            var keycloakConf = config.GetSection("KeycloakConfiguration");
-            services.Configure<KeycloakConfiguration>(keycloakConf);
-            var keycloakSettings = keycloakConf.Get<KeycloakConfiguration>();
-
-            services.AddHttpClient<IExternalAuthService, KeycloakService>((sp, client) =>
-            {
-                client.BaseAddress = new Uri(keycloakSettings.BaseUrl);
-            });
-
 
             services.AddMediatR
                 (

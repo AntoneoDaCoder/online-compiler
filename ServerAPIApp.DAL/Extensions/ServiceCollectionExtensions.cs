@@ -1,11 +1,9 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.DAL.Contexts;
 using ServerAPIApp.DAL.Repositories;
-using ServerAPIApp.Domain.Entities;
 
 namespace ServerAPIApp.DAL.Extensions
 {
@@ -17,19 +15,6 @@ namespace ServerAPIApp.DAL.Extensions
                 (
                     options => options.UseNpgsql(conf.GetConnectionString("DbConnectionString"))
                 );
-
-            services.AddIdentity<UserEntity, IdentityRole<Guid>>
-                (
-                    options =>
-                    {
-                        options.Password.RequireDigit = true;
-                        options.Password.RequireUppercase = true;
-                        options.Password.RequiredLength = 8;
-                        options.Password.RequireNonAlphanumeric = false;
-                    }
-                )
-                .AddEntityFrameworkStores<BaseDbContext>()
-                .AddDefaultTokenProviders();
         }
 
         public static void ConfigureRepositories(this IServiceCollection services)

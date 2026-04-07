@@ -55,17 +55,28 @@ deploy: bake set-composite-config
 
 	@echo [93mSetting up PostgreSQL...[0m
 	@cd $(ROOT_DIR) && \
-	kubectl create ns postgresql || true && \
+	kubectl create ns postgresql --dry-run=client -o yaml | kubectl apply -f - && \
 	kubectl -n postgresql delete secret postgres-secret --ignore-not-found && \
 	kubectl -n postgresql create secret generic postgres-secret \
 	  --from-literal=POSTGRES_USER=postgresadmin \
-	  --from-literal=POSTGRES_PASSWORD=admin123 \
-	  --from-literal=POSTGRES_DB=postgresdb \
-	  --from-literal=POSTGRES_REPLICATION_USER=replicationuser \
-	  --from-literal=POSTGRES_REPLICATION_PASSWORD=replicationPassword && \
+	  --from-literal=POSTGRES_PASSWORD=admin123 && \
 	kubectl -n postgresql apply -f k8s/postgres-statefulset.yaml && \
 	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=300s
 	@echo [92mPostgreSQL deployed and ready![0m
+
+	@echo [93mSetting up Keycloak...[0m
+	@cd $(ROOT_DIR) && \
+	kubectl create ns keycloak --dry-run=client -o yaml | kubectl apply -f - && \
+	kubectl -n keycloak delete secret keycloak-admin-secret keycloak-db-secret --ignore-not-found && \
+	kubectl -n keycloak create secret generic keycloak-admin-secret \
+	  --from-literal=KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+	  --from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD=admin123 && \
+	kubectl -n keycloak create secret generic keycloak-db-secret \
+	  --from-literal=KC_DB_USERNAME=postgresadmin \
+	  --from-literal=KC_DB_PASSWORD=admin123 && \
+	kubectl -n keycloak apply -f k8s/keycloak.yaml && \
+	kubectl -n keycloak rollout status deploy/keycloak --timeout=300s
+	@echo [92mKeycloak deployed and ready![0m
 	
 	@echo [93mSetting up MinIO...[0m
 	@cd $(ROOT_DIR) && \

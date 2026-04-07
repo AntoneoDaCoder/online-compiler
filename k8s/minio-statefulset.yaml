@@ -13,9 +13,6 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: manual
   hostPath:
-    # ЗАМЕНИТЕ путь на ваш:
-    # macOS: /Users/youruser/minio-data
-    # Windows (Docker Desktop): /host_mnt/c/Users/youruser/minio-data
     path: /mnt/host/c/users/anton/documents/minikube-volumes/minio
     type: DirectoryOrCreate
 ---
