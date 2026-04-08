@@ -493,6 +493,7 @@ class Program
                 var confRoot = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false)
+                .AddEnvironmentVariables()
                 .Build();
 
                 services.AddSingleton<IConfiguration>(confRoot);

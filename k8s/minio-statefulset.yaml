@@ -1,4 +1,3 @@
----
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -9,12 +8,27 @@ spec:
   capacity:
     storage: 5Gi
   accessModes:
-  - ReadWriteOnce
+    - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   storageClassName: manual
   hostPath:
-    path: /mnt/host/c/users/anton/documents/minikube-volumes/minio
+    path: /minio-data
     type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-minio-data
+  namespace: minio
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
 ---
 apiVersion: v1
 kind: Namespace
@@ -34,7 +48,7 @@ data:
     until mc alias set myminio http://minio.minio.svc.cluster.local:9000 \
       "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"; do
       echo "Waiting for MinIO service..."
-      sleep 1
+      sleep 2
     done
 
     if mc ls myminio/manifestbucket >/dev/null 2>&1; then
@@ -51,11 +65,11 @@ metadata:
   name: minio
   namespace: minio
 spec:
+  serviceName: minio
+  replicas: 1
   selector:
     matchLabels:
       app: minio
-  serviceName: "minio"
-  replicas: 1
   template:
     metadata:
       labels:
@@ -63,81 +77,73 @@ spec:
     spec:
       terminationGracePeriodSeconds: 30
       containers:
-      - name: minio
-        image: minio/minio:latest
-        args: ["server", "/data", "--console-address", ":9001"]
-        ports:
-        - containerPort: 9000
-          name: api
-        - containerPort: 9001
-          name: console
-        env:
-        - name: MINIO_ROOT_USER
-          valueFrom:
-            secretKeyRef:
-              name: minio-secret
-              key: MINIO_ROOT_USER
-        - name: MINIO_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: minio-secret
-              key: MINIO_ROOT_PASSWORD
-        - name: MINIO_BROWSER
-          value: "on"
-        volumeMounts:
-        - name: data
-          mountPath: /data
-        - name: config
-          mountPath: /config
-        livenessProbe:
-          httpGet:
-            path: /minio/health/live
-            port: 9000
-          initialDelaySeconds: 30
-          periodSeconds: 20
-        readinessProbe:
-          httpGet:
-            path: /minio/health/ready
-            port: 9000
-          initialDelaySeconds: 20
-          periodSeconds: 15
+        - name: minio
+          image: minio/minio:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - server
+            - /data
+            - --console-address
+            - ":9001"
+          ports:
+            - containerPort: 9000
+              name: api
+            - containerPort: 9001
+              name: console
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_PASSWORD
+            - name: MINIO_BROWSER
+              value: "on"
+          volumeMounts:
+            - name: minio-storage
+              mountPath: /data
+            - name: config
+              mountPath: /config
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: 9000
+            initialDelaySeconds: 20
+            periodSeconds: 15
       volumes:
-      - name: config
-        configMap:
-          name: minio-config
-          defaultMode: 0755
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-      labels:
-        type: local
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 5Gi
-      storageClassName: manual
-      selector:
-        matchLabels:
-          type: local
+        - name: minio-storage
+          persistentVolumeClaim:
+            claimName: pvc-minio-data
+        - name: config
+          configMap:
+            name: minio-config
+            defaultMode: 0755
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: minio
   namespace: minio
-  labels:
-    app: minio
 spec:
-  ports:
-  - port: 9000
-    targetPort: 9000
-    name: api
-  - port: 9001
-    targetPort: 9001
-    name: console
   selector:
     app: minio
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
 ---
 apiVersion: batch/v1
 kind: Job
@@ -150,28 +156,28 @@ spec:
     spec:
       restartPolicy: OnFailure
       containers:
-      - name: mc
-        image: minio/mc:latest
-        env:
-        - name: MINIO_ROOT_USER
-          valueFrom:
-            secretKeyRef:
-              name: minio-secret
-              key: MINIO_ROOT_USER
-        - name: MINIO_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: minio-secret
-              key: MINIO_ROOT_PASSWORD
-        volumeMounts:
-        - name: config
-          mountPath: /config
-        command:
-        - sh
-        - -c
-        - /config/create-bucket.sh
+        - name: mc
+          image: minio/mc:latest
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_PASSWORD
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          command:
+            - sh
+            - -c
+            - /config/create-bucket.sh
       volumes:
-      - name: config
-        configMap:
-          name: minio-config
-          defaultMode: 0755
+        - name: config
+          configMap:
+            name: minio-config
+            defaultMode: 0755

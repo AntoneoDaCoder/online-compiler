@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: db-seeder
-  namespace: postgresql   # <--- ensure job runs in the same ns as postgres-secret
+  namespace: postgresql
 spec:
   ttlSecondsAfterFinished: 3600
   backoffLimit: 0
@@ -14,7 +14,7 @@ spec:
         image: db-seeder:local
         env:
         - name: POSTGRES_HOST
-          value: "postgres.postgresql.svc.cluster.local"   # correct namespace
+          value: "postgres.postgresql.svc.cluster.local"
         - name: POSTGRES_DB
           value: "postgresdb"
         - name: POSTGRES_USER
@@ -27,15 +27,20 @@ spec:
             secretKeyRef:
               name: postgres-secret
               key: POSTGRES_PASSWORD
-        - name: MINIO_ENDPOINT
+        - name: ConnectionStrings__DbConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: seeder-secret
+              key: ConnectionString
+        - name: Minio__Endpoint
           value: "minio.minio.svc.cluster.local:9000"
-        - name: MINIO_ACCESS_KEY
+        - name: Minio__AccessKey
           valueFrom:
             secretKeyRef:
-              name: minio-secret
+              name: seeder-secret
               key: ACCESS_KEY
-        - name: MINIO_SECRET_KEY
+        - name: Minio__SecretKey
           valueFrom:
             secretKeyRef:
-              name: minio-secret
+              name: seeder-secret
               key: SECRET_KEY

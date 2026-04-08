@@ -3,26 +3,6 @@ kind: Namespace
 metadata:
   name: keycloak
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: keycloak-admin-secret
-  namespace: keycloak
-type: Opaque
-stringData:
-  KC_BOOTSTRAP_ADMIN_USERNAME: admin
-  KC_BOOTSTRAP_ADMIN_PASSWORD: admin123
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: keycloak-db-secret
-  namespace: keycloak
-type: Opaque
-stringData:
-  KC_DB_USERNAME: postgresadmin
-  KC_DB_PASSWORD: admin123
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,7 +20,7 @@ spec:
     spec:
       containers:
         - name: keycloak
-          image: quay.io/keycloak/keycloak:26.0.8
+          image: quay.io/keycloak/keycloak:latest
           imagePullPolicy: IfNotPresent
           args:
             - start
@@ -51,16 +31,31 @@ spec:
               containerPort: 8080
             - name: management
               containerPort: 9000
-          envFrom:
-            - secretRef:
-                name: keycloak-admin-secret
-            - secretRef:
-                name: keycloak-db-secret
           env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin-secret 
+                  key: KC_BOOTSTRAP_ADMIN_USERNAME
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin-secret 
+                  key: KC_BOOTSTRAP_ADMIN_PASSWORD
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-db-secret 
+                  key: KC_DB_USERNAME
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-db-secret 
+                  key: KC_DB_PASSWORD
             - name: KC_DB
               value: postgres
             - name: KC_DB_URL
-              value: jdbc:postgresql://postgres.postgresql.svc.cluster.local:5432/keycloak
+              value: jdbc:postgresql://postgres.postgresql.svc.cluster.local:5432/keycloakdb
             - name: KC_HEALTH_ENABLED
               value: "true"
             - name: KC_METRICS_ENABLED

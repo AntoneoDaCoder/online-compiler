@@ -1,6 +1,5 @@
 using ServerAPIApp.Core.Extensions;
 using ServerAPIApp.Extensions;
-using System.Security.Cryptography.X509Certificates;
 using ServerAPIApp.Hubs;
 using System.Text.Json.Serialization;
 

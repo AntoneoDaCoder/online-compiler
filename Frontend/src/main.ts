@@ -1,6 +1,4 @@
-import { provideZoneChangeDetection } from "@angular/core";
-// src/main.ts
-import { enableProdMode } from '@angular/core';
+import { enableProdMode, provideZoneChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
@@ -18,13 +16,9 @@ if (environment.production) {
 bootstrapApplication(AppComponent, {
   providers: [
     provideZoneChangeDetection(),
-    provideHttpClient(),
     provideRouter(appRoutes),
-
-    // HttpClient + DI interceptors
     provideHttpClient(withInterceptorsFromDi()),
 
-    // JWT interceptor
     { provide: HTTP_INTERCEPTORS, useClass: JwtInterceptor, multi: true }
   ]
 }).catch(err => console.error(err));
