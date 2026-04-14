@@ -12,8 +12,6 @@
         public Guid? ModifiedBy { get; set; }
         public UserEntity? Editor { get; set; }
 
-        public string Name { get; set; }
-
         public bool IsDeleted { get; set; } = false;
         public DateTimeOffset? DeletionScheduledAt { get; set; }
         public DateTimeOffset? DeletionDeadline { get; set; }

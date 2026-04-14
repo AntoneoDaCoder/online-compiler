@@ -118,7 +118,8 @@ ifeq ($(FIRST_RUN),1)
 	kubectl -n postgresql create secret generic seeder-secret \
   	  --from-literal=ACCESS_KEY=minioadmin \
   	  --from-literal=SECRET_KEY=minioadmin123 \
-	  --from-literal=ConnectionString="Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=onlinecompilerdb;Username=postgresadmin;Password=admin123" && \
+	  --from-literal=ConnectionString="Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=onlinecompilerdb;Username=postgresadmin;Password=admin123" \
+	  --from-literal=ApiClientSecret=unHsofo6LqyFWYiLFw8xynTdFhGM1grs && \
 	kubectl -n postgresql apply -f k8s/db-seeder-job.yaml && \
 	kubectl -n postgresql wait --for=condition=complete --timeout=300s job/db-seeder && \
 	echo [92mdb-seeder job completed successfully![0m || \

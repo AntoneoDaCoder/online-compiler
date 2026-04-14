@@ -32,6 +32,11 @@ spec:
             secretKeyRef:
               name: seeder-secret
               key: ConnectionString
+        - name: KeycloakConfiguration__ApiClientSecret
+          valueFrom:
+            secretKeyRef:
+              name: seeder-secret
+              key: ApiClientSecret
         - name: Minio__Endpoint
           value: "minio.minio.svc.cluster.local:9000"
         - name: Minio__AccessKey

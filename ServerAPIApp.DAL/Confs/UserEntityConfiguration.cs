@@ -19,11 +19,6 @@ namespace ServerAPIApp.DAL.Confs
                 .IsRequired()
                 .HasColumnName("external_provider_id");
 
-            builder.Property(u => u.Name)
-             .HasMaxLength(200)
-             .HasColumnName("name")
-             .IsRequired();
-
             builder.Property(u => u.CreatedAt)
              .HasColumnName("created_at")
              .IsRequired(false);

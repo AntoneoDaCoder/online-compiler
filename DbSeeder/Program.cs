@@ -2,15 +2,14 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.Configs;
 using ServerAPIApp.Core.Services;
 using ServerAPIApp.DAL.Contexts;
 using ServerAPIApp.DAL.Extensions;
+using ServerAPIApp.Domain.Constants;
 using ServerAPIApp.Domain.Entities;
-using ServerAPIApp.Domain.Exceptions.ConflictExceptions;
 using Shared.DTOs;
 using Shared.Helpers;
 using System.Text.Json;
@@ -191,10 +190,11 @@ class Program
         await using (var scope = sp.CreateAsyncScope())
         {
             var problemRepo = scope.ServiceProvider.GetRequiredService<IProblemRepository>();
+
             var storage = scope.ServiceProvider.GetRequiredService<IObjectStorage>();
+
             var problemLanguageRepo = scope.ServiceProvider.GetRequiredService<IProblemVersionLanguageRepository>();
-            // Получим DbContext напрямую для вставки версии и апдейта problem,
-            // т.к. репозиторий problemRepo может быть реализован так, что он делает SaveChanges внутри.
+
             var db = scope.ServiceProvider.GetRequiredService<BaseDbContext>();
 
             var languages = await db.Languages.ToListAsync();
@@ -304,186 +304,59 @@ class Program
     }
 
 
-    //private static async Task SeedUsersAsync(IServiceProvider sp)
-    //{
-    //    await using var scope = sp.CreateAsyncScope();
-    //    {
-    //        var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-    //        var prot = scope.ServiceProvider.GetRequiredService<ISecretProtector>();
+    private static async Task SeedUsersAsync(IServiceProvider sp)
+    {
+        await using var scope = sp.CreateAsyncScope();
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
 
-    //        IEnumerable<string> roles = ["User", "Admin", "Editor"];
+            var keycloakSvc = scope.ServiceProvider.GetRequiredService<IExternalAuthService>();
 
-    //        foreach (var role in roles)
-    //        {
-    //            if (await repo.GetRoleByNameAsync(role) is not null)
-    //                continue;
+            var adminRole = UserRelatedConstants.AdminRoleName;
 
-    //            await repo.AddRoleAsync(role);
-    //        }
+            try
+            {
+                var name = "antoneo228";
+                var mail = "a@gmail.com";
+                var passw = "abcd123";
 
+                Guid adminId;
+                string providerId;
 
-    //        try
-    //        {
-    //            var name = "antoneo228";
-    //            var mail = "antonurbanovic@gmail.com";
-    //            var passw = "Abcd12345";
-    //            var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
+                var userData = await keycloakSvc.GetUserByEmailAsync(mail);
 
-    //            var adminUsr = await repo.GetByHashedEmailAsync(emailHash);
+                if (userData is null)
+                {
+                    adminId = await keycloakSvc.CreateUserWithRolesAsync(mail, name, passw, [adminRole]);
+                    providerId = adminId.ToString();
+                }
+                else
+                {
+                    adminId = Guid.Parse(userData.Id);
+                    providerId = userData.Id;
+                }
 
-    //            if (adminUsr is not null)
-    //            {
-    //                _adminId = adminUsr.Id;
-    //            }
-    //            else
-    //            {
-    //                var newId = Guid.NewGuid();
+                var localAccount = await repo.GetByIdAsync(adminId);
 
-    //                var now = DateTimeOffset.UtcNow;
+                if (localAccount is null || localAccount.ExternalProviderId != providerId)
+                {
+                    var newAccount = new UserEntity()
+                    {
+                        Id = adminId,
+                        ExternalProviderId = providerId
+                    };
 
-    //                var newUser = new UserEntity()
-    //                {
-    //                    Id = newId,
-    //                    CreatedAt = DateTimeOffset.UtcNow,
-    //                    Name = name,
-    //                    EmailHash = emailHash,
-    //                    EncryptedEmail = prot.Protect(mail),
-    //                    RefreshToken = null,
-    //                    RefreshTokenExpiryTime = DateTimeOffset.MinValue,
+                    await repo.CreateAsync(newAccount);
+                }
 
-    //                    SecurityStamp = newId.ToString(),
-    //                    ConcurrencyStamp = newId.ToString(),
-    //                    UserName = name,
-    //                    Email = newId.ToString(),
-    //                    NormalizedUserName = newId.ToString().ToUpperInvariant(),
-    //                    NormalizedEmail = newId.ToString().ToUpperInvariant(),
-    //                    EmailConfirmed = true,
-    //                    LockoutEnabled = true,
-    //                    AccessFailedCount = 0,
-    //                    TwoFactorEnabled = false,
-    //                    PhoneNumberConfirmed = false,
-    //                };
-
-    //                var res = await repo.CreateAsync(newUser, passw);
-
-    //                if (!res.Succeeded)
-    //                    Console.WriteLine(string.Join('\n', res.Errors));
-
-    //                var roleRes = await repo.AddToRolesAsync(newUser, ["User", "Admin", "Editor"]);
-
-    //                _adminId = newId;
-    //            }
-    //        }
-    //        catch (ConflictException)
-    //        {
-
-    //        }
-
-    //        try
-    //        {
-    //            var name = "test_editor";
-    //            var mail = "a@gmail.com";
-    //            var passw = "Abcd12345";
-    //            var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
-
-    //            var editorUsr = await repo.GetByHashedEmailAsync(emailHash);
-
-    //            if (editorUsr is null)
-    //            {
-    //                var newId = Guid.NewGuid();
-
-    //                var now = DateTimeOffset.UtcNow;
-
-    //                var newUser = new UserEntity()
-    //                {
-    //                    Id = newId,
-    //                    CreatedAt = DateTimeOffset.UtcNow,
-    //                    CreatedBy = _adminId,
-    //                    Name = name,
-    //                    EmailHash = emailHash,
-    //                    EncryptedEmail = prot.Protect(mail),
-    //                    RefreshToken = null,
-    //                    RefreshTokenExpiryTime = DateTimeOffset.MinValue,
-
-    //                    SecurityStamp = newId.ToString(),
-    //                    ConcurrencyStamp = newId.ToString(),
-    //                    UserName = name,
-    //                    Email = newId.ToString(),
-    //                    NormalizedUserName = newId.ToString().ToUpperInvariant(),
-    //                    NormalizedEmail = newId.ToString().ToUpperInvariant(),
-    //                    EmailConfirmed = true,
-    //                    LockoutEnabled = true,
-    //                    AccessFailedCount = 0,
-    //                    TwoFactorEnabled = false,
-    //                    PhoneNumberConfirmed = false,
-    //                };
-
-    //                var res = await repo.CreateAsync(newUser, passw);
-
-    //                if (!res.Succeeded)
-    //                    Console.WriteLine(string.Join('\n', res.Errors));
-
-    //                var roleRes = await repo.AddToRolesAsync(newUser, ["User", "Editor"]);
-    //            }
-    //        }
-    //        catch (ConflictException)
-    //        {
-
-    //        }
-
-    //        try
-    //        {
-    //            var name = "generic_user";
-    //            var mail = "b@gmail.com";
-    //            var passw = "Abcd12345";
-    //            var emailHash = CryptoHelpers.ComputeSha256Hex(mail);
-
-    //            var genUsr = await repo.GetByHashedEmailAsync(emailHash);
-
-    //            if (genUsr is null)
-    //            {
-    //                var newId = Guid.NewGuid();
-
-    //                var now = DateTimeOffset.UtcNow;
-
-    //                var newUser = new UserEntity()
-    //                {
-    //                    Id = newId,
-    //                    CreatedAt = DateTimeOffset.UtcNow,
-    //                    CreatedBy = _adminId,
-    //                    Name = name,
-    //                    EmailHash = emailHash,
-    //                    EncryptedEmail = prot.Protect(mail),
-    //                    RefreshToken = null,
-    //                    RefreshTokenExpiryTime = DateTimeOffset.MinValue,
-
-    //                    SecurityStamp = newId.ToString(),
-    //                    ConcurrencyStamp = newId.ToString(),
-    //                    UserName = name,
-    //                    Email = newId.ToString(),
-    //                    NormalizedUserName = newId.ToString().ToUpperInvariant(),
-    //                    NormalizedEmail = newId.ToString().ToUpperInvariant(),
-    //                    EmailConfirmed = true,
-    //                    LockoutEnabled = true,
-    //                    AccessFailedCount = 0,
-    //                    TwoFactorEnabled = false,
-    //                    PhoneNumberConfirmed = false,
-    //                };
-
-    //                var res = await repo.CreateAsync(newUser, passw);
-
-    //                if (!res.Succeeded)
-    //                    Console.WriteLine(string.Join('\n', res.Errors));
-
-    //                var roleRes = await repo.AddToRolesAsync(newUser, ["User"]);
-    //            }
-    //        }
-    //        catch (ConflictException)
-    //        {
-
-    //        }
-    //    }
-    //}
+                _adminId = adminId;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[WARN] Failed to create admin account. Details: " + ex.Message);
+            }
+        }
+    }
 
     static IServiceProvider BuildServiceProvider()
     {
@@ -501,6 +374,17 @@ class Program
                 services.ConfigureDbContext(confRoot);
                 services.ConfigureObjectStorage(confRoot);
                 services.ConfigureRepositories();
+
+                var keycloakConf = confRoot.GetSection("KeycloakConfiguration");
+
+                services.Configure<KeycloakConfiguration>(keycloakConf);
+
+                var keycloakSettings = keycloakConf.Get<KeycloakConfiguration>();
+
+                services.AddHttpClient<IExternalAuthService, KeycloakService>((sp, client) =>
+                {
+                    client.BaseAddress = new Uri(keycloakSettings.BaseUrl);
+                });
             })
             .Build();
 
@@ -528,15 +412,15 @@ class Program
             return 1;
         }
 
-        //try
-        //{
-        //    await SeedUsersAsync(sp);
-        //}
-        //catch (Exception ex)
-        //{
-        //    Console.WriteLine("[User-Seeding][Error] Failed to seed users. Reason: " + ex);
-        //    _seedingFailed = true;
-        //}
+        try
+        {
+            await SeedUsersAsync(sp);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("[User-Seeding][Error] Failed to seed users. Reason: " + ex);
+            _seedingFailed = true;
+        }
 
 
         IEnumerable<LanguageEntity> actualLanguages = [];

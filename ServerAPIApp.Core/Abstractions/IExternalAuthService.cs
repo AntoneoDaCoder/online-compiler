@@ -5,6 +5,8 @@ namespace ServerAPIApp.Core.Abstractions
     public interface IExternalAuthService
     {
         Task<ExternalUserResponseDto?> GetUserByEmailAsync(string email, CancellationToken cancellationToken = default);
+        Task<Guid> CreateUserWithRolesAsync(string email, string username, string password, IEnumerable<string> roles,
+            CancellationToken cancellationToken = default);
 
         Task DeleteAccountAsync(string keycloakAccountId, CancellationToken cancellationToken = default);
 

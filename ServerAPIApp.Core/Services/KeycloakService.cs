@@ -1,11 +1,12 @@
-﻿using ServerAPIApp.Core.Abstractions;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
+using ServerAPIApp.Contracts.DTOs.Auth;
+using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.Configs;
 using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using ServerAPIApp.Contracts.DTOs.Auth;
 
 namespace ServerAPIApp.Core.Services
 {
@@ -46,6 +47,51 @@ namespace ServerAPIApp.Core.Services
                 ?? throw new InvalidOperationException("Failed to deserialize user response");
 
             return users.FirstOrDefault();
+        }
+
+        public async Task<Guid> CreateUserWithRolesAsync(string email, string username, string password,
+            IEnumerable<string> roles, CancellationToken cancellationToken = default)
+        {
+            var adminToken = await GetAdminTokenAsync(cancellationToken);
+
+            var createUserBody = new
+            {
+                username,
+                email,
+                enabled = true,
+                emailVerified = false
+            };
+
+            using var createRequest = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"admin/realms/{_configuration.Realm}/users");
+
+            createRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+            createRequest.Content = new StringContent(
+                JsonSerializer.Serialize(createUserBody),
+                Encoding.UTF8,
+                "application/json");
+
+            var createResponse = await _httpClient.SendAsync(createRequest, cancellationToken);
+
+            if (createResponse.StatusCode != HttpStatusCode.Created)
+            {
+                var error = await createResponse.Content.ReadAsStringAsync(cancellationToken);
+
+                throw new InvalidOperationException($"Failed to create user. Status: {(int)createResponse.StatusCode}. Body: {error}");
+            }
+
+            var userId = createResponse.Headers.Location?.Segments.LastOrDefault()?.Trim('/');
+
+            if (userId is null)
+                throw new InvalidOperationException($"Failed to create user. Status: {(int)createResponse.StatusCode}. User id not found");
+
+            await SetPasswordAsync(userId, password, adminToken, cancellationToken);
+
+            if (roles.Any())
+                await AssignRealmRolesAsync(userId, roles, cancellationToken);
+
+            return Guid.Parse(userId);
         }
 
         public async Task DeleteAccountAsync(string keycloakAccountId, CancellationToken cancellationToken = default)
@@ -142,7 +188,7 @@ namespace ServerAPIApp.Core.Services
             var content = new FormUrlEncodedContent(formData);
 
             var response = await _httpClient.PostAsync(
-                $"realms/master/protocol/openid-connect/token",
+                $"realms/{_configuration.Realm}/protocol/openid-connect/token",
                 content,
                 cancellationToken);
 
@@ -154,6 +200,35 @@ namespace ServerAPIApp.Core.Services
 
             return tokenResponse?.AccessToken
                 ?? throw new InvalidOperationException("Failed to get admin token");
+        }
+
+        private async Task SetPasswordAsync(
+            string userId,
+            string password,
+            string adminToken,
+            CancellationToken cancellationToken = default)
+        {
+            var passwordBody = new
+            {
+                type = "password",
+                value = password,
+                temporary = false
+            };
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Put,
+                $"admin/realms/{_configuration.Realm}/users/{Uri.EscapeDataString(userId)}/reset-password");
+
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(passwordBody),
+                Encoding.UTF8,
+                "application/json");
+
+            var response = await _httpClient.SendAsync(request, cancellationToken);
+
+            response.EnsureSuccessStatusCode();
         }
     }
 }
