@@ -11,7 +11,8 @@ namespace ServerAPIApp.Extensions
 
         public static string? GetStringUserId(this ClaimsPrincipal user)
         {
-            return user.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value;
+            return user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value
+                ?? user.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
         }
     }
 }

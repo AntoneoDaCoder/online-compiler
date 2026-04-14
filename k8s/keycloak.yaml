@@ -26,6 +26,7 @@ spec:
             - start
             - --http-enabled=true
             - --hostname=http://localhost:8080
+            - --hostname-backchannel-dynamic=true
           ports:
             - name: http
               containerPort: 8080

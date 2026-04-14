@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.AuthorizationRequirements;
 using ServerAPIApp.Core.Configs;
@@ -24,7 +25,6 @@ namespace ServerAPIApp.Core.Extensions
             services.ConfigureObjectStorage(config);
             services.ConfigureRepositories();
 
-
             services.AddAuthorizationBuilder()
             .AddPolicy("AdminAccess", policy => policy
                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
@@ -35,7 +35,6 @@ namespace ServerAPIApp.Core.Extensions
             .AddPolicy("EditorAccess", policy => policy
                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
                    .AddRequirements(new RoleRequirement([UserRelatedConstants.AdminRoleName, UserRelatedConstants.EditorRoleName])));
-
 
             var keycloakConf = config.GetSection("KeycloakConfiguration");
             services.Configure<KeycloakConfiguration>(keycloakConf);
@@ -52,24 +51,42 @@ namespace ServerAPIApp.Core.Extensions
                 opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 opt.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
             })
-            .AddJwtBearer
-              (
-              options =>
-              {
-                  options.Authority = keycloakSettings.BaseUrl + "/realms/" + keycloakSettings.Realm;
-                  options.Audience = keycloakSettings.FrontEndClientId;
-                  options.RequireHttpsMetadata = false;
-                  options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
-                  {
-                      ValidateIssuer = true,
-                      ValidateAudience = true,
-                      ValidateLifetime = true,
-                      ValidateIssuerSigningKey = true,
-                      ValidIssuer = keycloakSettings.BaseUrl + "/realms/" + keycloakSettings.Realm,
-                      ValidAudience = keycloakSettings.FrontEndClientId
-                  };
-              }
-              );
+            .AddJwtBearer(options =>
+            {
+                options.MetadataAddress =
+                  keycloakSettings.BaseUrl + "/realms/" + keycloakSettings.Realm + "/.well-known/openid-configuration";
+
+                options.RequireHttpsMetadata = false;
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+
+                        if (!string.IsNullOrEmpty(accessToken) &&
+                            path.StartsWithSegments("/api/hubs/user"))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = keycloakSettings.HostName + "/realms/" + keycloakSettings.Realm,
+
+                    ValidateAudience = true,
+                    ValidAudience = keycloakSettings.FrontEndClientId,
+
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true
+                };
+            });
 
             services.AddScoped<IClaimsTransformation, KeycloakClaimTransformer>();
 

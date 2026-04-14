@@ -16,5 +16,4 @@ namespace ServerAPIApp.IdProviders
             return idClaim;
         }
     }
-
 }

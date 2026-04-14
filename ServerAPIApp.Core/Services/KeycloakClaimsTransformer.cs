@@ -8,8 +8,8 @@ namespace ServerAPIApp.Core.Services
     {
         public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
         {
-            var identity = principal.Identity as ClaimsIdentity;
-            if (identity == null) return Task.FromResult(principal);
+            if (principal.Identity is not ClaimsIdentity identity)
+                return Task.FromResult(principal);
 
             var existingRoles = new HashSet<string>(
                 identity.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value),
@@ -18,11 +18,26 @@ namespace ServerAPIApp.Core.Services
             void AddRole(string role)
             {
                 if (string.IsNullOrWhiteSpace(role)) return;
+
                 if (existingRoles.Add(role))
                 {
                     identity.AddClaim(new Claim(ClaimTypes.Role, role));
                 }
             }
+
+            void AddClaimIfMissing(string type, string value)
+            {
+                if (string.IsNullOrWhiteSpace(value)) return;
+
+                if (!identity.HasClaim(c => c.Type == type))
+                {
+                    identity.AddClaim(new Claim(type, value));
+                }
+            }
+
+            var sub = identity.FindFirst("sub")?.Value;
+
+            AddClaimIfMissing(ClaimTypes.NameIdentifier, sub);
 
             var realmAccess = identity.FindFirst("realm_access")?.Value;
             if (!string.IsNullOrEmpty(realmAccess))
@@ -30,7 +45,8 @@ namespace ServerAPIApp.Core.Services
                 try
                 {
                     using var doc = JsonDocument.Parse(realmAccess);
-                    if (doc.RootElement.TryGetProperty("roles", out var rolesElement) && rolesElement.ValueKind == JsonValueKind.Array)
+                    if (doc.RootElement.TryGetProperty("roles", out var rolesElement) &&
+                        rolesElement.ValueKind == JsonValueKind.Array)
                     {
                         foreach (var el in rolesElement.EnumerateArray())
                         {
@@ -39,7 +55,7 @@ namespace ServerAPIApp.Core.Services
                         }
                     }
                 }
-                catch (JsonException) { /* ignore malformed claim */ }
+                catch (JsonException) { }
             }
 
             var resourceAccess = identity.FindFirst("resource_access")?.Value;
@@ -51,7 +67,9 @@ namespace ServerAPIApp.Core.Services
                     foreach (var clientProp in doc.RootElement.EnumerateObject())
                     {
                         var clientObj = clientProp.Value;
-                        if (clientObj.ValueKind == JsonValueKind.Object && clientObj.TryGetProperty("roles", out var rolesElement) && rolesElement.ValueKind == JsonValueKind.Array)
+                        if (clientObj.ValueKind == JsonValueKind.Object &&
+                            clientObj.TryGetProperty("roles", out var rolesElement) &&
+                            rolesElement.ValueKind == JsonValueKind.Array)
                         {
                             foreach (var el in rolesElement.EnumerateArray())
                             {
@@ -61,7 +79,7 @@ namespace ServerAPIApp.Core.Services
                         }
                     }
                 }
-                catch (JsonException) { /* ignore malformed claim */ }
+                catch (JsonException) { }
             }
 
             return Task.FromResult(principal);

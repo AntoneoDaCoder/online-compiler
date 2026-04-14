@@ -133,7 +133,7 @@ endif
 		--from-literal=DbConnectionString="Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=onlinecompilerdb;Username=postgresadmin;Password=admin123" \
 		--from-literal=AccessKey=minioadmin \
 		--from-literal=SecretKey=minioadmin123 \
-		--from-literal=ApiClientSecret=idk &&\
+		--from-literal=ApiClientSecret=unHsofo6LqyFWYiLFw8xynTdFhGM1grs &&\
 	kubectl apply -f k8s/rbac.yaml && \
 	kubectl apply -f k8s/api-deployment.yaml && \
 	kubectl rollout restart deployment api-server -n default && \
