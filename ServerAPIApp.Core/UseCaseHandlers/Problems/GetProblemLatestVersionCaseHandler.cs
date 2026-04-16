@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using ServerAPIApp.Contracts.Abstractions;
-using ServerAPIApp.Contracts.DTOs;
+using ServerAPIApp.Contracts.DTOs.Problems;
 using ServerAPIApp.Core.UseCases.Problems;
 using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 using Shared.DTOs;

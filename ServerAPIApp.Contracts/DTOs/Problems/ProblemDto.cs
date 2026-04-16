@@ -1,6 +1,6 @@
 ﻿using ServerAPIApp.Domain.Entities;
 
-namespace ServerAPIApp.Contracts.DTOs
+namespace ServerAPIApp.Contracts.DTOs.Problems
 {
     public record ProblemDto(Guid Id, Guid? VersionLink, string Slug, string Title, string Status, string? Reason, UserProblemVersionDto? LatestVersion)
     {

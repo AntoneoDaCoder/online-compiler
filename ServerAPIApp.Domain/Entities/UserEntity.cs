@@ -1,12 +1,8 @@
 ﻿namespace ServerAPIApp.Domain.Entities
 {
-    public sealed class UserEntity : BaseEntity, ICreatable, IModifiable, ISoftDeletable
+    public sealed class UserEntity : BaseEntity, IModifiable, ISoftDeletable
     {
         public string ExternalProviderId { get; set; }
-
-        public DateTimeOffset? CreatedAt { get; set; }
-        public Guid? CreatedBy { get; set; }
-        public UserEntity? Creator { get; set; }
 
         public DateTimeOffset? ModifiedAt { get; set; }
         public Guid? ModifiedBy { get; set; }

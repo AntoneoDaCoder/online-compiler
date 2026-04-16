@@ -1,4 +1,5 @@
-﻿using Microsoft.IdentityModel.JsonWebTokens;
+﻿using k8s.KubeConfigModels;
+using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Claims;
 
 namespace ServerAPIApp.Extensions
@@ -9,7 +10,8 @@ namespace ServerAPIApp.Extensions
         {
             var jwtToken = handler.ReadJsonWebToken(token);
 
-            return Guid.Parse(jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value!);
+            return Guid.Parse(jwtToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value
+                ?? jwtToken.Claims.FirstOrDefault(c => c.Type == "sub")?.Value);
         }
     }
 }

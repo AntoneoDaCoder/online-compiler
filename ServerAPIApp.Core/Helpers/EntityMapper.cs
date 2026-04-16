@@ -1,4 +1,5 @@
 ﻿using ServerAPIApp.Contracts.DTOs;
+using ServerAPIApp.Contracts.DTOs.Problems;
 using ServerAPIApp.Core.UseCases.Languages;
 using ServerAPIApp.Core.UseCases.Problems;
 using ServerAPIApp.Core.UseCases.ProblemVersions;

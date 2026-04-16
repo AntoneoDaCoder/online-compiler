@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, DestroyRef, inject } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { CommonModule, Location } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from './core/services/auth.service';
+import { ApiService } from './core/services/api.service';
 
 @Component({
   selector: 'app-root',
@@ -10,14 +12,30 @@ import { AuthService } from './core/services/auth.service';
   imports: [RouterOutlet, CommonModule]
 })
 export class AppComponent implements OnInit {
+  private destroyRef = inject(DestroyRef);
+
   constructor(
     private router: Router,
     private auth: AuthService,
+    private api: ApiService,
     private location: Location
-  ) {}
+  ) { }
 
-  ngOnInit(): void {
-    void this.auth.init();
+  async ngOnInit(): Promise<void> {
+    await this.auth.init();
+
+    if (this.auth.isLoggedIn()) {
+      this.syncLocalAccount();
+    }
+  }
+
+  private syncLocalAccount(): void {
+    const userId = this.auth.getId();
+    if (!userId) return;
+
+    this.api.syncExternalAccount(userId).subscribe({
+      error: (err) => console.error(err),
+    });
   }
 
   showBack(): boolean {

@@ -14,6 +14,7 @@ namespace ServerAPIApp.DAL.Contexts
         public DbSet<ProblemVersionLanguage> VersionLanguages { get; set; }
         public DbSet<SubmissionEntity> Submissions { get; set; }
         public DbSet<UserEntity> Users { get; set; }
+        public DbSet<ProblemDeletionRequestEntity> DeletionRequests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

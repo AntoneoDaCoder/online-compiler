@@ -17,7 +17,7 @@ namespace ServerAPIApp.DAL.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.5")
+                .HasAnnotation("ProductVersion", "10.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -285,14 +285,6 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset?>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by");
-
                     b.Property<DateTimeOffset?>("DeletionDeadline")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deletion_deadline");
@@ -323,9 +315,6 @@ namespace ServerAPIApp.DAL.Migrations
                         .HasColumnName("modified_by");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CreatedBy")
-                        .HasDatabaseName("ix_users_createdby");
 
                     b.HasIndex("ExternalProviderId")
                         .IsUnique()
@@ -436,11 +425,6 @@ namespace ServerAPIApp.DAL.Migrations
 
             modelBuilder.Entity("ServerAPIApp.Domain.Entities.UserEntity", b =>
                 {
-                    b.HasOne("ServerAPIApp.Domain.Entities.UserEntity", "Creator")
-                        .WithMany()
-                        .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("ServerAPIApp.Domain.Entities.UserEntity", "Initiator")
                         .WithMany()
                         .HasForeignKey("InitiatorId")
@@ -450,8 +434,6 @@ namespace ServerAPIApp.DAL.Migrations
                         .WithMany()
                         .HasForeignKey("ModifiedBy")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Creator");
 
                     b.Navigation("Editor");
 

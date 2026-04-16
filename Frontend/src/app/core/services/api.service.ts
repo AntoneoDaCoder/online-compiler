@@ -72,4 +72,13 @@ export class ApiService {
     submitCode(dto: any) {
         return this.http.post(`${environment.apiBaseUrl}/jobs/start`, dto);
     }
+
+    syncExternalAccount(userId: string) {
+        return this.http.post(`${environment.apiBaseUrl}/users`, JSON.stringify(userId),
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+    }
 }

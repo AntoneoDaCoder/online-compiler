@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Shared.DTOs;
 using ServerAPIApp.Domain.Entities;
-using ServerAPIApp.Contracts.DTOs;
+using ServerAPIApp.Contracts.DTOs.Problems;
 
 namespace ServerAPIApp.Core.UseCases.ProblemVersions
 {

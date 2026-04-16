@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ServerAPIApp.Contracts.Abstractions;
-using ServerAPIApp.Contracts.DTOs;
+using ServerAPIApp.Contracts.DTOs.Problems;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
 using ServerAPIApp.Helpers;
 using static System.Runtime.InteropServices.JavaScript.JSType;

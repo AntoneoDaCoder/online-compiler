@@ -1,7 +1,7 @@
 ﻿using ServerAPIApp.Domain.Entities;
 using Shared.DTOs;
 
-namespace ServerAPIApp.Contracts.DTOs
+namespace ServerAPIApp.Contracts.DTOs.Problems
 {
     public class EditorProblemVersionDto
     {

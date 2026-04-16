@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import Keycloak, { KeycloakInstance } from 'keycloak-js';
+import Keycloak from 'keycloak-js';
 import { environment } from '../../environment';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-    private keycloak: KeycloakInstance = new Keycloak({
+    private keycloak: Keycloak = new Keycloak({
         url: environment.keycloakUrl,
         realm: environment.keycloakRealm,
         clientId: environment.keycloakClientId,
@@ -36,28 +36,32 @@ export class AuthService {
         if (!this.initPromise) {
             this.bindEvents();
 
-            this.initPromise = this.keycloak.init({
-                onLoad: 'check-sso',
-                pkceMethod: 'S256',
-                checkLoginIframe: false,
-                silentCheckSsoRedirectUri: `${window.location.origin}/assets/silent-check-sso.html`,
-                silentCheckSsoFallback: false,
-            }).then(async (authenticated) => {
-                this.initialized = true;
+            this.initPromise = this.keycloak
+                .init({
+                    onLoad: 'check-sso',
+                    pkceMethod: 'S256',
+                    checkLoginIframe: false,
+                    silentCheckSsoRedirectUri: `${window.location.origin}/assets/silent-check-sso.html`,
+                    silentCheckSsoFallback: false,
+                    responseMode: 'query',
+                })
+                .then(async (authenticated) => {
+                    this.initialized = true;
 
-                if (authenticated) {
-                    await this.handleLogin();
-                } else {
+                    if (authenticated) {
+                        await this.handleLogin();
+                    } else {
+                        this.clearState();
+                    }
+
+                    return authenticated;
+                })
+                .catch((err) => {
+                    console.error('Keycloak init failed', err);
                     this.clearState();
-                }
-
-                return authenticated;
-            }).catch((err) => {
-                console.error('Keycloak init failed', err);
-                this.clearState();
-                this.initialized = true;
-                return false;
-            });
+                    this.initialized = true;
+                    return false;
+                });
         }
 
         return this.initPromise;
@@ -76,7 +80,8 @@ export class AuthService {
     async handleLogin(): Promise<void> {
         this._accessToken = this.keycloak.token ?? null;
 
-        const token = this.keycloak.tokenParsed as any | undefined;
+        const token = this.keycloak.tokenParsed as any;
+
         this._userId = token?.sub ?? '';
         this._userName =
             token?.name ??
@@ -89,6 +94,8 @@ export class AuthService {
             this.keycloak.resourceAccess?.[environment.keycloakClientId]?.roles ?? [];
 
         this._userRoles = Array.from(new Set([...realmRoles, ...clientRoles]));
+
+        this.cleanAuthUrl();
 
         this.loginSubject.next();
     }
@@ -135,6 +142,23 @@ export class AuthService {
 
     isLoggedIn(): boolean {
         return !!this._accessToken;
+    }
+
+    private cleanAuthUrl(): void {
+        setTimeout(() => {
+            const url = new URL(window.location.href);
+
+            url.searchParams.delete('state');
+            url.searchParams.delete('session_state');
+            url.searchParams.delete('iss');
+            url.searchParams.delete('code');
+
+            window.history.replaceState(
+                {},
+                document.title,
+                url.pathname + url.search
+            );
+        }, 0);
     }
 
     private bindEvents(): void {

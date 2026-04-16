@@ -12,20 +12,16 @@
     <PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
     <PackageReference Include="KubernetesClient" Version="19.0.2" />
     <PackageReference Include="MediatR" Version="14.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.6" />
     <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.3.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.6" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.6" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ServerAPIApp.Contracts\ServerAPIApp.Contracts.csproj" />
     <ProjectReference Include="..\ServerAPIApp.DAL\ServerAPIApp.DAL.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Validators\" />
   </ItemGroup>
 
 </Project>

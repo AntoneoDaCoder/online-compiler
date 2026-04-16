@@ -5,7 +5,7 @@ using ServerAPIApp.Domain.Entities;
 using ServerAPIApp.Core.Helpers;
 using ServerAPIApp.Domain.Exceptions;
 using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
-using ServerAPIApp.Contracts.DTOs;
+using ServerAPIApp.Contracts.DTOs.Problems;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 {

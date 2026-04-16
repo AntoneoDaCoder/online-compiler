@@ -4,6 +4,7 @@ using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
 using Shared.DTOs;
 using System.Threading.Channels;
+using System.Text.Json;
 
 namespace ServerAPIApp.Dispatchers
 {
@@ -137,6 +138,8 @@ namespace ServerAPIApp.Dispatchers
 
                             var notifier = scope.ServiceProvider.GetRequiredService<ISubmissionNotifier>();
 
+                            Console.WriteLine("Insine consume async");
+
                             if (requestData.NumRetries > MaxRetries)
                             {
                                 await notifier.NotifyAsync(requestData.UserId.ToString(), "Exceeded maximum number of retries", cancellationToken);
@@ -166,6 +169,8 @@ namespace ServerAPIApp.Dispatchers
 
                                 if (!_managers.TryGetValue(request.LanguageCode, out var manager))
                                     throw new NotSupportedException($"Language '{request.LanguageCode}' is not supported");
+
+                                Console.WriteLine("Got the manager. Data: " + JsonSerializer.Serialize(newSolution, new JsonSerializerOptions { WriteIndented = true }));
 
                                 if (!await manager.ExecuteAsync(newSolution, cancellationToken))
                                 {

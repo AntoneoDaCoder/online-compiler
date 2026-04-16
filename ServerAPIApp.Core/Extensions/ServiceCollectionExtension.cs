@@ -12,6 +12,7 @@ using ServerAPIApp.Core.Configs;
 using ServerAPIApp.Core.PipelineBehaviours;
 using ServerAPIApp.Core.Services;
 using ServerAPIApp.Core.UseCaseHandlers.Users;
+using ServerAPIApp.Core.Validators.Problems;
 using ServerAPIApp.DAL.Extensions;
 using ServerAPIApp.Domain.Constants;
 
@@ -95,7 +96,7 @@ namespace ServerAPIApp.Core.Extensions
                 cfg => cfg.RegisterServicesFromAssembly(typeof(AddUserToRolesCaseHandler).Assembly)
                 );
 
-            //services.AddValidatorsFromAssembly(typeof(RegisterUserValidator).Assembly);
+            services.AddValidatorsFromAssembly(typeof(CreateProblemDeletionRequestValidator).Assembly);
 
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
 

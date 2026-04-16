@@ -1,5 +1,5 @@
 ﻿using MediatR;
-using ServerAPIApp.Contracts.DTOs;
+using ServerAPIApp.Contracts.DTOs.Problems;
 using System;
 using System.Collections.Generic;
 using System.Text;

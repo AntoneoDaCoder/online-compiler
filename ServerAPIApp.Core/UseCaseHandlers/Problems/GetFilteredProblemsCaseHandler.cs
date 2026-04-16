@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Identity.Data;
 using ServerAPIApp.Contracts.Abstractions;
-using ServerAPIApp.Contracts.DTOs;
+using ServerAPIApp.Contracts.DTOs.Problems;
 using ServerAPIApp.Core.Helpers;
 using ServerAPIApp.Core.UseCases.Problems;
 using ServerAPIApp.Domain.Entities;

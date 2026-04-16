@@ -1,6 +1,6 @@
 ﻿using ServerAPIApp.Domain.Entities;
 
-namespace ServerAPIApp.Contracts.DTOs
+namespace ServerAPIApp.Contracts.DTOs.Problems
 {
 
     //null checks are not necessary here because this dto appears only when problem has been published (so it has an active version)

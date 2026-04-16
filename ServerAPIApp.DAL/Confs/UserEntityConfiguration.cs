@@ -19,19 +19,6 @@ namespace ServerAPIApp.DAL.Confs
                 .IsRequired()
                 .HasColumnName("external_provider_id");
 
-            builder.Property(u => u.CreatedAt)
-             .HasColumnName("created_at")
-             .IsRequired(false);
-
-            builder.Property(u => u.CreatedBy)
-             .HasColumnName("created_by")
-             .IsRequired(false);
-
-            builder.HasOne(u => u.Creator)
-             .WithMany()
-             .HasForeignKey(u => u.CreatedBy)
-             .OnDelete(DeleteBehavior.Restrict);
-
             builder.Property(u => u.ModifiedAt)
              .HasColumnName("modified_at")
              .IsRequired(false);
@@ -65,9 +52,6 @@ namespace ServerAPIApp.DAL.Confs
              .WithMany()
              .HasForeignKey(u => u.InitiatorId)
              .OnDelete(DeleteBehavior.Restrict);
-
-            builder.HasIndex(u => u.CreatedBy)
-             .HasDatabaseName("ix_users_createdby");
 
             builder.HasIndex(u => u.ExternalProviderId)
                 .IsUnique()

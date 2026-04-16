@@ -224,6 +224,11 @@ namespace ServerAPIApp.Dispatchers
 
                 await _client.CoreV1.CreateNamespaceAsync(ns, cancellationToken: token);
             }
+            catch (k8s.Autorest.HttpOperationException createEx) when (
+                    createEx.Response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+               
+            }
         }
 
         private async Task EnsureNetworkPolicyExistsAsync(CancellationToken token)

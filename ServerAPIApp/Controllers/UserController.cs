@@ -46,5 +46,16 @@ namespace ServerAPIApp.Controllers
 
             return StatusCode(200, updatedRoles);
         }
+
+        [Authorize(Policy = "DefaultAccess")]
+        [HttpPost("users")]
+        public async Task<IActionResult> SyncExternalAccountAsync([FromBody] string id, CancellationToken cancellationToken = default)
+        {
+            var command = new SyncExternalAccountCase(id);
+
+            await _mediator.Send(command, cancellationToken);
+
+            return Ok();
+        }
     }
 }

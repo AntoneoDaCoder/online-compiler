@@ -13,8 +13,9 @@
         public bool IsDeleted { get; set; } = false;
         public DateTimeOffset? DeletionScheduledAt { get; set; }
         public DateTimeOffset? DeletionDeadline { get; set; }
-        public Guid? InitiatorId { get; set; }
-        public UserEntity? Initiator { get; set; }
+        public string? DeletionJobId { get; set; }
+
+        public ProblemDeletionRequestEntity? DeletionRequest { get; set; }
 
 
         public DateTimeOffset? ModifiedAt { get; set; }

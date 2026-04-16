@@ -1,4 +1,5 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using Hangfire;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
 
 namespace ServerAPIApp.Core.Helpers
@@ -26,6 +27,11 @@ namespace ServerAPIApp.Core.Helpers
             }
 
             return (userId, realmRoles);
+        }
+
+        public static void RemoveHangfireJob(string jobId)
+        {
+            BackgroundJob.Delete(jobId);
         }
     }
 }

@@ -47,6 +47,8 @@ builder.Services.AddRoleHandler();
 
 var app = builder.Build();
 
+app.MigrateDatabase();
+
 //app.UseHttpsRedirection();
 
 app.UseRouting();

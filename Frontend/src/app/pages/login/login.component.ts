@@ -3,30 +3,34 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
-    selector: 'app-login',
-    standalone: true,
-    imports: [CommonModule],
-    templateUrl: './login.component.html',
-    styleUrls: ['./login.component.scss'],
+  selector: 'app-login',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './login.component.html',
+  styleUrls: ['./login.component.scss'],
 })
 export class LoginComponent {
-    loading = false;
+  loading = false;
 
-    constructor(private auth: AuthService) { }
+  constructor(private auth: AuthService) {}
 
-    onLogin(): void {
-        this.loading = true;
-        this.auth.login().catch((error) => {
-            console.error(error);
-            this.loading = false;
-        });
+  async onLogin(): Promise<void> {
+    this.loading = true;
+    try {
+      await this.auth.login();
+    } catch (error) {
+      console.error(error);
+      this.loading = false;
     }
+  }
 
-    onRegister(): void {
-        this.loading = true;
-        this.auth.register().catch((error) => {
-            console.error(error);
-            this.loading = false;
-        });
+  async onRegister(): Promise<void> {
+    this.loading = true;
+    try {
+      await this.auth.register();
+    } catch (error) {
+      console.error(error);
+      this.loading = false;
     }
+  }
 }

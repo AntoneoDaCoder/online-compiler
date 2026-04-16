@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using ServerAPIApp.Contracts.Abstractions;
-using ServerAPIApp.Contracts.DTOs;
+using ServerAPIApp.Contracts.DTOs.Problems;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
 using ServerAPIApp.Domain.Entities;
 using Shared.DTOs;

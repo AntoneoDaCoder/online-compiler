@@ -119,24 +119,6 @@ class Program
         return manifests;
     }
 
-    private static void MigrateDb(IServiceProvider sp)
-    {
-        using var scope = sp.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<BaseDbContext>();
-
-        try
-        {
-            Console.WriteLine("Applying migrations...");
-            dbContext.Database.Migrate();
-            Console.WriteLine("Migrations applied successfully.");
-
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"An error occurred while applying migrations: {ex.Message}");
-        }
-    }
-
     private static async Task<IEnumerable<LanguageEntity>> SeedLanguagesAsync(IServiceProvider sp)
     {
         var languages = new List<LanguageEntity>();
@@ -401,16 +383,6 @@ class Program
          */
 
         var sp = BuildServiceProvider();
-
-        try
-        {
-            MigrateDb(sp);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("[Migration][Error] Failed to migrate db. Reason: " + ex);
-            return 1;
-        }
 
         try
         {

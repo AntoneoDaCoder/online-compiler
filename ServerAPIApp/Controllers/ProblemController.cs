@@ -2,9 +2,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ServerAPIApp.Core.UseCases.Problems;
-using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Extensions;
 using ServerAPIApp.Helpers;
+using ServerAPIApp.Contracts.DTOs.Problems;
 
 namespace ServerAPIApp.Controllers
 {
@@ -109,6 +109,36 @@ namespace ServerAPIApp.Controllers
             Console.WriteLine("[API] about to return data");
 
             return StatusCode(200, data);
+        }
+
+        [Authorize(Policy = "EditorAccess")]
+        [HttpPost("problems/{problemId:guid}/deletion-requests")]
+        public async Task<IActionResult> CreateProblemDeletionRequestAsync([FromRoute] Guid problemId, [FromBody] ProblemDeletionRequestDto dto,
+            CancellationToken cancellationToken = default)
+        {
+            var request = new CreateProblemDeletionRequestCase(problemId, dto.InitiatorId, dto.Reason);
+
+            var requestId = await _mediator.Send(request, cancellationToken);
+
+            return Created($"problems/{problemId}/deletion-requests/{requestId}", requestId);
+        }
+
+        [Authorize(Policy = "EditorAccess")]
+        [HttpDelete("problems/{problemId:guid}/deletion-requests/{requestId:guid}")]
+        public async Task<IActionResult> CancelDeletionRequestAsync([FromRoute] Guid requestId, CancellationToken cancellationToken = default)
+        {
+            var command = new CancelProblemDeletionRequestCase(requestId);
+
+            await _mediator.Send(command, cancellationToken);
+
+            return NoContent();
+        }
+
+        //approve request endpoint
+        [Authorize(Policy = "AdminAccess")]
+        [HttpPost("problems/{problemId:guid}/deletion-requests/approved/{requestId:guid}")]
+        public async Task<IActionResult> ApproveDeletionRequestAsync([FromRoute] Guid requestId, CancellationToken cancellationToken = default)
+        {
         }
     }
 }
