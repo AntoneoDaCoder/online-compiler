@@ -1,7 +1,10 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Contracts.DTOs.Problems;
 using ServerAPIApp.Core.UseCases.Problems;
+using ServerAPIApp.DAL.Confs;
 using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 using Shared.DTOs;
 using Shared.Helpers;
@@ -12,19 +15,24 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
     {
         private IProblemRepository _repo;
         private IObjectStorage _storage;
+        private readonly string _bucketName;
 
-        //TODO: move this to config as well
-        const string _bucketName = "manifestbucket";
-
-        public GetProblemLatestVersionCaseHandler(IProblemRepository repo, IObjectStorage storage)
+        public GetProblemLatestVersionCaseHandler(IProblemRepository repo, IObjectStorage storage, IOptions<MinioConfiguration> opt)
         {
             _repo = repo;
             _storage = storage;
+            _bucketName = opt.Value.BucketName;
         }
 
         public async Task<EditorProblemVersionDto> Handle(GetProblemLatestVersionCase command, CancellationToken cancellationToken)
         {
-            var problem = await _repo.GetLatestVersionBySlugAsync(command.ProblemSlug, cancellationToken);
+            var problem = await _repo
+                .Query()
+                .AsNoTracking()
+                .Where(x => x.Slug == command.ProblemSlug)
+                .Include(x => x.LastPublishedVersion)
+                .ThenInclude(x => x.SupportedLanguages)
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (problem is null)
                 throw new ResourceNotFoundException("Such problem doesn't exist");

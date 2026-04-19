@@ -7,7 +7,7 @@ using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 {
-    public class UpdateCaseHandler : IRequestHandler<UpdateProblemCase,ProblemEntity>
+    public class UpdateCaseHandler : IRequestHandler<UpdateProblemCase, ProblemEntity>
     {
         private IProblemRepository _repo;
         public UpdateCaseHandler(IProblemRepository repo)
@@ -21,7 +21,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 
             var updated = await _repo.UpdateAsync(entity, cancellationToken);
 
-            if (!updated)
+            if (updated is null)
                 throw new ResourceNotFoundException("Resource not found");
 
             return entity;

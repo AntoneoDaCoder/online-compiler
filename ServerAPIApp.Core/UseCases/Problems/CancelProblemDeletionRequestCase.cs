@@ -2,5 +2,5 @@
 
 namespace ServerAPIApp.Core.UseCases.Problems
 {
-    public record CancelProblemDeletionRequestCase(Guid RequestId) : IRequest;
+    public record CancelProblemDeletionRequestCase(Guid SenderId, Guid RequestId, IEnumerable<string> SenderRoles) : IRequest;
 }

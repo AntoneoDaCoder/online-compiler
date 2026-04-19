@@ -33,9 +33,10 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 
             problem.DeletionScheduledAt = deletionInitiationDate;
             problem.DeletionDeadline = deletionDate;
+            problem.IsDeleted = true;
 
             string newJobId = BackgroundJob.Schedule<IProblemRepository>(
-                svc => svc.DeleteAsync(problem.Id),
+                svc => svc.DeleteAsync(problem),
                 ApplicationConstants.GracePeriod);
 
             BackgroundJob.ContinueJobWith(newJobId, () => Utils.RemoveHangfireJob(newJobId), JobContinuationOptions.OnlyOnSucceededState);
@@ -43,6 +44,8 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
             problem.DeletionJobId = newJobId;
 
             await _problemRepo.UpdateAsync(problem, cancellationToken);
+
+            await _requestsRepo.DeleteAsync(request, cancellationToken);
         }
     }
 }

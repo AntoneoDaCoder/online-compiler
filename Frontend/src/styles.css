@@ -639,3 +639,45 @@ button.ghost {
 .profile-id{
     margin-top: 6%;
 }
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1000;
+}
+
+.delete-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(620px, calc(100vw - 32px));
+    z-index: 1001;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.delete-modal__header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.delete-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.delete-modal__body textarea {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+    font-family: var(--ui-font);
+}
+
+.delete-modal__footer {
+    justify-content: flex-end;
+}

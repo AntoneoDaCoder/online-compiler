@@ -1,9 +1,10 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Identity.Data;
+using Microsoft.EntityFrameworkCore;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Contracts.DTOs.Problems;
 using ServerAPIApp.Core.Helpers;
 using ServerAPIApp.Core.UseCases.Problems;
+using ServerAPIApp.Domain.Constants;
 using ServerAPIApp.Domain.Entities;
 using System.Linq.Expressions;
 
@@ -12,8 +13,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 {
     public class GetFilteredProblemsCaseHandler : IRequestHandler<GetFilteredProblemsCase, IEnumerable<ProblemDto>?>
     {
-        //TODO: later change it
-        private static readonly IEnumerable<string> _editorRoles = ["Admin", "Editor"];
+        private static readonly IEnumerable<string> _editorRoles = [UserRelatedConstants.AdminRoleName, UserRelatedConstants.EditorRoleName];
 
         private IProblemRepository _repo;
 
@@ -26,7 +26,12 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
         {
             var filter = BuildFilter(request.Roles);
 
-            var result = await _repo.GetFilteredWithLatestVersionsAsync(filter, cancellationToken);
+            var result = await _repo
+                .Query()
+                .Where(filter)
+                .Include(x => x.LastPublishedVersion)
+                .ThenInclude(x => x.SupportedLanguages)
+                .ToListAsync(cancellationToken);
 
             return result.ToDto();
         }
@@ -37,7 +42,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 
             if (roles.Any(x => _editorRoles.Contains(x)))
             {
-                filter = x => true;
+                filter = x => !x.IsDeleted;
             }
 
             return filter;

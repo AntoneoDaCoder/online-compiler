@@ -6,7 +6,7 @@ import { RouterModule, Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { SignalrService } from '../../core/services/signalr.service';
 import { AuthService } from '../../core/services/auth.service';
-import { LanguageDto, ProblemDto, UserProblemVersionDto } from '../../core/models/dtos';
+import { LanguageDto, ProblemDto } from '../../core/models/dtos';
 import { SidebarComponent } from '../../components/shared/sidebar.component';
 import { Subscription, switchMap } from 'rxjs';
 
@@ -28,6 +28,11 @@ export class TasksComponent implements OnInit, OnDestroy {
     filterSlug = '';
     showOnlyPublished: 'all' | 'published' | 'unpublished' = 'all';
 
+    deleteDialogOpen = false;
+    deleteReason = '';
+    deleteTarget: ProblemDto | null = null;
+    deleteSubmitting = false;
+
     constructor(
         private api: ApiService,
         private signalr: SignalrService,
@@ -47,7 +52,7 @@ export class TasksComponent implements OnInit, OnDestroy {
                 return this.api.getUserVersion(versionId);
             })
         ).subscribe(version => {
-            var found = this.problems.findIndex(p => p.id === version.problemId);
+            const found = this.problems.findIndex(p => p.id === version.problemId);
             if (found > -1) {
                 this.problems[found].latestVersion = version;
             }
@@ -71,9 +76,10 @@ export class TasksComponent implements OnInit, OnDestroy {
         this.userRoles = this.auth.getRoles() || [];
     }
 
-
     applyFilters() {
         this.filtered = this.problems.filter(p => {
+            if (p.isDeleted) return false;
+
             if (this.filterSlug && !p.slug.includes(this.filterSlug)) return false;
 
             if (this.showOnlyPublished !== 'all') {
@@ -93,16 +99,10 @@ export class TasksComponent implements OnInit, OnDestroy {
     }
 
     private isPublished(p: ProblemDto): boolean {
-        // Server may use literals like "Deleted", "no version", "Unlisted", "Listed" etc.
-        if (!p.status) return false;
-        const s = p.status.toLowerCase();
-        // treat as unpublished if explicit negative statuses
-        const unpublished = ['no version', 'deleted', 'unlisted'];
-        return !unpublished.includes(s);
+        return p.isPublished;
     }
 
     onOpenProblem(problem: ProblemDto) {
-
         const versionId = problem.latestVersion?.versionId ?? '';
         const mappedSupported: LanguageDto[] = [];
         const supportedIds = problem.latestVersion?.supportedLanguages ?? [];
@@ -123,7 +123,6 @@ export class TasksComponent implements OnInit, OnDestroy {
         this.router.navigate(['/code-editor'], { state });
     }
 
-
     formatSupportedLanguages(langIds?: string[] | null): string {
         if (!langIds || !this.languages || this.languages.length === 0) return '';
         return langIds
@@ -133,5 +132,36 @@ export class TasksComponent implements OnInit, OnDestroy {
 
     onEditProblem(problem: ProblemDto) {
         this.router.navigate(['/problems', problem.slug, 'edit']);
+    }
+
+    onDeleteProblem(problem: ProblemDto) {
+        this.deleteTarget = problem;
+        this.deleteReason = '';
+        this.deleteDialogOpen = true;
+    }
+
+    closeDeleteDialog() {
+        this.deleteDialogOpen = false;
+        this.deleteReason = '';
+        this.deleteTarget = null;
+        this.deleteSubmitting = false;
+    }
+
+    confirmDeleteRequest() {
+        if (!this.deleteTarget) return;
+
+        const reason = this.deleteReason.trim();
+        if (!reason) return;
+
+        this.deleteSubmitting = true;
+
+        this.api.createProblemDeletionRequest(this.deleteTarget.id, this.auth.getId(), reason).subscribe({
+            next: () => {
+                this.closeDeleteDialog();
+            },
+            error: () => {
+                this.deleteSubmitting = false;
+            }
+        });
     }
 }

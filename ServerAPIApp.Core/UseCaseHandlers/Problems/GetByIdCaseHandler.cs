@@ -17,7 +17,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 
         public async Task<ProblemEntity> Handle(GetProblemByIdCase command, CancellationToken cancellationToken)
         {
-            var entity = await _repo.GetByIdAsync(command.Id, cancellationToken);
+            var entity = (await _repo.GetFilteredAsync(x => x.Id == command.Id, cancellationToken)).FirstOrDefault();
 
             if (entity is null)
                 throw new ResourceNotFoundException("Resource not found");

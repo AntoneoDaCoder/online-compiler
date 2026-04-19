@@ -16,6 +16,11 @@ namespace ServerAPIApp.DAL.Confs
                 .IsRequired()
                 .HasColumnName("id");
 
+            builder.
+                Property(x => x.InitiatorId)
+                .IsRequired()
+                .HasColumnName("initiator_id");
+
             builder.HasKey(x => x.Id);
 
             builder

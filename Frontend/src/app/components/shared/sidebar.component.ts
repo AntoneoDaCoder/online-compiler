@@ -21,4 +21,8 @@ export class SidebarComponent implements OnInit {
     isEditorOrAdmin() {
         return this.roles.includes('Editor') || this.roles.includes('Admin');
     }
+
+    isAdmin() {
+        return this.roles.includes('Admin')
+    }
 }

@@ -188,7 +188,13 @@ class Program
 
             foreach (var data in problemData)
             {
-                if (await problemRepo.GetLatestVersionBySlugAsync(data.Slug) is not null)
+                if (await problemRepo
+                            .Query()
+                            .AsNoTracking()
+                            .Where(x => x.Slug == data.Slug)
+                            .Include(x => x.LastPublishedVersion)
+                            .ThenInclude(x => x.SupportedLanguages)
+                            .FirstOrDefaultAsync() is not null)
                     continue;
 
                 var problemId = Guid.NewGuid();

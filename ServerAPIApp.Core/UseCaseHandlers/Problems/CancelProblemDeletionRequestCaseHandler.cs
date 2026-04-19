@@ -1,7 +1,8 @@
 ﻿using MediatR;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.UseCases.Problems;
-using ServerAPIApp.Domain.Entities;
+using ServerAPIApp.Domain.Exceptions.ForbiddenExceptions;
+using ServerAPIApp.Domain.Constants;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 {
@@ -16,12 +17,15 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 
         public async Task Handle(CancelProblemDeletionRequestCase request, CancellationToken cancellationToken)
         {
-            var stub = new ProblemDeletionRequestEntity()
-            {
-                Id = request.RequestId
-            };
+            var entity = (await _repo.GetFilteredAsync(x => x.Id == request.RequestId, cancellationToken)).FirstOrDefault();
 
-            await _repo.DeleteAsync(stub, cancellationToken);
+            if (entity == null)
+                return;
+
+            if (entity.InitiatorId != request.SenderId || !request.SenderRoles.Any(x => x.Contains(UserRelatedConstants.AdminRoleName)))
+                throw new ForbiddenException("You are not allowed to cancel a request that is not yours");
+
+            await _repo.DeleteAsync(entity, cancellationToken);
         }
     }
 }

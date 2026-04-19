@@ -62,39 +62,6 @@ namespace ServerAPIApp.Controllers
             return StatusCode(200, data);
         }
 
-
-        [Authorize(Policy = "EditorAccess")]
-        [HttpDelete("problems/{id:guid}")]
-        public async Task<IActionResult> DeleteProblemAsync([FromRoute] Guid id, CancellationToken cancellationToken = default)
-        {
-            var userId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
-
-            var command = new DeleteProblemCase(id, userId);
-
-            await _mediator.Send(command, cancellationToken);
-
-            //TODO: notify ALL users about unlisting a problem
-
-            return StatusCode(204);
-        }
-
-        [Authorize(Policy = "EditorAccess")]
-        [HttpPatch("problems/deleted/{id:guid}")]
-        public async Task<IActionResult> RestoreDeletedProblemAsync([FromRoute] Guid id, CancellationToken cancellationToken = default)
-        {
-            var userId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
-
-            var command = new RestoreProblemCase(id, userId);
-
-            //TODO: get problem data
-            await _mediator.Send(command, cancellationToken);
-
-            //TODO: notify all users that problem was restored (if it has a version), otherwise only editors and admins
-
-            return StatusCode(201);
-        }
-
-
         //if this method returns 404, on the client we shouldn't show any message just silently make an empty copy
         [Authorize(Policy = "EditorAccess")]
         [HttpGet("problems/{problemSlug}/latest-version")]
@@ -113,32 +80,76 @@ namespace ServerAPIApp.Controllers
 
         [Authorize(Policy = "EditorAccess")]
         [HttpPost("problems/{problemId:guid}/deletion-requests")]
-        public async Task<IActionResult> CreateProblemDeletionRequestAsync([FromRoute] Guid problemId, [FromBody] ProblemDeletionRequestDto dto,
+        public async Task<IActionResult> CreateProblemDeletionRequestAsync([FromRoute] Guid problemId, [FromBody] CreateProblemDeletionRequestDto dto,
             CancellationToken cancellationToken = default)
         {
             var request = new CreateProblemDeletionRequestCase(problemId, dto.InitiatorId, dto.Reason);
 
-            var requestId = await _mediator.Send(request, cancellationToken);
+            await _mediator.Send(request, cancellationToken);
 
-            return Created($"problems/{problemId}/deletion-requests/{requestId}", requestId);
+            return Created();
         }
 
         [Authorize(Policy = "EditorAccess")]
         [HttpDelete("problems/{problemId:guid}/deletion-requests/{requestId:guid}")]
         public async Task<IActionResult> CancelDeletionRequestAsync([FromRoute] Guid requestId, CancellationToken cancellationToken = default)
         {
-            var command = new CancelProblemDeletionRequestCase(requestId);
+            var senderId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
+
+            var userRoles = User.GetRoles();
+
+            var command = new CancelProblemDeletionRequestCase(senderId, requestId, userRoles);
 
             await _mediator.Send(command, cancellationToken);
 
             return NoContent();
         }
 
-        //approve request endpoint
         [Authorize(Policy = "AdminAccess")]
-        [HttpPost("problems/{problemId:guid}/deletion-requests/approved/{requestId:guid}")]
-        public async Task<IActionResult> ApproveDeletionRequestAsync([FromRoute] Guid requestId, CancellationToken cancellationToken = default)
+        [HttpPost("problems/{problemId:guid}/deletion-requests/approved")]
+        public async Task<IActionResult> ApproveDeletionRequestAsync([FromBody] Guid requestId, CancellationToken cancellationToken = default)
         {
+            var command = new ApproveProblemDeletionRequestCase(requestId);
+
+            await _mediator.Send(command, cancellationToken);
+
+            return Ok();
+        }
+
+        [Authorize(Policy = "AdminAccess")]
+        [HttpPatch("problems/deleted/{id:guid}")]
+        public async Task<IActionResult> RestoreDeletedProblemAsync([FromRoute] Guid id, CancellationToken cancellationToken = default)
+        {
+            var command = new RestoreProblemCase(id);
+
+            await _mediator.Send(command, cancellationToken);
+
+            return Ok();
+        }
+
+        [Authorize(Policy = "EditorAccess")]
+        [HttpGet("users/{userId:guid}/deletion-requests")]
+        public async Task<IActionResult> GetPagedOwnDeletionRequestsAsync([FromRoute] Guid userId, CancellationToken cancellationToken = default)
+        {
+            var request = new GetFilteredProblemDeletionRequestsCase(x => x.InitiatorId == userId/*, page, pageSize*/);
+
+            var data = await _mediator.Send(request, cancellationToken);
+
+            return Ok(data);
+        }
+
+
+        [Authorize(Policy = "AdminAccess")]
+        [HttpGet("deletion-requests")]
+        public async Task<IActionResult> GetPagedProblemDeletionRequestsAsync(CancellationToken cancellationToken = default)
+        {
+            var userId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
+
+            var request = new GetFilteredProblemDeletionRequestsCase(x => x.InitiatorId != userId/*, page, pageSize*/);
+
+            var data = await _mediator.Send(request, cancellationToken);
+
+            return Ok(data);
         }
     }
 }

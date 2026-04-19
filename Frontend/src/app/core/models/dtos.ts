@@ -28,9 +28,18 @@ export interface ProblemDto {
     versionLink?: string | null;
     slug: string;
     title: string;
-    status: string; // "Deleted", "no version", or other
-    reason?: string | null;
+    isPublished: boolean;
+    isDeleted: boolean;
     latestVersion?: UserProblemVersionDto | null;
+}
+
+export interface DeletionRequestDto {
+    id: string;
+    problemId: string;
+    initiatorId: string;
+    reason: string;
+    problemSlug:string;
+    problemTitle:string;
 }
 
 
@@ -56,7 +65,7 @@ export interface SubmissionDto {
     submissionId: string;
     versionId: string;
     problemSlug: string;
-    title:string;
+    title: string;
     solutionLanguage: string;
     solution: string;
     numPassedTests: number;

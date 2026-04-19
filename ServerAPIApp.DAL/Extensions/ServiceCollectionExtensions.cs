@@ -1,12 +1,13 @@
 ﻿using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ValueGeneration.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using ServerAPIApp.Contracts.Abstractions;
+using ServerAPIApp.DAL.Confs;
 using ServerAPIApp.DAL.Contexts;
 using ServerAPIApp.DAL.Repositories;
-using Hangfire.PostgreSql;
 
 namespace ServerAPIApp.DAL.Extensions
 {
@@ -19,16 +20,26 @@ namespace ServerAPIApp.DAL.Extensions
                     options => options.UseNpgsql(conf.GetConnectionString("DbConnectionString"))
                 );
 
+            using (var conn = new NpgsqlConnection(conf.GetConnectionString("DbConnectionString")))
+            {
+                conn.Open();
+
+                using (var cmd = new NpgsqlCommand("CREATE SCHEMA IF NOT EXISTS hangfire", conn))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
             services.AddHangfire(opt =>
-               opt.UsePostgreSqlStorage(
-                   conn => conn.UseNpgsqlConnection(conf.GetConnectionString("DbConnectionString")
-                   ),
-                   new PostgreSqlStorageOptions()
-                   {
-                       SchemaName = "hangfire"
-                   }
-                   )
-               );
+                   opt.UsePostgreSqlStorage(
+                       conn => conn.UseNpgsqlConnection(conf.GetConnectionString("DbConnectionString")
+                       ),
+                       new PostgreSqlStorageOptions()
+                       {
+                           SchemaName = "hangfire"
+                       }
+                       )
+                   );
         }
 
         public static void ConfigureRepositories(this IServiceCollection services)
@@ -50,16 +61,11 @@ namespace ServerAPIApp.DAL.Extensions
 
         public static void ConfigureObjectStorage(this IServiceCollection services, IConfiguration cfg)
         {
-            services.AddSingleton<IObjectStorage>
-                (
-                sp =>
-                {
-                    var endpoint = cfg["Minio:Endpoint"];
-                    var access = cfg["Minio:AccessKey"];
-                    var secret = cfg["Minio:SecretKey"];
-                    bool useSsl = bool.Parse(cfg["Minio:UseSsl"] ?? "true");
-                    return new ObjectStorage(endpoint, access, secret, useSsl);
-                });
+            var minioConfSection = cfg.GetSection("Minio");
+
+            services.Configure<MinioConfiguration>(minioConfSection);
+
+            services.AddSingleton<IObjectStorage, ObjectStorage>();
         }
     }
 }

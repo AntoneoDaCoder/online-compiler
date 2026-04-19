@@ -1,17 +1,21 @@
 ﻿using ServerAPIApp.Contracts.Abstractions;
 using Minio;
+using Microsoft.Extensions.Options;
+using ServerAPIApp.DAL.Confs;
 
 namespace ServerAPIApp.DAL.Repositories
 {
     public class ObjectStorage : IObjectStorage
     {
         private IMinioClient _client;
-        public ObjectStorage(string endpoint, string accessKey, string secretKey, bool useSsl = true)
+        public ObjectStorage(IOptions<MinioConfiguration> opt)
         {
+            var conf = opt.Value;
+
             _client = new MinioClient()
-                .WithEndpoint(endpoint)
-                .WithCredentials(accessKey, secretKey)
-                .WithSSL(useSsl)
+                .WithEndpoint(conf.Endpoint)
+                .WithCredentials(conf.AccessKey, conf.SecretKey)
+                .WithSSL(conf.UseSsl)
                 .Build();
         }
 

@@ -1,0 +1,40 @@
+<div class="tasks-page layout">
+    <div class="tasks-main">
+        <section class="filters card">
+            <input placeholder="Фильтр по причине, названию или жетону задачи" [(ngModel)]="filterValue"
+                (input)="applyFilters()" />
+            <select [(ngModel)]="filterTarget" (change)="applyFilters()">
+                <option value="slug">Жетон</option>
+                <option value="title">Название задачи</option>
+                <option value="reason">Причина удаления</option>
+            </select>
+            <div class="row">
+                <button (click)="clearFilters()">Очистить</button>
+            </div>
+        </section>
+
+        <section class="problems-list">
+            <div *ngFor="let p of filteredRequests" class="problem-card">
+                <div class="problem-main">
+                    <div class="title">{{ p.problemTitle }} <small class="slug">({{ p.problemSlug }})</small></div>
+                    <div class="langs">
+                        <span>
+                            {{ p.reason }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="problem-meta">
+                    <div class="actions">
+                        <button *ngIf="isAdmin()" class="btn-solve" (click)="onApproveRequest(p)">Подтвердить</button>
+                        <button class="btn-delete" (click)="onCancelRequest(p)">Отменить</button>
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="filteredRequests.length === 0" class="muted small">Нет запросов по текущим фильтрам.</div>
+        </section>
+    </div>
+
+    <app-sidebar class="tasks-sidebar"></app-sidebar>
+</div>

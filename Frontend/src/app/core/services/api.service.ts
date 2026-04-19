@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environment';
-import { LanguageDto, ProblemDto, EditorProblemVersionDto, ShortSubmissionDto, SubmissionDto, UserProblemVersionDto } from '../models/dtos';
+import { LanguageDto, ProblemDto, EditorProblemVersionDto, ShortSubmissionDto, SubmissionDto, UserProblemVersionDto, DeletionRequestDto } from '../models/dtos';
 
 
 @Injectable({ providedIn: 'root' })
@@ -79,6 +79,34 @@ export class ApiService {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+            });
+    }
+
+    createProblemDeletionRequest(problemId: string, initiatorId: string, reason: string) {
+        return this.http.post(`${environment.apiBaseUrl}/problems/${problemId}/deletion-requests`,
+            {
+                initiatorId: initiatorId,
+                reason: reason
+            }
+        )
+    }
+
+    getOwnProblemDeletionRequests(userId: string) {
+        return this.http.get<DeletionRequestDto[]>(`${environment.apiBaseUrl}/users/${userId}/deletion-requests`);
+    }
+
+    getAllProblemDeletionRequests() {
+        return this.http.get<DeletionRequestDto[]>(`${environment.apiBaseUrl}/deletion-requests`);
+    }
+
+    cancelProblemDeletionRequest(problemId: string, requestId: string) {
+        return this.http.delete(`${environment.apiBaseUrl}/problems/${problemId}/deletion-requests/${requestId}`);
+    }
+
+    approveProblemDeletionRequest(problemId: string, requestId: string) {
+        return this.http.post(`${environment.apiBaseUrl}/problems/${problemId}/deletion-requests/approved`,
+            {
+                requestId: requestId
             });
     }
 }

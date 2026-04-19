@@ -144,5 +144,14 @@ namespace ServerAPIApp.Core.Helpers
             return (draft, manifest);
         }
         #endregion
+
+        #region ProblemDeletionRequestEntity related mapping
+        public static IEnumerable<ProblemDeletionRequestDto> ToDto(this IList<ProblemDeletionRequestEntity> entities)
+        {
+            if (entities is null) return [];
+
+            return entities.Select(e => ProblemDeletionRequestDto.From(e)!);
+        }
+        #endregion
     }
 }

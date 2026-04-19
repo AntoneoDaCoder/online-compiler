@@ -5,7 +5,7 @@ using ServerAPIApp.Domain.Entities;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 {
-    public class CreateProblemDeletionRequestCaseHandler : IRequestHandler<CreateProblemDeletionRequestCase, Guid>
+    public class CreateProblemDeletionRequestCaseHandler : IRequestHandler<CreateProblemDeletionRequestCase, Unit>
     {
         private readonly IProblemDeletionRequestRepository _repo;
 
@@ -14,7 +14,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
             _repo = repo;
         }
 
-        public async Task<Guid> Handle(CreateProblemDeletionRequestCase command, CancellationToken cancellationToken)
+        public async Task<Unit> Handle(CreateProblemDeletionRequestCase command, CancellationToken cancellationToken)
         {
             var request = new ProblemDeletionRequestEntity()
             {
@@ -24,9 +24,9 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
                 Reason = command.Reason,
             };
 
-            var entity = await _repo.CreateAsync(request, cancellationToken);
+            await _repo.CreateAsync(request, cancellationToken);
 
-            return entity.Id;
+            return Unit.Value;
         }
     }
 }

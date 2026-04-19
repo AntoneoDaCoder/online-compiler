@@ -9,6 +9,7 @@ import { SubmissionsComponent } from './pages/submissions/submissions.component'
 import { SubmissionDetailComponent } from './pages/submission-detail/submission-detail.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { AuthGuard } from './core/guards/auth.guard';
+import { DeletionRequestsComponent } from './pages/deletion-requests/deletion-requests.component';
 
 export const appRoutes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -22,7 +23,9 @@ export const appRoutes: Routes = [
   { path: 'submissions', component: SubmissionsComponent, canActivate: [AuthGuard] },
   { path: 'submissions/:id', component: SubmissionDetailComponent, canActivate: [AuthGuard] },
   { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] },
-
+  { path: 'my-deletion-requests', component: DeletionRequestsComponent, canActivate: [AuthGuard], data: { roles: ['Editor', 'Admin'] } },
+  { path: 'deletion-requests', component: DeletionRequestsComponent, canActivate: [AuthGuard], data: { roles: ['Admin'] } },
+  
   // дефолтная
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: '**', redirectTo: 'login' }
