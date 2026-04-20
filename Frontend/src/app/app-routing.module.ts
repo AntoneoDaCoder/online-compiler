@@ -10,6 +10,7 @@ import { SubmissionDetailComponent } from './pages/submission-detail/submission-
 import { ProfileComponent } from './pages/profile/profile.component';
 import { AuthGuard } from './core/guards/auth.guard';
 import { DeletionRequestsComponent } from './pages/deletion-requests/deletion-requests.component';
+import { DeletionQueueComponent } from './pages/deletion-queue/deletion-queue.component';
 
 export const appRoutes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -23,9 +24,10 @@ export const appRoutes: Routes = [
   { path: 'submissions', component: SubmissionsComponent, canActivate: [AuthGuard] },
   { path: 'submissions/:id', component: SubmissionDetailComponent, canActivate: [AuthGuard] },
   { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] },
-  { path: 'my-deletion-requests', component: DeletionRequestsComponent, canActivate: [AuthGuard], data: { roles: ['Editor', 'Admin'] } },
-  { path: 'deletion-requests', component: DeletionRequestsComponent, canActivate: [AuthGuard], data: { roles: ['Admin'] } },
-  
+  { path: 'my-deletion-requests', component: DeletionRequestsComponent, canActivate: [AuthGuard], data: { roles: ['Editor', 'Admin'], viewAsEditor: true } },
+  { path: 'deletion-requests', component: DeletionRequestsComponent, canActivate: [AuthGuard], data: { roles: ['Admin'], viewAsEditor: false } },
+  { path: 'deletion-queue', component: DeletionQueueComponent, canActivate: [AuthGuard], data: { roles: ['Admin'] } },
+
   // дефолтная
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: '**', redirectTo: 'login' }

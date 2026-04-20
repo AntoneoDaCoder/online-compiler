@@ -69,7 +69,7 @@ export class TasksComponent implements OnInit, OnDestroy {
 
     loadInitial() {
         this.api.getLanguages().subscribe(l => this.languages = l || []);
-        this.api.getProblems().subscribe(p => {
+        this.api.getProblems({ includeLanguages: true, includeLatestVersion: true }).subscribe(p => {
             this.problems = p || [];
             this.applyFilters();
         });

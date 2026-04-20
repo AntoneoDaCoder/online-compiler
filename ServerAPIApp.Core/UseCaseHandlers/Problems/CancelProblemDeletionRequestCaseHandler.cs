@@ -22,7 +22,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
             if (entity == null)
                 return;
 
-            if (entity.InitiatorId != request.SenderId || !request.SenderRoles.Any(x => x.Contains(UserRelatedConstants.AdminRoleName)))
+            if (entity.InitiatorId != request.SenderId && !request.SenderRoles.Any(x => x.Contains(UserRelatedConstants.AdminRoleName)))
                 throw new ForbiddenException("You are not allowed to cancel a request that is not yours");
 
             await _repo.DeleteAsync(entity, cancellationToken);

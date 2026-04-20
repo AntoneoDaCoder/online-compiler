@@ -19,8 +19,9 @@ namespace ServerAPIApp.Contracts.DTOs.Problems
                 isPublished = false;
             else
             {
-                //EF Core sets this property to null if lastpublishedid is null, so if its not null there is actually such a version with languages in the db
-                supportedLanguages = entity.LastPublishedVersion!.SupportedLanguages.Select(x => x.LanguageId).ToList();
+                //needed because on one tab on the UI we don't need the languages and the latest version, so its not included
+                if (entity.LastPublishedVersion is not null)
+                    supportedLanguages = entity.LastPublishedVersion.SupportedLanguages.Select(x => x.LanguageId).ToList();
             }
 
             return new ProblemDto

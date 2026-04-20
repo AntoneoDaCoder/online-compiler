@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environment';
 import { LanguageDto, ProblemDto, EditorProblemVersionDto, ShortSubmissionDto, SubmissionDto, UserProblemVersionDto, DeletionRequestDto } from '../models/dtos';
 
@@ -14,8 +14,26 @@ export class ApiService {
     }
 
 
-    getProblems() {
-        return this.http.get<ProblemDto[]>(`${environment.apiBaseUrl}/problems`);
+    getProblems(
+        {
+            getDeleted = null,
+            includeLatestVersion = null,
+            includeLanguages = null
+        }: {
+            getDeleted?: boolean | null;
+            includeLatestVersion?: boolean | null;
+            includeLanguages?: boolean | null;
+        } = {}) {
+        let params = new HttpParams()
+
+        if (getDeleted != null)
+            params = params.set('getDeleted', getDeleted);
+        if (includeLatestVersion != null)
+            params = params.set('includeLatestVersion', includeLatestVersion);
+        if (includeLanguages != null)
+            params = params.set('includeLanguages', includeLanguages);
+
+        return this.http.get<ProblemDto[]>(`${environment.apiBaseUrl}/problems`, { params });
     }
 
 
@@ -95,18 +113,47 @@ export class ApiService {
         return this.http.get<DeletionRequestDto[]>(`${environment.apiBaseUrl}/users/${userId}/deletion-requests`);
     }
 
-    getAllProblemDeletionRequests() {
-        return this.http.get<DeletionRequestDto[]>(`${environment.apiBaseUrl}/deletion-requests`);
+    getFilteredProblemDeletionRequests
+        (
+            {
+                excludeUser = null,
+                userId = null,
+                exactMatch = null,
+                problemId = null
+            }: {
+                excludeUser?: boolean | null,
+                userId?: string | null,
+                exactMatch?: boolean | null,
+                problemId?: string | null,
+            } = {}
+        ) {
+        let params = new HttpParams();
+
+        if (excludeUser != null && userId != null) {
+            params = params.set('excludeUser', excludeUser);
+            params = params.set('userId', userId);
+        }
+
+        if (exactMatch != null && problemId != null) {
+            params = params.set('exactMatch', exactMatch);
+            params = params.set('problemId', problemId);
+        }
+
+        return this.http.get<DeletionRequestDto[]>(`${environment.apiBaseUrl}/deletion-requests`, { params });
     }
 
     cancelProblemDeletionRequest(problemId: string, requestId: string) {
         return this.http.delete(`${environment.apiBaseUrl}/problems/${problemId}/deletion-requests/${requestId}`);
     }
 
-    approveProblemDeletionRequest(problemId: string, requestId: string) {
+    approveProblemDeletionRequest(problemId: string, rId: string) {
         return this.http.post(`${environment.apiBaseUrl}/problems/${problemId}/deletion-requests/approved`,
             {
-                requestId: requestId
+                requestId: rId
             });
+    }
+
+    restoreProblem(problemId: string) {
+        return this.http.patch(`${environment.apiBaseUrl}/problems/deleted/${problemId}`, null);
     }
 }

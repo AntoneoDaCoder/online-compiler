@@ -243,6 +243,11 @@ body {
     box-shadow: 0 4px 10px rgba(16, 24, 40, 0.03);
 }
 
+.problem-card:hover {
+    box-shadow: 0 4px 10px rgba(14, 22, 37, 0.03);
+    border-color: #558af4;
+}
+
 
 .problem-main {
     flex: 1;
@@ -622,23 +627,25 @@ button.ghost {
     flex-direction: column;
 }
 
-.app-main .profile-card{
-    width:30%;
+.app-main .profile-card {
+    width: 30%;
     margin-right: 20%;
 }
 
-.profile-page{
+.profile-page {
     display: flex;
     flex-direction: row;
     justify-content: flex-end;
 }
 
-.roles{
-    margin-top:9%;
+.roles {
+    margin-top: 9%;
 }
-.profile-id{
+
+.profile-id {
     margin-top: 6%;
 }
+
 .modal-backdrop {
     position: fixed;
     inset: 0;

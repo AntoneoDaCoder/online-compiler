@@ -24,25 +24,38 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 
         public async Task<IEnumerable<ProblemDto>?> Handle(GetFilteredProblemsCase request, CancellationToken cancellationToken)
         {
-            var filter = BuildFilter(request.Roles);
+            var filter = BuildFilter(request);
 
-            var result = await _repo
+            var query = _repo
                 .Query()
-                .Where(filter)
+                .AsNoTracking()
+                .Where(filter);
+
+            if (request.IncludeLatestVersion.HasValue && request.IncludeLatestVersion.Value
+                && request.IncludeLanguages.HasValue && request.IncludeLanguages.Value)
+            {
+                query = query
                 .Include(x => x.LastPublishedVersion)
-                .ThenInclude(x => x.SupportedLanguages)
-                .ToListAsync(cancellationToken);
+                .ThenInclude(x => x.SupportedLanguages);
+            }
+
+            var result = await query.ToListAsync(cancellationToken);
 
             return result.ToDto();
         }
 
-        private static Expression<Func<ProblemEntity, bool>> BuildFilter(IEnumerable<string> roles)
+        private static Expression<Func<ProblemEntity, bool>> BuildFilter(GetFilteredProblemsCase request)
         {
-            Expression<Func<ProblemEntity, bool>> filter = x => x.LastPublishedVersionId != null && !x.IsDeleted;
+            Expression<Func<ProblemEntity, bool>> filter = x => x.LastPublishedVersionId != null;
 
-            if (roles.Any(x => _editorRoles.Contains(x)))
+            if (request.Roles.Any(x => _editorRoles.Contains(x)))
             {
-                filter = x => !x.IsDeleted;
+                filter = x => true;
+            }
+
+            if (request.GetDeleted.HasValue)
+            {
+                filter = filter.And(x => x.IsDeleted == request.GetDeleted.Value);
             }
 
             return filter;

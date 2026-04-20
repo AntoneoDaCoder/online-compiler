@@ -91,6 +91,8 @@ namespace ServerAPIApp.Core.Extensions
 
             services.AddScoped<IClaimsTransformation, KeycloakClaimTransformer>();
 
+            services.AddScoped<ICleanupService, CleanupService>();
+
             services.AddMediatR
                 (
                 cfg => cfg.RegisterServicesFromAssembly(typeof(AddUserToRolesCaseHandler).Assembly)

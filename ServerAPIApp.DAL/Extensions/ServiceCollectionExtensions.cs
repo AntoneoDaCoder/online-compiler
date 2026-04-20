@@ -20,26 +20,20 @@ namespace ServerAPIApp.DAL.Extensions
                     options => options.UseNpgsql(conf.GetConnectionString("DbConnectionString"))
                 );
 
-            using (var conn = new NpgsqlConnection(conf.GetConnectionString("DbConnectionString")))
+            services.AddHangfire((sp, cfg) =>
             {
-                conn.Open();
+                cfg.UsePostgreSqlStorage(opts =>
+                    opts.UseNpgsqlConnection(conf.GetConnectionString("DbConnectionString")),
+                    new PostgreSqlStorageOptions
+                    {
+                        SchemaName = "hangfire",
+                        PrepareSchemaIfNecessary = true,
+                        StartupConnectionMaxRetries = 0,
+                        AllowDegradedModeWithoutStorage = false
+                    });
+            });
 
-                using (var cmd = new NpgsqlCommand("CREATE SCHEMA IF NOT EXISTS hangfire", conn))
-                {
-                    cmd.ExecuteNonQuery();
-                }
-            }
-
-            services.AddHangfire(opt =>
-                   opt.UsePostgreSqlStorage(
-                       conn => conn.UseNpgsqlConnection(conf.GetConnectionString("DbConnectionString")
-                       ),
-                       new PostgreSqlStorageOptions()
-                       {
-                           SchemaName = "hangfire"
-                       }
-                       )
-                   );
+            services.AddHangfireServer();
         }
 
         public static void ConfigureRepositories(this IServiceCollection services)

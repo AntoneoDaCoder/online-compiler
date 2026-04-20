@@ -1,14 +1,14 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 
 import { ApiService } from '../../core/services/api.service';
 import { SignalrService } from '../../core/services/signalr.service';
 import { AuthService } from '../../core/services/auth.service';
 import { DeletionRequestDto, LanguageDto, ProblemDto } from '../../core/models/dtos';
 import { SidebarComponent } from '../../components/shared/sidebar.component';
-import { Subscription, switchMap } from 'rxjs';
+import { Subscription, switchMap, takeUntil, Subject } from 'rxjs';
 
 export type FilterTarget = 'slug' | 'reason' | 'title';
 
@@ -26,27 +26,36 @@ export class DeletionRequestsComponent implements OnInit, OnDestroy {
     filterValue = '';
     filterTarget: FilterTarget = 'slug';
 
+    viewAsEditor = true;
+    private destroy$ = new Subject<void>();
+
     constructor(
         private api: ApiService,
         private signalr: SignalrService,
         public auth: AuthService,
-        private router: Router
+        private route: ActivatedRoute
     ) { }
 
     ngOnInit(): void {
+        this.route.data
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(data => {
+                this.viewAsEditor = data['viewAsEditor'];
+            });
         this.loadInitial();
     }
 
     ngOnDestroy(): void {
-
+        this.destroy$.next();
+        this.destroy$.complete();
     }
 
     loadInitial() {
-        let userId = this.auth.getId();
+        const userId = this.auth.getId();
         this.roles = this.auth.getRoles();
 
-        if (this.isAdmin()) {
-            this.api.getAllProblemDeletionRequests().subscribe(r => {
+        if (!this.viewAsEditor) {
+            this.api.getFilteredProblemDeletionRequests({ excludeUser: true, userId: userId }).subscribe(r => {
                 this.requests = r || [];
                 this.applyFilters();
             });

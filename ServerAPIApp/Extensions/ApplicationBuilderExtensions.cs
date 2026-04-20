@@ -1,4 +1,5 @@
-﻿using ServerAPIApp.Middlewares;
+﻿using Hangfire;
+using ServerAPIApp.Middlewares;
 
 namespace ServerAPIApp.Extensions
 {

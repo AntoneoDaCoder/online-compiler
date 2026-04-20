@@ -1,9 +1,8 @@
 ﻿using MediatR;
 using ServerAPIApp.Contracts.DTOs.Problems;
-using ServerAPIApp.Domain.Entities;
-using System.Linq.Expressions;
 
 namespace ServerAPIApp.Core.UseCases.Problems
 {
-    public record GetFilteredProblemDeletionRequestsCase(Expression<Func<ProblemDeletionRequestEntity, bool>> Filter/*, int Page, int PageSize*/) : IRequest<IEnumerable<ProblemDeletionRequestDto>>;
+    public record GetFilteredProblemDeletionRequestsCase(bool? ExcludeUser = null, bool? OnlyUser = null, Guid? UserId = null, bool? ExactMatch = null, Guid? ProblemId = null) :
+        IRequest<IEnumerable<ProblemDeletionRequestDto>>;
 }

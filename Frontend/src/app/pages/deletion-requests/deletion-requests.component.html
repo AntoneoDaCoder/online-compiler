@@ -26,7 +26,8 @@
 
                 <div class="problem-meta">
                     <div class="actions">
-                        <button *ngIf="isAdmin()" class="btn-solve" (click)="onApproveRequest(p)">Подтвердить</button>
+                        <button *ngIf="isAdmin() && !viewAsEditor" class="btn-solve"
+                            (click)="onApproveRequest(p)">Подтвердить</button>
                         <button class="btn-delete" (click)="onCancelRequest(p)">Отменить</button>
                     </div>
                 </div>

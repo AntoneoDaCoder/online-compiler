@@ -5,6 +5,7 @@ using ServerAPIApp.Core.UseCases.Problems;
 using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 using ServerAPIApp.Domain.Constants;
 using ServerAPIApp.Core.Helpers;
+using ServerAPIApp.Core.Abstractions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 {
@@ -39,13 +40,13 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
                 svc => svc.DeleteAsync(problem),
                 ApplicationConstants.GracePeriod);
 
-            BackgroundJob.ContinueJobWith(newJobId, () => Utils.RemoveHangfireJob(newJobId), JobContinuationOptions.OnlyOnSucceededState);
+            BackgroundJob.ContinueJobWith<ICleanupService>(newJobId,
+                svc => svc.DeleteProblemRelatedMetadataAsync(request.Id, newJobId),
+                JobContinuationOptions.OnlyOnSucceededState);
 
             problem.DeletionJobId = newJobId;
 
             await _problemRepo.UpdateAsync(problem, cancellationToken);
-
-            await _requestsRepo.DeleteAsync(request, cancellationToken);
         }
     }
 }

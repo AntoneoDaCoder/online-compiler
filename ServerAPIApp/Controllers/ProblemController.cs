@@ -21,11 +21,12 @@ namespace ServerAPIApp.Controllers
 
         [Authorize(Policy = "DefaultAccess")]
         [HttpGet("problems")]
-        public async Task<IActionResult> GetProblemsAsync(CancellationToken cancellationToken = default)
+        public async Task<IActionResult> GetFilteredProblemsAsync([FromQuery] bool? getDeleted = null, [FromQuery] bool? includeLatestVersion = null,
+           [FromQuery] bool? includeLanguages = null, CancellationToken cancellationToken = default)
         {
             var userRoles = User.GetRoles();
 
-            var command = new GetFilteredProblemsCase(userRoles);
+            var command = new GetFilteredProblemsCase(userRoles, getDeleted, includeLatestVersion, includeLanguages);
 
             var data = await _mediator.Send(command, cancellationToken);
 
@@ -107,9 +108,9 @@ namespace ServerAPIApp.Controllers
 
         [Authorize(Policy = "AdminAccess")]
         [HttpPost("problems/{problemId:guid}/deletion-requests/approved")]
-        public async Task<IActionResult> ApproveDeletionRequestAsync([FromBody] Guid requestId, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> ApproveDeletionRequestAsync([FromBody] CancelProblemDeletionRequestDto dto, CancellationToken cancellationToken = default)
         {
-            var command = new ApproveProblemDeletionRequestCase(requestId);
+            var command = new ApproveProblemDeletionRequestCase(dto.RequestId);
 
             await _mediator.Send(command, cancellationToken);
 
@@ -129,9 +130,9 @@ namespace ServerAPIApp.Controllers
 
         [Authorize(Policy = "EditorAccess")]
         [HttpGet("users/{userId:guid}/deletion-requests")]
-        public async Task<IActionResult> GetPagedOwnDeletionRequestsAsync([FromRoute] Guid userId, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> GetOwnDeletionRequestsAsync([FromRoute] Guid userId, CancellationToken cancellationToken = default)
         {
-            var request = new GetFilteredProblemDeletionRequestsCase(x => x.InitiatorId == userId/*, page, pageSize*/);
+            var request = new GetFilteredProblemDeletionRequestsCase(OnlyUser: true, UserId: userId);
 
             var data = await _mediator.Send(request, cancellationToken);
 
@@ -141,11 +142,10 @@ namespace ServerAPIApp.Controllers
 
         [Authorize(Policy = "AdminAccess")]
         [HttpGet("deletion-requests")]
-        public async Task<IActionResult> GetPagedProblemDeletionRequestsAsync(CancellationToken cancellationToken = default)
+        public async Task<IActionResult> GetProblemDeletionRequestsAsync([FromQuery] bool? excludeUser = null, [FromQuery] Guid? userId = null,
+            [FromQuery] bool? exactMatch = null, [FromQuery] Guid? problemId = null, CancellationToken cancellationToken = default)
         {
-            var userId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
-
-            var request = new GetFilteredProblemDeletionRequestsCase(x => x.InitiatorId != userId/*, page, pageSize*/);
+            var request = new GetFilteredProblemDeletionRequestsCase(ExcludeUser: excludeUser, UserId: userId, ExactMatch: exactMatch, ProblemId: problemId);
 
             var data = await _mediator.Send(request, cancellationToken);
 

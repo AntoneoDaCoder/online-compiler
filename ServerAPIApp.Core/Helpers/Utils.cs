@@ -28,10 +28,5 @@ namespace ServerAPIApp.Core.Helpers
 
             return (userId, realmRoles);
         }
-
-        public static void RemoveHangfireJob(string jobId)
-        {
-            BackgroundJob.Delete(jobId);
-        }
     }
 }
