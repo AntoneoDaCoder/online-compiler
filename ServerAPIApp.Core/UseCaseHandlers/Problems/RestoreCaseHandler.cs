@@ -1,5 +1,6 @@
 ﻿using Hangfire;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Contracts.DTOs.Problems;
 using ServerAPIApp.Core.UseCases.Problems;
@@ -18,7 +19,12 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 
         public async Task<ProblemDto> Handle(RestoreProblemCase command, CancellationToken cancellationToken)
         {
-            var entity = (await _repo.GetFilteredAsync(x => x.Id == command.ProblemId, cancellationToken)).FirstOrDefault();
+            var entity = await _repo
+                .Query()
+                .Where(x => x.Id == command.ProblemId)
+                .Include(x => x.LastPublishedVersion)
+                .ThenInclude(x => x.SupportedLanguages)
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (entity is null)
                 throw new ResourceNotFoundException("Problem not found.");
@@ -31,9 +37,9 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
             entity.DeletionScheduledAt = null;
             entity.IsDeleted = false;
 
-            var res = await _repo.UpdateAsync(entity, cancellationToken);
+            await _repo.SaveChangesAsync(cancellationToken);
 
-            return ProblemDto.From(res!);
+            return ProblemDto.From(entity);
         }
     }
 }

@@ -9,7 +9,7 @@ using ServerAPIApp.Core.Abstractions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Problems
 {
-    public class ApproveProblemDeletionRequestCaseHandler : IRequestHandler<ApproveProblemDeletionRequestCase>
+    public class ApproveProblemDeletionRequestCaseHandler : IRequestHandler<ApproveProblemDeletionRequestCase, Guid>
     {
         private readonly IProblemDeletionRequestRepository _requestsRepo;
         private readonly IProblemRepository _problemRepo;
@@ -20,7 +20,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
             _problemRepo = problemRepo;
         }
 
-        public async Task Handle(ApproveProblemDeletionRequestCase command, CancellationToken cancellationToken = default)
+        public async Task<Guid> Handle(ApproveProblemDeletionRequestCase command, CancellationToken cancellationToken = default)
         {
             var request = (await _requestsRepo.GetFilteredAsync(x => x.Id == command.RequestId, cancellationToken, includes: x => x.Problem)).FirstOrDefault();
 
@@ -36,6 +36,8 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
             problem.DeletionDeadline = deletionDate;
             problem.IsDeleted = true;
 
+            request.IsApproved = true;
+
             string newJobId = BackgroundJob.Schedule<IProblemRepository>(
                 svc => svc.DeleteAsync(problem),
                 ApplicationConstants.GracePeriod);
@@ -47,6 +49,10 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
             problem.DeletionJobId = newJobId;
 
             await _problemRepo.UpdateAsync(problem, cancellationToken);
+
+            await _requestsRepo.UpdateAsync(request, cancellationToken);
+
+            return request.InitiatorId;
         }
     }
 }

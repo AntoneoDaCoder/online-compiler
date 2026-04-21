@@ -1,10 +1,11 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ServerAPIApp.Contracts.Abstractions;
+using ServerAPIApp.Contracts.DTOs.Problems;
 using ServerAPIApp.Core.UseCases.Problems;
 using ServerAPIApp.Extensions;
 using ServerAPIApp.Helpers;
-using ServerAPIApp.Contracts.DTOs.Problems;
 
 namespace ServerAPIApp.Controllers
 {
@@ -12,11 +13,13 @@ namespace ServerAPIApp.Controllers
     [ApiController]
     public class ProblemController : ControllerBase
     {
-        private IMediator _mediator;
+        private readonly IMediator _mediator;
+        private readonly INotificationService _notifier;
 
-        public ProblemController(IMediator mediator)
+        public ProblemController(IMediator mediator, INotificationService notifier)
         {
             _mediator = mediator;
+            _notifier = notifier;
         }
 
         [Authorize(Policy = "DefaultAccess")]
@@ -34,6 +37,17 @@ namespace ServerAPIApp.Controllers
         }
 
         [Authorize(Policy = "EditorAccess")]
+        [HttpGet("problem-slug")]
+        public async Task<IActionResult> GenerateTaskSlugAsync(CancellationToken cancellationToken = default)
+        {
+            var command = new GenerateTaskSlugCase();
+
+            var slug = await _mediator.Send(command, cancellationToken);
+
+            return Ok(slug);
+        }
+
+        [Authorize(Policy = "EditorAccess")]
         [HttpPost("problems")]
         public async Task<IActionResult> CreateProblemAsync([FromBody] ProblemUpdateDto dto, CancellationToken cancellationToken = default)
         {
@@ -43,9 +57,9 @@ namespace ServerAPIApp.Controllers
 
             var data = await _mediator.Send(command, cancellationToken);
 
-            //TODO: notify editors and admins about problem creation
+            await _notifier.NotifyGroupAsync("Editors", "TaskCreated", data, cancellationToken);
 
-            return StatusCode(200, data);
+            return Created();
         }
 
         [Authorize(Policy = "EditorAccess")]
@@ -68,13 +82,9 @@ namespace ServerAPIApp.Controllers
         [HttpGet("problems/{problemSlug}/latest-version")]
         public async Task<IActionResult> GetLatestVersionBySlugAsync([FromRoute] string problemSlug, CancellationToken cancellationToken = default)
         {
-            Console.WriteLine("[API] got slug: " + problemSlug);
-
             var command = new GetProblemLatestVersionCase(problemSlug);
 
             var data = await _mediator.Send(command, cancellationToken);
-
-            Console.WriteLine("[API] about to return data");
 
             return StatusCode(200, data);
         }
@@ -86,7 +96,9 @@ namespace ServerAPIApp.Controllers
         {
             var request = new CreateProblemDeletionRequestCase(problemId, dto.InitiatorId, dto.Reason);
 
-            await _mediator.Send(request, cancellationToken);
+            var createdRequest = await _mediator.Send(request, cancellationToken);
+
+            await _notifier.NotifyGroupAsync("Admins", "RequestCreated", createdRequest, cancellationToken);
 
             return Created();
         }
@@ -101,18 +113,28 @@ namespace ServerAPIApp.Controllers
 
             var command = new CancelProblemDeletionRequestCase(senderId, requestId, userRoles);
 
-            await _mediator.Send(command, cancellationToken);
+            var initiatorId = await _mediator.Send(command, cancellationToken);
+
+            await _notifier.NotifyGroupAsync("Admins", "RequestDeleted", requestId, cancellationToken);
+
+            if (initiatorId is not null)
+                await _notifier.NotifyUserAsync(initiatorId.ToString()!, "RequestDeleted", requestId, cancellationToken);
 
             return NoContent();
         }
 
         [Authorize(Policy = "AdminAccess")]
         [HttpPost("problems/{problemId:guid}/deletion-requests/approved")]
-        public async Task<IActionResult> ApproveDeletionRequestAsync([FromBody] CancelProblemDeletionRequestDto dto, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> ApproveDeletionRequestAsync([FromRoute] Guid problemId, [FromBody] CancelProblemDeletionRequestDto dto,
+            CancellationToken cancellationToken = default)
         {
             var command = new ApproveProblemDeletionRequestCase(dto.RequestId);
 
             await _mediator.Send(command, cancellationToken);
+
+            await _notifier.NotifyGroupAsync("Editors", "ProblemDeleted", problemId, cancellationToken);
+
+            await _notifier.NotifyGroupAsync("Admins", "RequestApproved", dto.RequestId, cancellationToken);
 
             return Ok();
         }
@@ -123,7 +145,9 @@ namespace ServerAPIApp.Controllers
         {
             var command = new RestoreProblemCase(id);
 
-            await _mediator.Send(command, cancellationToken);
+            var restoredProblem = await _mediator.Send(command, cancellationToken);
+
+            await _notifier.NotifyGroupAsync("Users", "ProblemRestored", restoredProblem, cancellationToken);
 
             return Ok();
         }
@@ -143,9 +167,10 @@ namespace ServerAPIApp.Controllers
         [Authorize(Policy = "AdminAccess")]
         [HttpGet("deletion-requests")]
         public async Task<IActionResult> GetProblemDeletionRequestsAsync([FromQuery] bool? excludeUser = null, [FromQuery] Guid? userId = null,
-            [FromQuery] bool? exactMatch = null, [FromQuery] Guid? problemId = null, CancellationToken cancellationToken = default)
+            [FromQuery] bool? exactMatch = null, [FromQuery] Guid? problemId = null, [FromQuery] bool? onlyNotApproved = null, CancellationToken cancellationToken = default)
         {
-            var request = new GetFilteredProblemDeletionRequestsCase(ExcludeUser: excludeUser, UserId: userId, ExactMatch: exactMatch, ProblemId: problemId);
+            var request = new GetFilteredProblemDeletionRequestsCase(ExcludeUser: excludeUser, UserId: userId, ExactMatch: exactMatch,
+                ProblemId: problemId, OnlyNotApproved: onlyNotApproved);
 
             var data = await _mediator.Send(request, cancellationToken);
 

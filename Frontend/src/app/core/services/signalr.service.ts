@@ -3,7 +3,7 @@ import * as signalR from '@microsoft/signalr';
 import { environment } from '../../environment';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { AuthService } from './auth.service';
-import { CodeResponseDto, EditorProblemVersionDto } from '../models/dtos';
+import { CodeResponseDto, DeletionRequestDto, EditorProblemVersionDto, ProblemDto } from '../models/dtos';
 
 
 @Injectable({ providedIn: 'root' })
@@ -18,8 +18,24 @@ export class SignalrService implements OnDestroy {
     private draftDeletedMessages$ = new Subject<string>();
     private draftCreatedMessages$ = new Subject<EditorProblemVersionDto>();
 
+    private problemDeletedMessages$ = new Subject<string>();
+    private problemRestoredMessages$ = new Subject<ProblemDto>();
+    private problemCreatedMessages$ = new Subject<ProblemDto>();
+
+    private deletionRequestCreatedMessages$ = new Subject<DeletionRequestDto>();
+    private deletionRequestDeletedMessages$ = new Subject<string>();
+    private deletionRequestApprovedMessages$ = new Subject<string>();
+
     public onCodeResponse$ = this.codeResponseMessages$.asObservable();
     public onVersionPublished = this.versionPublishedMessages$.asObservable();
+
+    public onProblemDeleted = this.problemDeletedMessages$.asObservable();
+    public onProblemRestored = this.problemRestoredMessages$.asObservable();
+    public onProblemCreated = this.problemCreatedMessages$.asObservable();
+
+    public onDeletionRequestCreated = this.deletionRequestCreatedMessages$.asObservable();
+    public onDeletionRequestDeleted = this.deletionRequestDeletedMessages$.asObservable();
+    public onDeletionRequestApproved = this.deletionRequestApprovedMessages$.asObservable();
 
     public onDraftCreated = this.draftCreatedMessages$.asObservable();
     public onDraftUpdated = this.draftUpdatedMessages$.asObservable();
@@ -108,16 +124,48 @@ export class SignalrService implements OnDestroy {
         this.hubConnection.on('DraftDeleted', (data: string) => {
             this.draftDeletedMessages$.next(data);
         });
+
+        this.hubConnection.on('ProblemDeleted', (data: string) => {
+            this.problemDeletedMessages$.next(data);
+        })
+
+        this.hubConnection.on('ProblemRestored', (data: ProblemDto) => {
+            this.problemRestoredMessages$.next(data);
+        })
+
+        this.hubConnection.on("RequestApproved", (data: string) => {
+            this.deletionRequestApprovedMessages$.next(data);
+        })
+
+        this.hubConnection.on("RequestDeleted", (data: string) => {
+            this.deletionRequestDeletedMessages$.next(data);
+        })
+
+        this.hubConnection.on("RequestCreated", (data: DeletionRequestDto) => {
+            this.deletionRequestCreatedMessages$.next(data);
+        })
+
+        this.hubConnection.on("TaskCreated", (data: ProblemDto) => {
+            this.problemCreatedMessages$.next(data);
+        })
     }
 
     ngOnDestroy() {
         this.stopConnection();
+
         this.codeResponseMessages$.complete();
         this.versionPublishedMessages$.complete();
+
         this.draftCreatedMessages$.complete();
         this.draftDeletedMessages$.complete();
         this.draftUpdatedMessages$.complete();
+
+        this.problemDeletedMessages$.complete();
+        this.problemRestoredMessages$.complete();
+        this.problemCreatedMessages$.complete();
+
+        this.deletionRequestApprovedMessages$.complete();
+        this.deletionRequestCreatedMessages$.complete();
+        this.deletionRequestDeletedMessages$.complete();
     }
-
-
 }

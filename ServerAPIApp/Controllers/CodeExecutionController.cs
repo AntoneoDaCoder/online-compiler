@@ -33,8 +33,6 @@ namespace ServerAPIApp.Controllers
             {
                 var userId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
 
-                Console.WriteLine("Extracted id");
-
                 await _dispatcher.ScheduleForExecutionAsync(userId, dto, cancellationToken);
 
                 Console.WriteLine($"[API Controller] Received a request [Id:{dto.RequestId}], server time: {DateTime.Now}");

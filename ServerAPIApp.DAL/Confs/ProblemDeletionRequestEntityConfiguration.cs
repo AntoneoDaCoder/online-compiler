@@ -30,6 +30,11 @@ namespace ServerAPIApp.DAL.Confs
                 .HasColumnName("reason");
 
             builder
+                .Property(x => x.IsApproved)
+                .IsRequired()
+                .HasColumnName("is_approved");
+
+            builder
                 .Property(x => x.ProblemId)
                 .IsRequired()
                 .HasColumnName("problem_id");

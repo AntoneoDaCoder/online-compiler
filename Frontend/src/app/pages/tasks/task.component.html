@@ -9,6 +9,7 @@
             </select>
             <div class="row">
                 <button (click)="clearFilters()">Очистить</button>
+                <button *ngIf="isAdminOrEditor()" (click)="openCreateDialog()">Создать задачу</button>
             </div>
         </section>
 
@@ -27,7 +28,8 @@
                     <div class="actions">
                         <button class="btn-solve" (click)="onOpenProblem(p)">Решить</button>
                         <button *ngIf="isAdminOrEditor()" class="btn-edit" (click)="onEditProblem(p)">Изменить</button>
-                        <button *ngIf="isAdminOrEditor()" class="btn-delete" (click)="onDeleteProblem(p)">Запросить удаление</button>
+                        <button *ngIf="isAdminOrEditor()" class="btn-delete" (click)="onDeleteProblem(p)">Запросить
+                            удаление</button>
                     </div>
                 </div>
             </div>
@@ -40,6 +42,7 @@
 </div>
 
 <div class="modal-backdrop" *ngIf="deleteDialogOpen" (click)="closeDeleteDialog()"></div>
+<div class="modal-backdrop" *ngIf="createDialogOpen" (click)="closeCreateDialog()"></div>
 
 <div class="delete-modal card" *ngIf="deleteDialogOpen" (click)="$event.stopPropagation()">
     <div class="delete-modal__header">
@@ -51,22 +54,37 @@
 
     <div class="delete-modal__body">
         <label for="deleteReason">Причина запроса</label>
-        <textarea
-            id="deleteReason"
-            [(ngModel)]="deleteReason"
-            rows="5"
-            placeholder="Опишите причину удаления"
-        ></textarea>
+        <textarea id="deleteReason" [(ngModel)]="deleteReason" rows="5"
+            placeholder="Опишите причину удаления"></textarea>
     </div>
 
     <div class="delete-modal__footer row">
         <button class="secondary" (click)="closeDeleteDialog()">Отмена</button>
-        <button
-            class="btn-primary"
-            (click)="confirmDeleteRequest()"
-            [disabled]="deleteSubmitting || !deleteReason.trim()"
-        >
+        <button class="btn-primary" (click)="confirmDeleteRequest()"
+            [disabled]="deleteSubmitting || !deleteReason.trim()">
             Подтвердить
+        </button>
+    </div>
+</div>
+
+<div class="delete-modal card" *ngIf="createDialogOpen" (click)="$event.stopPropagation()">
+    <div class="delete-modal__header">
+        <div class="title">Создание задачи</div>
+    </div>
+
+    <div class="delete-modal__body">
+        <label for="createSlug">Жетон задачи</label>
+        <input readonly="readonly" id="createSlug" [(ngModel)]="createSlug" placeholder="Жетон задачи" />
+        <button class="btn-primary" (click)="getTaskSlug()" [disabled]="createSubmitting">Получить жетон</button>
+        <label for="createTitle">Название задачи</label>
+        <input id="createTitle" [(ngModel)]="createTitle" placeholder="Название задачи" />
+    </div>
+
+    <div class="delete-modal__footer row">
+        <button class="secondary" (click)="closeCreateDialog()">Отмена</button>
+        <button class="btn-primary" (click)="confirmCreateRequest()"
+            [disabled]="createSubmitting || !createTitle.trim()">
+            Создать
         </button>
     </div>
 </div>

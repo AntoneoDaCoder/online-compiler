@@ -38,8 +38,14 @@ export interface DeletionRequestDto {
     problemId: string;
     initiatorId: string;
     reason: string;
-    problemSlug:string;
-    problemTitle:string;
+    problemSlug: string;
+    problemTitle: string;
+    isApproved: boolean;
+}
+
+export interface ProblemUpdateDto {
+    slug: string;
+    title: string;
 }
 
 

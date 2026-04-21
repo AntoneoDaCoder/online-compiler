@@ -1,12 +1,21 @@
 <div class="tasks-page layout">
     <div class="tasks-main">
         <section class="filters card">
-            <input placeholder="Фильтр по причине, названию или жетону задачи" [(ngModel)]="filterValue"
-                (input)="applyFilters()" />
+            <input *ngIf="filterTarget!=='status'" placeholder="Фильтр по причине запроса, названию или жетону задачи"
+                [(ngModel)]="filterValue" (input)="applyFilters()" />
+
+            <select *ngIf="filterTarget==='status' && viewAsEditor" [(ngModel)]="showOnlyApproved"
+                (change)="applyFilters()">
+                <option value="all">Все</option>
+                <option value="approved">Подтверждённые</option>
+                <option value="not-approved">Неподтверждённые</option>
+            </select>
+
             <select [(ngModel)]="filterTarget" (change)="applyFilters()">
                 <option value="slug">Жетон</option>
                 <option value="title">Название задачи</option>
                 <option value="reason">Причина удаления</option>
+                <option *ngIf="viewAsEditor" value="status">Статус запроса</option>
             </select>
             <div class="row">
                 <button (click)="clearFilters()">Очистить</button>
@@ -18,9 +27,7 @@
                 <div class="problem-main">
                     <div class="title">{{ p.problemTitle }} <small class="slug">({{ p.problemSlug }})</small></div>
                     <div class="langs">
-                        <span>
-                            {{ p.reason }}
-                        </span>
+                        <span>Причина: {{ p.reason }}, Статус: {{formatStatus(p.isApproved)}}</span>
                     </div>
                 </div>
 
@@ -28,7 +35,7 @@
                     <div class="actions">
                         <button *ngIf="isAdmin() && !viewAsEditor" class="btn-solve"
                             (click)="onApproveRequest(p)">Подтвердить</button>
-                        <button class="btn-delete" (click)="onCancelRequest(p)">Отменить</button>
+                        <button *ngIf="!p.isApproved" class="btn-delete" (click)="onCancelRequest(p)">Отменить</button>
                     </div>
                 </div>
             </div>

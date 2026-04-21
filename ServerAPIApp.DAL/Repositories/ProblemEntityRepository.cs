@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using ServerAPIApp.Contracts.Abstractions;
+﻿using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.DAL.Contexts;
 using ServerAPIApp.Domain.Entities;
 
@@ -12,6 +11,11 @@ namespace ServerAPIApp.DAL.Repositories
         public IQueryable<ProblemEntity> Query()
         {
             return _dbSet.AsQueryable();
+        }
+
+        public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
         }
     }
 }

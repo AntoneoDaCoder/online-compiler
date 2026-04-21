@@ -34,6 +34,11 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Problems
         {
             Expression<Func<ProblemDeletionRequestEntity, bool>> filter = x => true;
 
+            if (request.OnlyNotApproved.HasValue && request.OnlyNotApproved.Value)
+            {
+                filter = filter.And(x => !x.IsApproved);
+            }
+
             if (request.ExcludeUser.HasValue && request.ExcludeUser.Value)
             {
                 if (!request.UserId.HasValue)

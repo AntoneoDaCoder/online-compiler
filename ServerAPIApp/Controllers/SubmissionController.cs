@@ -35,8 +35,6 @@ namespace ServerAPIApp.Controllers
 
             await _mediator.Send(command, cancellationToken);
 
-            //TODO: notify admins and user about submission deletion (or do not notify user, just execute callback on front upon success receival)
-
             return StatusCode(204);
         }
 

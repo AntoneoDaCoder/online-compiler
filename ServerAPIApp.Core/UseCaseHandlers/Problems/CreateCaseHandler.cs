@@ -2,7 +2,6 @@
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.UseCases.Problems;
 using ServerAPIApp.Core.Helpers;
-using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
 using ServerAPIApp.Contracts.DTOs.Problems;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Problems

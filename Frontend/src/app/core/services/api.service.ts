@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environment';
-import { LanguageDto, ProblemDto, EditorProblemVersionDto, ShortSubmissionDto, SubmissionDto, UserProblemVersionDto, DeletionRequestDto } from '../models/dtos';
+import { LanguageDto, ProblemDto, EditorProblemVersionDto, ShortSubmissionDto, SubmissionDto, UserProblemVersionDto, DeletionRequestDto, ProblemUpdateDto } from '../models/dtos';
 
 
 @Injectable({ providedIn: 'root' })
@@ -119,12 +119,14 @@ export class ApiService {
                 excludeUser = null,
                 userId = null,
                 exactMatch = null,
-                problemId = null
+                problemId = null,
+                onlyNotApproved = null
             }: {
                 excludeUser?: boolean | null,
                 userId?: string | null,
                 exactMatch?: boolean | null,
                 problemId?: string | null,
+                onlyNotApproved?: boolean | null
             } = {}
         ) {
         let params = new HttpParams();
@@ -137,6 +139,10 @@ export class ApiService {
         if (exactMatch != null && problemId != null) {
             params = params.set('exactMatch', exactMatch);
             params = params.set('problemId', problemId);
+        }
+
+        if (onlyNotApproved != null) {
+            params = params.set('onlyNotApproved', onlyNotApproved)
         }
 
         return this.http.get<DeletionRequestDto[]>(`${environment.apiBaseUrl}/deletion-requests`, { params });
@@ -155,5 +161,13 @@ export class ApiService {
 
     restoreProblem(problemId: string) {
         return this.http.patch(`${environment.apiBaseUrl}/problems/deleted/${problemId}`, null);
+    }
+
+    getTaskSlug() {
+        return this.http.get(`${environment.apiBaseUrl}/problem-slug`, { responseType: 'text' })
+    }
+
+    createProblem(p: ProblemUpdateDto) {
+        return this.http.post(`${environment.apiBaseUrl}/problems`, p);
     }
 }

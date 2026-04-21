@@ -1,7 +1,4 @@
-﻿using Shared.DTOs;
-using System.Text.Json;
-
-namespace ServerAPIApp.Contracts.Abstractions
+﻿namespace ServerAPIApp.Contracts.Abstractions
 {
     public interface INotificationService
     {

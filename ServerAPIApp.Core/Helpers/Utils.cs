@@ -1,5 +1,5 @@
-﻿using Hangfire;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace ServerAPIApp.Core.Helpers
@@ -27,6 +27,18 @@ namespace ServerAPIApp.Core.Helpers
             }
 
             return (userId, realmRoles);
+        }
+
+        public static string GenerateTaskToken()
+        {
+            Span<char> digits = stackalloc char[5];
+
+            for (int i = 0; i < digits.Length; i++)
+            {
+                digits[i] = (char)('0' + RandomNumberGenerator.GetInt32(10));
+            }
+
+            return "Task-" + new string(digits);
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Hubs;
-using System.Text.Json;
 
 namespace ServerAPIApp.Notifiers
 {
