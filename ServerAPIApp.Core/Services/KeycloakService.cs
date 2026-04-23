@@ -49,6 +49,65 @@ namespace ServerAPIApp.Core.Services
             return users.FirstOrDefault();
         }
 
+        public async Task<IEnumerable<ExternalUserResponseDto>?> GetAllUsersAsync(CancellationToken cancellationToken = default)
+        {
+            var adminToken = await GetAdminTokenAsync(cancellationToken);
+
+            var request = new HttpRequestMessage(HttpMethod.Get,
+                $"admin/realms/{_configuration.Realm}/users");
+
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+
+            var response = await _httpClient.SendAsync(request, cancellationToken);
+
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (string.IsNullOrEmpty(json) || json == "null" || json == "[]")
+                return null;
+
+            var users = JsonSerializer.Deserialize<IEnumerable<ExternalUserResponseDto>>(json, _jsonOptions)
+                        ?? throw new InvalidOperationException("Failed to deserialize user response");
+
+            return users;
+        }
+
+        public async Task<IEnumerable<ExternalRoleDto>?> GetUserRealmRolesAsync(
+            string userId,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new EmptyFieldException("Keycloak account id is required.");
+
+            var adminToken = await GetAdminTokenAsync(cancellationToken);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"admin/realms/{_configuration.Realm}/users/{Uri.EscapeDataString(userId)}/role-mappings/realm");
+
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var response = await _httpClient.SendAsync(request, cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return null;
+
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(json) || json == "null" || json == "[]")
+                return null;
+
+            var roles = JsonSerializer.Deserialize<IEnumerable<ExternalRoleDto>>(json, _jsonOptions)
+                        ?? throw new InvalidOperationException("Failed to deserialize user realm roles response");
+
+            return roles;
+        }
+
+
         public async Task<Guid> CreateUserWithRolesAsync(string email, string username, string password,
             IEnumerable<string> roles, CancellationToken cancellationToken = default)
         {
@@ -89,7 +148,11 @@ namespace ServerAPIApp.Core.Services
             await SetPasswordAsync(userId, password, adminToken, cancellationToken);
 
             if (roles.Any())
-                await AssignRealmRolesAsync(userId, roles, cancellationToken);
+            {
+                var allRoles = await GetRoleDataAsync(adminToken, cancellationToken);
+
+                await AssignRealmRolesAsync(userId, adminToken, allRoles!, roles, cancellationToken);
+            }
 
             return Guid.Parse(userId);
         }
@@ -141,11 +204,32 @@ namespace ServerAPIApp.Core.Services
 
             return user.Email;
         }
-
-        public async Task AssignRealmRolesAsync(string userId, IEnumerable<string> roleNames, CancellationToken cancellationToken)
+        public async Task<IEnumerable<ExternalRoleDto>?> GetAvailableRolesAsync(CancellationToken cancellationToken = default)
         {
             var adminToken = await GetAdminTokenAsync(cancellationToken);
 
+            return await GetRoleDataAsync(adminToken, cancellationToken);
+        }
+
+        public async Task UpdateUserRolesAsync(string userId, IEnumerable<string> rolesToRemove, IEnumerable<string> rolesToAdd, CancellationToken cancellationToken = default)
+        {
+            var adminToken = await GetAdminTokenAsync(cancellationToken);
+
+            var allRoles = await GetRoleDataAsync(adminToken, cancellationToken);
+
+            if (rolesToRemove.Any())
+            {
+                await UnassignRealmRolesAsync(userId, adminToken, allRoles!, rolesToRemove, cancellationToken);
+            }
+
+            if (rolesToAdd.Any())
+            {
+                await AssignRealmRolesAsync(userId, adminToken, allRoles!, rolesToAdd, cancellationToken);
+            }
+        }
+
+        private async Task<IEnumerable<ExternalRoleDto>?> GetRoleDataAsync(string adminToken, CancellationToken cancellationToken = default)
+        {
             var urlRoles = $"admin/realms/{_configuration.Realm}/roles";
             var request = new HttpRequestMessage(HttpMethod.Get, urlRoles);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
@@ -155,25 +239,7 @@ namespace ServerAPIApp.Core.Services
 
             var allRoles = JsonSerializer.Deserialize<IEnumerable<ExternalRoleDto>>(await respAll.Content.ReadAsStringAsync(cancellationToken), _jsonOptions);
 
-            List<ExternalRoleDto> rolesToAssign = new List<ExternalRoleDto>();
-
-            foreach (var role in allRoles)
-            {
-                if (roleNames.Contains(role.RoleName))
-                {
-                    rolesToAssign.Add(role);
-                }
-            }
-
-            var assignUrl = $"admin/realms/{_configuration.Realm}/users/{userId}/role-mappings/realm";
-            using var body = new StringContent(JsonSerializer.Serialize(rolesToAssign), Encoding.UTF8, "application/json");
-
-            request = new HttpRequestMessage(HttpMethod.Post, assignUrl);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
-            request.Content = body;
-
-            var respAssign = await _httpClient.SendAsync(request, cancellationToken);
-            respAssign.EnsureSuccessStatusCode();
+            return allRoles;
         }
 
         private async Task<string> GetAdminTokenAsync(CancellationToken cancellationToken = default)
@@ -229,6 +295,56 @@ namespace ServerAPIApp.Core.Services
             var response = await _httpClient.SendAsync(request, cancellationToken);
 
             response.EnsureSuccessStatusCode();
+        }
+
+        private async Task AssignRealmRolesAsync(string userId, string adminToken,
+            IEnumerable<ExternalRoleDto> allRoles, IEnumerable<string> roles, CancellationToken cancellationToken)
+        {
+            List<ExternalRoleDto> rolesToAssign = new List<ExternalRoleDto>();
+
+            foreach (var role in allRoles)
+            {
+                if (roles.Contains(role.RoleName))
+                {
+                    rolesToAssign.Add(role);
+                }
+            }
+
+            var assignUrl = $"admin/realms/{_configuration.Realm}/users/{userId}/role-mappings/realm";
+            using var body = new StringContent(JsonSerializer.Serialize(rolesToAssign), Encoding.UTF8, "application/json");
+
+            var request = new HttpRequestMessage(HttpMethod.Post, assignUrl);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+            request.Content = body;
+
+            var respAssign = await _httpClient.SendAsync(request, cancellationToken);
+            respAssign.EnsureSuccessStatusCode();
+        }
+
+        private async Task UnassignRealmRolesAsync(string userId, string adminToken,
+            IEnumerable<ExternalRoleDto> allRoles, IEnumerable<string> roles, CancellationToken cancellationToken)
+        {
+            var roleNamesSet = roles.ToHashSet(StringComparer.Ordinal);
+
+            var rolesToRemove = allRoles
+                .Where(role => roleNamesSet.Contains(role.RoleName))
+                .ToList();
+
+            if (rolesToRemove.Count == 0)
+                return;
+
+            var removeUrl = $"admin/realms/{_configuration.Realm}/users/{userId}/role-mappings/realm";
+            using var body = new StringContent(
+                JsonSerializer.Serialize(rolesToRemove),
+                Encoding.UTF8,
+                "application/json");
+
+            var request = new HttpRequestMessage(HttpMethod.Delete, removeUrl);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+            request.Content = body;
+
+            var respRemove = await _httpClient.SendAsync(request, cancellationToken);
+            respRemove.EnsureSuccessStatusCode();
         }
     }
 }

@@ -6,6 +6,7 @@
         <li *ngIf="isAdmin()"><a class="nav-link" routerLink="/deletion-requests">Запросы на удаление задач</a></li>
         <li *ngIf="isAdmin()"><a class="nav-link" routerLink="/deletion-queue">Очередь задач на удаление</a></li>
         <li *ngIf="isEditorOrAdmin()"><a class="nav-link" routerLink="/versions">Версии</a></li>
+        <li *ngIf="isAdmin()"><a class="nav-link" routerLink="/users">Управление пользователями</a></li>
         <li><a class="nav-link" routerLink="/submissions">Мои сабмишны</a></li>
         <li><a class="nav-link" routerLink="/profile">Профиль</a></li>
     </ul>

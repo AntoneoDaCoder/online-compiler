@@ -688,3 +688,85 @@ button.ghost {
 .delete-modal__footer {
     justify-content: flex-end;
 }
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1000;
+}
+
+.delete-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(620px, calc(100vw - 32px));
+    z-index: 1001;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: min(80vh, 720px);
+    overflow: hidden;
+}
+
+.delete-modal__header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.delete-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.delete-modal__footer {
+    justify-content: flex-end;
+}
+
+.roles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.role-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    user-select: none;
+}
+
+.role-item input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+.role-item span {
+    font-family: var(--ui-font);
+    font-size: 14px;
+    color: #111827;
+}
+
+.role-item--fixed {
+    background: #f8fafc;
+    cursor: default;
+    opacity: 1;
+}
+
+.role-item--fixed span {
+    color: var(--muted);
+}

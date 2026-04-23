@@ -3,7 +3,7 @@ import * as signalR from '@microsoft/signalr';
 import { environment } from '../../environment';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { AuthService } from './auth.service';
-import { CodeResponseDto, DeletionRequestDto, EditorProblemVersionDto, ProblemDto } from '../models/dtos';
+import { CodeResponseDto, DeletionRequestDto, EditorProblemVersionDto, ProblemDto, UpdateRolesDto } from '../models/dtos';
 
 
 @Injectable({ providedIn: 'root' })
@@ -25,6 +25,9 @@ export class SignalrService implements OnDestroy {
     private deletionRequestCreatedMessages$ = new Subject<DeletionRequestDto>();
     private deletionRequestDeletedMessages$ = new Subject<string>();
     private deletionRequestApprovedMessages$ = new Subject<string>();
+
+    private userRolesChangedMessages$ = new Subject<UpdateRolesDto>();
+    public onUserRolesChanged = this.userRolesChangedMessages$.asObservable();
 
     public onCodeResponse$ = this.codeResponseMessages$.asObservable();
     public onVersionPublished = this.versionPublishedMessages$.asObservable();
@@ -148,6 +151,10 @@ export class SignalrService implements OnDestroy {
         this.hubConnection.on("TaskCreated", (data: ProblemDto) => {
             this.problemCreatedMessages$.next(data);
         })
+
+        this.hubConnection.on("RolesUpdated", (data: UpdateRolesDto) => {
+            this.userRolesChangedMessages$.next(data);
+        })
     }
 
     ngOnDestroy() {
@@ -167,5 +174,7 @@ export class SignalrService implements OnDestroy {
         this.deletionRequestApprovedMessages$.complete();
         this.deletionRequestCreatedMessages$.complete();
         this.deletionRequestDeletedMessages$.complete();
+
+        this.userRolesChangedMessages$.complete();
     }
 }

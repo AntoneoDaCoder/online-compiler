@@ -48,6 +48,22 @@ export interface ProblemUpdateDto {
     title: string;
 }
 
+export interface UserDto {
+    id: string;
+    email: string;
+    username: string;
+    created: number;
+}
+
+export interface RoleDto {
+    id: string;
+    roleName: string;
+}
+
+export interface UpdateRolesDto {
+    rolesToRemove?: string[];
+    rolesToAdd?: string[];
+}
 
 export interface CodeRequestDto {
     requestId: string;

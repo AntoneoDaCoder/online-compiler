@@ -11,6 +11,7 @@ import { ProfileComponent } from './pages/profile/profile.component';
 import { AuthGuard } from './core/guards/auth.guard';
 import { DeletionRequestsComponent } from './pages/deletion-requests/deletion-requests.component';
 import { DeletionQueueComponent } from './pages/deletion-queue/deletion-queue.component';
+import { UsersComponent } from './pages/users/users.component';
 
 export const appRoutes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -27,6 +28,7 @@ export const appRoutes: Routes = [
   { path: 'my-deletion-requests', component: DeletionRequestsComponent, canActivate: [AuthGuard], data: { roles: ['Editor', 'Admin'], viewAsEditor: true } },
   { path: 'deletion-requests', component: DeletionRequestsComponent, canActivate: [AuthGuard], data: { roles: ['Admin'], viewAsEditor: false } },
   { path: 'deletion-queue', component: DeletionQueueComponent, canActivate: [AuthGuard], data: { roles: ['Admin'] } },
+  { path: 'users', component: UsersComponent, canActivate: [AuthGuard], data: { roles: ['Admin'] } },
 
   // дефолтная
   { path: '', redirectTo: 'login', pathMatch: 'full' },

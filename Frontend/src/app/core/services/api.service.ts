@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environment';
-import { LanguageDto, ProblemDto, EditorProblemVersionDto, ShortSubmissionDto, SubmissionDto, UserProblemVersionDto, DeletionRequestDto, ProblemUpdateDto } from '../models/dtos';
+import { LanguageDto, ProblemDto, EditorProblemVersionDto, ShortSubmissionDto, SubmissionDto, UserProblemVersionDto, DeletionRequestDto, ProblemUpdateDto, UserDto, RoleDto, UpdateRolesDto } from '../models/dtos';
 
 
 @Injectable({ providedIn: 'root' })
@@ -169,5 +169,21 @@ export class ApiService {
 
     createProblem(p: ProblemUpdateDto) {
         return this.http.post(`${environment.apiBaseUrl}/problems`, p);
+    }
+
+    getUsers() {
+        return this.http.get<UserDto[]>(`${environment.apiBaseUrl}/users`);
+    }
+
+    getUserRoles(userId: string) {
+        return this.http.get<RoleDto[]>(`${environment.apiBaseUrl}/users/${userId}`);
+    }
+
+    getAvailableRoles() {
+        return this.http.get<RoleDto[]>(`${environment.apiBaseUrl}/roles`);
+    }
+
+    updateUserRoles(userId: string, dto: UpdateRolesDto) {
+        return this.http.patch(`${environment.apiBaseUrl}/user/${userId}/roles`, dto)
     }
 }

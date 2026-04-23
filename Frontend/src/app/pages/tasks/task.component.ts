@@ -200,6 +200,7 @@ export class TasksComponent implements OnInit, OnDestroy {
                 next: () => {
                     //do nothing, as signalr will notify us
                     this.closeCreateDialog();
+                    this.router.navigate(['/problems', problemDto.slug, 'edit']);
                 },
                 error: (error) => {
                     this.createSubmitting = false;

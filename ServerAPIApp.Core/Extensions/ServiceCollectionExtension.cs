@@ -95,7 +95,7 @@ namespace ServerAPIApp.Core.Extensions
 
             services.AddMediatR
                 (
-                cfg => cfg.RegisterServicesFromAssembly(typeof(AddUserToRolesCaseHandler).Assembly)
+                cfg => cfg.RegisterServicesFromAssembly(typeof(UpdateRolesCaseHandler).Assembly)
                 );
 
             services.AddValidatorsFromAssembly(typeof(CreateProblemDeletionRequestValidator).Assembly);

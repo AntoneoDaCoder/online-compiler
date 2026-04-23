@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ServerAPIApp.Contracts.Abstractions;
+using ServerAPIApp.Contracts.DTOs.Auth;
 using ServerAPIApp.Core.UseCases.Users;
 using ServerAPIApp.Helpers;
 
@@ -11,40 +13,12 @@ namespace ServerAPIApp.Controllers
     public class UserController : ControllerBase
     {
         private IMediator _mediator;
+        private readonly INotificationService _notifier;
 
-        public UserController(IMediator mediator)
+        public UserController(IMediator mediator, INotificationService notifier)
         {
             _mediator = mediator;
-        }
-
-        [Authorize(Policy = "AdminAccess")]
-        [HttpPost("users/{id:guid}/roles")]
-        public async Task<IActionResult> AddUserToRolesAsync([FromBody] IEnumerable<string> addedRoles, [FromRoute] Guid id, CancellationToken cancellationToken = default)
-        {
-            var editorId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
-
-            var command = new AddUserToRolesCase(id, editorId, addedRoles);
-
-            var updatedRoles = await _mediator.Send(command, cancellationToken);
-
-            //TODO: notify user and admins about role change
-
-            return StatusCode(201, updatedRoles);
-        }
-
-        [Authorize(Policy = "AdminAccess")]
-        [HttpDelete("users/{id:guid}/roles")]
-        public async Task<IActionResult> RemoveUserFromRolesAsync([FromBody] IEnumerable<string> removedRoles, [FromRoute] Guid id, CancellationToken cancellationToken = default)
-        {
-            var editorId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
-
-            var command = new RemoveUserFromRolesCase(id, editorId, removedRoles);
-
-            var updatedRoles = await _mediator.Send(command, cancellationToken);
-
-            //TODO: notify user and admins about role change
-
-            return StatusCode(200, updatedRoles);
+            _notifier = notifier;
         }
 
         [Authorize(Policy = "DefaultAccess")]
@@ -54,6 +28,52 @@ namespace ServerAPIApp.Controllers
             var command = new SyncExternalAccountCase(id);
 
             await _mediator.Send(command, cancellationToken);
+
+            return Ok();
+        }
+
+        [Authorize(Policy = "AdminAccess")]
+        [HttpGet("users")]
+        public async Task<IActionResult> GetUsersAsync(CancellationToken cancellationToken = default)
+        {
+            var request = new GetUsersCase();
+
+            var users = await _mediator.Send(request, cancellationToken);
+
+            return Ok(users);
+        }
+
+        [Authorize(Policy = "AdminAccess")]
+        [HttpGet("users/{userId}")]
+        public async Task<IActionResult> GetUsersRealmRolesAsync([FromRoute] string userId, CancellationToken cancellationToken = default)
+        {
+            var request = new GetUsersRealmRolesCase(userId);
+
+            var roles = await _mediator.Send(request, cancellationToken);
+
+            return Ok(roles);
+        }
+
+        [Authorize(Policy = "AdminAccess")]
+        [HttpGet("roles")]
+        public async Task<IActionResult> GetAvailableRolesAsync(CancellationToken cancellationToken = default)
+        {
+            var request = new GetAvailableRolesCase();
+
+            var roles = await _mediator.Send(request, cancellationToken);
+
+            return Ok(roles);
+        }
+
+        [Authorize(Policy = "AdminAccess")]
+        [HttpPatch("user/{userId}/roles")]
+        public async Task<IActionResult> UpdateRolesAsync([FromRoute] string userId, [FromBody] UpdateRolesDto dto, CancellationToken cancellationToken = default)
+        {
+            var command = UpdateUserRolesCase.From(userId, dto);
+
+            await _mediator.Send(command, cancellationToken);
+
+            await _notifier.NotifyUserAsync(userId, "RolesUpdated", dto, cancellationToken);
 
             return Ok();
         }
