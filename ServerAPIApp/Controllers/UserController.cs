@@ -77,5 +77,44 @@ namespace ServerAPIApp.Controllers
 
             return Ok();
         }
+
+        [Authorize(Policy = "DefaultAccess")]
+        [HttpDelete("users/{userId}")]
+        public async Task<IActionResult> SoftDeleteUserAsync([FromRoute] string userId, CancellationToken cancellationToken = default)
+        {
+            var senderId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
+
+            var command = new SoftDeleteAccountCase(userId, senderId);
+
+            await _mediator.Send(command, cancellationToken);
+
+            return NoContent();
+        }
+
+        [Authorize(Policy = "DefaultAccess")]
+        [HttpPatch("users/{userId}")]
+        public async Task<IActionResult> CancelAccountDeletionAsync([FromRoute] string userId, CancellationToken cancellationToken = default)
+        {
+            var senderId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
+
+            var command = new CancelAccountDeletionCase(userId, senderId);
+
+            await _mediator.Send(command, cancellationToken);
+
+            return Ok();
+        }
+
+        [Authorize(Policy = "DefaultAccess")]
+        [HttpGet("users/{userId}/metadata")]
+        public async Task<IActionResult> GetUserMetadataAsync([FromRoute] string userId, CancellationToken cancellationToken = default)
+        {
+            var senderId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
+
+            var request = new GetUserMetadataCase(userId, senderId);
+
+            var metadata = await _mediator.Send(request, cancellationToken);
+
+            return Ok(metadata);
+        }
     }
 }

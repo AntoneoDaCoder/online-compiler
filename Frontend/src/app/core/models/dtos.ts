@@ -55,6 +55,13 @@ export interface UserDto {
     created: number;
 }
 
+export interface UserMetadataDto {
+    id: string;
+    isDeleted: boolean;
+    deletionScheduledAt?: string | null; //iso date string
+    deletionDeadline?: string | null; //iso date string
+}
+
 export interface RoleDto {
     id: string;
     roleName: string;

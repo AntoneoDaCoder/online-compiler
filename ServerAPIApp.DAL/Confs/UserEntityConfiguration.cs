@@ -27,6 +27,10 @@ namespace ServerAPIApp.DAL.Confs
              .HasColumnName("modified_by")
              .IsRequired(false);
 
+            builder.Property(x => x.DeletionJobId)
+                .IsRequired(false)
+                .HasColumnName("deletion_job_id");
+
             builder.HasOne(u => u.Editor)
              .WithMany()
              .HasForeignKey(u => u.ModifiedBy)
@@ -56,6 +60,9 @@ namespace ServerAPIApp.DAL.Confs
             builder.HasIndex(u => u.ExternalProviderId)
                 .IsUnique()
                 .HasDatabaseName("ux_users_external_provider_id");
+
+            builder.HasIndex(x => x.DeletionJobId)
+                .HasDatabaseName("ix_users_deletion_job_id");
         }
     }
 }
