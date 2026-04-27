@@ -18,7 +18,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
         {
             var id = Guid.Parse(command.ProviderId);
 
-            var entity = await _repo.GetByIdAsync(id, cancellationToken);
+            var entity = (await _repo.GetFilteredAsync(x => x.Id == id, cancellationToken)).FirstOrDefault();
 
             if (entity is null)
             {

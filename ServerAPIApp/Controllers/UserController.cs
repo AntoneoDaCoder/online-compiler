@@ -86,9 +86,9 @@ namespace ServerAPIApp.Controllers
 
             var command = new SoftDeleteAccountCase(userId, senderId);
 
-            await _mediator.Send(command, cancellationToken);
+            var data = await _mediator.Send(command, cancellationToken);
 
-            return NoContent();
+            return Ok(data);
         }
 
         [Authorize(Policy = "DefaultAccess")]

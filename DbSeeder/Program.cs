@@ -324,7 +324,7 @@ class Program
                     providerId = userData.Id;
                 }
 
-                var localAccount = await repo.GetByIdAsync(adminId);
+                var localAccount = (await repo.GetFilteredAsync(x => x.Id == adminId)).FirstOrDefault();
 
                 if (localAccount is null || localAccount.ExternalProviderId != providerId)
                 {

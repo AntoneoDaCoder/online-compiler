@@ -627,25 +627,6 @@ button.ghost {
     flex-direction: column;
 }
 
-.app-main .profile-card {
-    width: 30%;
-    margin-right: 20%;
-}
-
-.profile-page {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-end;
-}
-
-.roles {
-    margin-top: 9%;
-}
-
-.profile-id {
-    margin-top: 6%;
-}
-
 .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -769,4 +750,148 @@ button.ghost {
 
 .role-item--fixed span {
     color: var(--muted);
+}
+
+.profile-page.layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 32px;
+}
+
+.profile-main {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: center;
+    /* центрируем карточку */
+}
+
+.profile-card {
+    width: 480px;
+    /* фиксированная ширина карточки */
+    max-width: 100%;
+}
+
+.profile-sidebar {
+    margin-left: auto;
+}
+
+.profile-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.profile-title {
+    display: block;
+}
+
+.profile-head h3 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    line-height: 1.15;
+    word-break: break-word;
+}
+
+.profile-id {
+    margin-top: 4px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 0;
+}
+
+.profile-actions {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.profile-sidebar,
+app-sidebar.profile-sidebar {
+    display: block;
+    flex: 0 0 340px;
+    width: 340px;
+    min-width: 340px;
+    margin-left: auto;
+}
+
+app-sidebar.profile-sidebar .sidebar {
+    width: 340px;
+    min-width: 340px;
+}
+
+.sidebar a {
+    white-space: nowrap;
+}
+
+@media (max-width: 1024px) {
+    .profile-page.layout {
+        flex-direction: column;
+    }
+
+    .profile-main,
+    .profile-sidebar,
+    app-sidebar.profile-sidebar,
+    app-sidebar.profile-sidebar .sidebar {
+        width: 100%;
+        min-width: 0;
+        flex: 1 1 auto;
+        margin-left: 0;
+    }
+
+    .sidebar a {
+        white-space: normal;
+    }
+}
+
+.profile-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.45);
+    z-index: 1000;
+}
+
+.profile-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(620px, calc(100vw - 32px));
+    max-height: min(80vh, 720px);
+    z-index: 1001;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
+}
+
+.profile-modal__header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.profile-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.profile-modal__body textarea {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+    font-family: var(--ui-font);
+}
+
+.profile-modal__footer {
+    justify-content: flex-end;
 }

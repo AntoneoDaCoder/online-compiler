@@ -63,7 +63,7 @@ export class UsersComponent implements OnInit, OnDestroy {
     loadInitial() {
         this.api.getUsers().subscribe({
             next: (response) => {
-                this.users = response || [];
+                this.users = response?.filter(x => x.id !== this.auth.getId()) || [];
                 this.applyFilters();
             },
             error: (error) => {
@@ -188,7 +188,7 @@ export class UsersComponent implements OnInit, OnDestroy {
 
     confirmUpdateRoles() {
         this.updateRolesSubmitting = true;
-        
+
         const roleDto: UpdateRolesDto = {
             rolesToAdd: this.getRolesToAdd(),
             rolesToRemove: this.getRolesToRemove()

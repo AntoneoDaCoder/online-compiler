@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environment';
-import { LanguageDto, ProblemDto, EditorProblemVersionDto, ShortSubmissionDto, SubmissionDto, UserProblemVersionDto, DeletionRequestDto, ProblemUpdateDto, UserDto, RoleDto, UpdateRolesDto } from '../models/dtos';
+import { LanguageDto, ProblemDto, EditorProblemVersionDto, ShortSubmissionDto, SubmissionDto, UserProblemVersionDto, DeletionRequestDto, ProblemUpdateDto, UserDto, RoleDto, UpdateRolesDto, UserMetadataDto } from '../models/dtos';
 
 
 @Injectable({ providedIn: 'root' })
@@ -185,5 +185,17 @@ export class ApiService {
 
     updateUserRoles(userId: string, dto: UpdateRolesDto) {
         return this.http.patch(`${environment.apiBaseUrl}/user/${userId}/roles`, dto)
+    }
+
+    getUserMetadata(userId: string) {
+        return this.http.get<UserMetadataDto>(`${environment.apiBaseUrl}/users/${userId}/metadata`);
+    }
+
+    softDeleteUser(userId: string) {
+        return this.http.delete<UserMetadataDto | null>(`${environment.apiBaseUrl}/users/${userId}`);
+    }
+
+    cancelUserDeletion(userId: string) {
+        return this.http.patch(`${environment.apiBaseUrl}/users/${userId}`, null);
     }
 }

@@ -1,20 +1,74 @@
-<div class="profile-page">
-    <div class="profile-card card">
+<div class="profile-page layout">
+    <div class="profile-main">
+        <section class="profile-card card">
+            <div class="profile-body">
+                <div class="profile-title">
+                    <div class="profile-head" style="min-width:0">
+                        <h3 [title]="name">{{ name }}</h3>
+                        <div class="profile-id muted">Id: {{ id }}</div>
 
+                        <ng-container *ngIf="userMetadata?.isDeleted">
+                            <div class="profile-id muted">
+                                Дата запроса на удаление: {{ userMetadata?.deletionScheduledAt }}
+                            </div>
+                            <div class="profile-id muted">
+                                Дедлайн удаления аккаунта: {{ userMetadata?.deletionDeadline }}
+                            </div>
+                        </ng-container>
+                    </div>
+                </div>
 
-        <div class="profile-body">
-            <div class="profile-title">
-                <div style="min-width:0">
-                    <h3 title="{{ name }}">{{ name }}</h3>
-                    <div class="profile-id muted">Id: {{ id }}</div>
+                <div class="roles" aria-label="Роли пользователя">
+                    <span class="tag">{{ roles.join(', ') }}</span>
+                </div>
+
+                <div class="profile-actions row">
+                    <button type="button" class="btn-primary"
+                        (click)="openDeleteDialog(userMetadata?.isDeleted ? 'cancel' : 'delete')">
+                        {{ userMetadata?.isDeleted ? 'Отменить удаление' : 'Удалить аккаунт' }}
+                    </button>
                 </div>
             </div>
+        </section>
+    </div>
 
-            <div class="roles" aria-label="Роли пользователя">
-                <span class="tag">{{ roles.join(', ') }}</span>
-            </div>
+    <app-sidebar class="profile-sidebar"></app-sidebar>
+</div>
+
+<div class="profile-modal-backdrop" *ngIf="deleteDialogOpen" (click)="closeDeleteDialog()"></div>
+
+<div class="profile-modal card" *ngIf="deleteDialogOpen" (click)="$event.stopPropagation()">
+    <div class="profile-modal__header">
+        <div class="title">
+            {{ deleteDialogMode === 'delete' ? 'Удаление аккаунта' : 'Отмена удаления аккаунта' }}
+        </div>
+        <div class="muted small" *ngIf="name">
+            {{ name }} (Id: {{ id }})
         </div>
     </div>
 
-    <app-sidebar></app-sidebar>
+    <div class="profile-modal__body">
+        <label for="deleteInfo">
+            {{ deleteDialogMode === 'delete' ? 'Информация об удалении' : 'Информация об отмене удаления' }}
+        </label>
+
+        <textarea id="deleteInfo" readonly="readonly" rows="6"
+            [value]="deleteDialogMode === 'delete'
+                ? 'Вы можете продолжать логиниться и решать задачи, но если в указанное время не отменить удаление, аккаунт будет удалён навсегда.'
+                : 'Если вы отмените удаление, аккаунт останется активным, а запрос на удаление будет снят.'"></textarea>
+
+        <div class="profile-modal__hint muted small" *ngIf="userMetadata?.isDeleted && deleteDialogMode === 'delete'">
+            Дата удаления: {{ userMetadata?.deletionDeadline }}
+        </div>
+    </div>
+
+    <div class="profile-modal__footer row">
+        <button type="button" class="secondary" (click)="closeDeleteDialog()">
+            Отмена
+        </button>
+
+        <button type="button" class="btn-primary" (click)="confirmDeleteDialog()" [disabled]="deleteSubmitting">
+            Подтвердить
+        </button>
+    </div>
 </div>

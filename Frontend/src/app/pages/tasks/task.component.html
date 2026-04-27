@@ -18,7 +18,7 @@
                 <div class="problem-main">
                     <div class="title">{{ p.title }} <small class="slug">({{ p.slug }})</small></div>
                     <div class="langs">
-                        <span *ngIf="p.latestVersion">
+                        <span *ngIf="p.latestVersion" class="tag">
                             {{ formatSupportedLanguages(p.latestVersion.supportedLanguages) }}
                         </span>
                     </div>

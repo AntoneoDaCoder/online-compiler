@@ -1,6 +1,7 @@
 ﻿using Hangfire;
 using MediatR;
 using ServerAPIApp.Contracts.Abstractions;
+using ServerAPIApp.Contracts.DTOs;
 using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.UseCases.Users;
 using ServerAPIApp.Domain.Constants;
@@ -8,7 +9,7 @@ using ServerAPIApp.Domain.Exceptions.ForbiddenExceptions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.Users
 {
-    public class SoftDeleteAccountCaseHandler : IRequestHandler<SoftDeleteAccountCase>
+    public class SoftDeleteAccountCaseHandler : IRequestHandler<SoftDeleteAccountCase, UserMetadataDto?>
     {
         private readonly IUserRepository _repo;
 
@@ -17,7 +18,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             _repo = repo;
         }
 
-        public async Task Handle(SoftDeleteAccountCase command, CancellationToken cancellationToken)
+        public async Task<UserMetadataDto?> Handle(SoftDeleteAccountCase command, CancellationToken cancellationToken)
         {
             var userId = Guid.Parse(command.UserId);
             if (userId != command.SenderId)
@@ -26,7 +27,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             var entity = (await _repo.GetFilteredAsync(x => x.Id == userId, cancellationToken)).FirstOrDefault();
 
             if (entity is null)
-                return;
+                return null;
 
             var deletionInitiationDate = DateTimeOffset.UtcNow;
             var deletionDate = deletionInitiationDate.Add(ApplicationConstants.GracePeriod);
@@ -47,6 +48,8 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
             entity.DeletionJobId = newJobId;
 
             await _repo.UpdateAsync(entity, cancellationToken);
+
+            return UserMetadataDto.From(entity);
         }
     }
 }
