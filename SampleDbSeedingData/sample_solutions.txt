@@ -2,7 +2,7 @@
 
 // C#
 public class Solution {
-    public static int[] FilterEven(int[] numbers) {
+    public static int[] Solution(int[] numbers) {
         if (numbers == null) return new int[0];
         return numbers.Where(n => n % 2 == 0).ToArray();
     }
@@ -32,7 +32,7 @@ class Solution {
 
 // TypeScript
 export class Solution {
-    static filterEven(numbers: number[] | null): number[] {
+   function solution(numbers: number[] | null): number[] {
         if (!numbers) return [];
         return numbers.filter(n => n % 2 === 0);
     }
@@ -40,7 +40,7 @@ export class Solution {
 
 // Node.js
 class Solution {
-    static filterEven(numbers) {
+    function filterEven(numbers) {
         if (!numbers) return [];
         return numbers.filter(n => n % 2 === 0);
     }

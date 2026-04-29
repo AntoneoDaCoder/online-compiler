@@ -26,6 +26,8 @@ namespace Runners.Shared.CodeWrappers.Typescript
             if (manifest == null) throw new ArgumentNullException(nameof(manifest));
             var sb = new StringBuilder();
 
+            manifest.Entrypoint = manifest.Entrypoint.ToLowerInvariant();
+
             // inject base source with banned modules
             var sourceWithBans = TypescriptBaseSourceCode.Source.Replace("{{BANNED_MODULES}}", JsonConvert.SerializeObject(DefaultBannedModules));
             sb.AppendLine(sourceWithBans);
@@ -51,15 +53,17 @@ namespace Runners.Shared.CodeWrappers.Typescript
             // user code container
             sb.AppendLine($"const {entrypointContainerName}: any = {{}};");
             sb.AppendLine($"(function(exports: any) {{");
-            sb.AppendLine("    // user code starts");
             if (!string.IsNullOrEmpty(userCode))
             {
                 var userLines = userCode.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
                 foreach (var l in userLines) sb.AppendLine("    " + l);
             }
-            sb.AppendLine("    // user code ends");
+
+            sb.AppendLine($"    if (typeof exports[{JsonConvert.SerializeObject(manifest.Entrypoint)}] === 'undefined'" +
+                $" && typeof {manifest.Entrypoint} !== 'undefined') {{");
+            sb.AppendLine($"        exports[{JsonConvert.SerializeObject(manifest.Entrypoint)}] = {manifest.Entrypoint};");
+            sb.AppendLine($"    }}");
             sb.AppendLine($"}})({entrypointContainerName});");
-            sb.AppendLine();
 
             // advanced tests container
             if (manifest.AdvancedTests != null && manifest.AdvancedTests.Count > 0)
@@ -94,39 +98,20 @@ namespace Runners.Shared.CodeWrappers.Typescript
                 // render inputs (explicit any typing)
                 var paramList = manifest.Signature?.Parameters ?? new List<ParameterDescriptor>();
                 int paramCount = paramList.Count;
-                if (st.Inputs.HasValue && paramCount > 0)
+
+                JToken? inputsToken = null;
+                if (st.Inputs.HasValue)
+                    inputsToken = JToken.Parse(st.Inputs.Value.GetRawText());
+
+                var args = InputNormalizer.NormalizeInputs(inputsToken, paramCount, st.Name);
+
+                for (int i = 0; i < paramCount; i++)
                 {
-                    var j = JToken.Parse(st.Inputs.Value.GetRawText());
-                    if (paramCount == 1)
-                    {
-                        var pType = paramList[0].Type;
-                        var rendered = TypeScriptTokenParser.Render(j, pType);
-                        sb.AppendLine($"            const arg0: any = {rendered};");
-                    }
-                    else
-                    {
-                        if (j is JArray arr)
-                        {
-                            for (int i = 0; i < paramCount; i++)
-                            {
-                                var pType = i < paramCount ? paramList[i].Type : null;
-                                JToken item = i < arr.Count ? arr[i] : JValue.CreateNull();
-                                var rendered = TypeScriptTokenParser.Render(item, pType);
-                                sb.AppendLine($"            const arg{i}: any = {rendered};");
-                            }
-                        }
-                        else
-                        {
-                            var rendered0 = TypeScriptTokenParser.Render(j, paramList.Count > 0 ? paramList[0].Type : null);
-                            sb.AppendLine($"            const arg0: any = {rendered0};");
-                            for (int i = 1; i < paramCount; i++) sb.AppendLine($"            const arg{i}: any = undefined;");
-                        }
-                    }
+                    var pType = paramList[i].Type;
+                    var rendered = TypeScriptTokenParser.Render(args[i], pType);
+                    sb.AppendLine($"            const arg{i}: any = {rendered};");
                 }
-                else
-                {
-                    for (int i = 0; i < paramCount; i++) sb.AppendLine($"            const arg{i}: any = undefined;");
-                }
+
 
                 var invocationArgs = GenerateArgsInvocationBySignature(paramCount);
                 sb.AppendLine($"            const __timeoutMs: number = {timeoutMsExpr};");

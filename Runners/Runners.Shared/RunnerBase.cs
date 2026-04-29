@@ -51,7 +51,17 @@ namespace Runners.Shared
 
                             Console.WriteLine($"[Runner] Received request [Id:{codeRequest.RequestId}]");
 
-                            _ = ExecuteUserCodeAsync(codeRequest, cancellationToken);
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    await ExecuteUserCodeAsync(codeRequest, cancellationToken);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"[Runner] Failed to execute code: {ex}");
+                                }
+                            }, cancellationToken);
 
                             Console.WriteLine($"[Runner] Scheduled request [Id:{codeRequest.RequestId}]");
                         }
@@ -132,7 +142,8 @@ namespace Runners.Shared
                 UserId = request.UserId,
                 VersionId = request.VersionId,
                 UserSolution = request.UserSolution,
-                TotalTests = compilationResult.TotalTests
+                TotalTests = compilationResult.TotalTests,
+                ExecutablePath = compilationResult.ExecutablePath
             };
 
             var executionResult = await _runner.ExecuteCodeAsync(executionData, cancellationToken);

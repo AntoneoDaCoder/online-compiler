@@ -9,5 +9,6 @@
         public string Language { get; set; } = string.Empty;
         public DateTimeOffset RequestDate { get; set; }
         public int TotalTests { get; set; }
+        public required string ExecutablePath { get; set; }
     }
 }

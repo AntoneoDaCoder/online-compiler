@@ -16,8 +16,8 @@ namespace Runners.Shared.Runners
     public partial class DotNetRunner : IRunner
     {
         const int _maxProcessLifetime = 25000;
-        const string _tmpDllPath = "/tmp/UserProgram.dll";
-        const string _tmpRuntimeConfigPath = "/tmp/UserProgram.runtimeconfig.json";
+        const string _basePath = "/tmp";
+        readonly string _tmpRuntimeConfigPath = Path.Combine(_basePath, "UserProgram.runtimeconfig.json");
 
         const string _runtimeConfig =
                """
@@ -38,13 +38,6 @@ namespace Runners.Shared.Runners
         static string[] _dllsToCopy = new[] {
             "nunitlite.dll",
             "nunit.framework.dll",
-        };
-        static ProcessStartInfo _pInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"{_tmpDllPath}",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
         };
 
         private static int _compilationCount = 0;
@@ -135,7 +128,9 @@ namespace Runners.Shared.Runners
                     new CompilationResult()
                     {
                         Success = false,
-                        CompilationErrors = $"Manifest validation failed: {ex.Message}"
+                        CompilationErrors = $"Manifest validation failed: {ex.Message}",
+                        TotalTests = 0,
+                        ExecutablePath = ""
                     }
                     );
             }
@@ -146,7 +141,9 @@ namespace Runners.Shared.Runners
                   new CompilationResult()
                   {
                       Success = false,
-                      CompilationErrors = $"Manifest JSON parse error: {ex.Message}"
+                      CompilationErrors = $"Manifest JSON parse error: {ex.Message}",
+                      TotalTests = 0,
+                      ExecutablePath = ""
                   }
                   );
             }
@@ -157,7 +154,9 @@ namespace Runners.Shared.Runners
                     new CompilationResult()
                     {
                         Success = false,
-                        CompilationErrors = $"Manifest parse error: {ex.Message}"
+                        CompilationErrors = $"Manifest parse error: {ex.Message}",
+                        TotalTests = 0,
+                        ExecutablePath = ""
                     }
                     );
             }
@@ -168,11 +167,21 @@ namespace Runners.Shared.Runners
                    new CompilationResult()
                    {
                        Success = false,
-                       CompilationErrors = $"Invalid manifest: no tests for {userSolution.LanguageCode} detected"
+                       CompilationErrors = $"Invalid manifest: no tests for {userSolution.LanguageCode} detected",
+                       TotalTests = 0,
+                       ExecutablePath = ""
                    }
                    );
 
+            var executablePath = Path.Combine(_basePath, $"{userSolution.RequestId:N}.dll");
+
             var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.UserSolution, "SolutionContainer");
+
+
+
+            File.WriteAllText(Path.Combine(_basePath, $"{userSolution.RequestId:N}.txt"), fullCode);
+
+
 
             var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
 
@@ -198,7 +207,7 @@ namespace Runners.Shared.Runners
             if (compilationResult.Success)
             {
                 ms.Seek(0, SeekOrigin.Begin);
-                using var fs = File.Create(_tmpDllPath);
+                using var fs = File.Create(executablePath);
                 ms.CopyTo(fs);
             }
 
@@ -215,6 +224,7 @@ namespace Runners.Shared.Runners
                     Success = compilationResult.Success,
                     CompilationErrors = compilationResultString,
                     TotalTests = manifest.SampleTests.Count + manifest.AdvancedTests.Count,
+                    ExecutablePath = executablePath,
                 });
         }
 
@@ -235,12 +245,27 @@ namespace Runners.Shared.Runners
                 }
             };
 
+            var pInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+
+            pInfo.ArgumentList.Add("exec");
+            pInfo.ArgumentList.Add("--runtimeconfig");
+            pInfo.ArgumentList.Add(_tmpRuntimeConfigPath);
+            pInfo.ArgumentList.Add(data.ExecutablePath);
+
             using var proc = new Process
             {
-                StartInfo = _pInfo,
+                StartInfo = pInfo,
             };
 
             proc.Start();
+
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync(cancellationToken);
+            var stderrTask = proc.StandardError.ReadToEndAsync(cancellationToken);
 
             if (!proc.WaitForExit(_maxProcessLifetime))
             {
@@ -250,15 +275,17 @@ namespace Runners.Shared.Runners
                 result.Result.ExitCode = 124;
                 result.Result.ConsoleOutput = "Execution timed out.";
 
-                File.Delete(_tmpDllPath);
+                File.Delete(data.ExecutablePath);
 
                 return result;
             }
 
             result.Result.ExitCode = proc.ExitCode;
 
-            var stdout = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
-            var stderr = await proc.StandardError.ReadToEndAsync(cancellationToken);
+            await Task.WhenAll(stdoutTask, stderrTask);
+
+            var stdout = stdoutTask.Result;
+            var stderr = stderrTask.Result;
 
             var passedMatch = PassedTestsRegex().Match(stdout ?? string.Empty);
             if (passedMatch.Success && int.TryParse(passedMatch.Groups[1].Value, out var passedCount))
@@ -317,7 +344,7 @@ namespace Runners.Shared.Runners
                 result.Result.ConsoleOutput = stdout;
             }
 
-            File.Delete(_tmpDllPath);
+            File.Delete(data.ExecutablePath);
 
             return result;
         }

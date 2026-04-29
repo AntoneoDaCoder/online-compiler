@@ -24,17 +24,13 @@ namespace Runners.Shared.CodeWrappers.CSharp
             if (manifest == null) throw new ArgumentNullException(nameof(manifest));
             var sb = new StringBuilder();
 
-            // usings
             sb.AppendLine(_boilerplateUsings);
-
             sb.AppendLine("namespace GeneratedSubmission");
             sb.AppendLine("{");
 
-            // RunnerHelpers
             sb.AppendLine(CSharpBaseSourceCode.Source);
             sb.AppendLine();
 
-            // Test counter/monitor
             sb.AppendLine("    public static class __TestMonitor");
             sb.AppendLine("    {");
             sb.AppendLine("        private static int _passed = 0;");
@@ -43,7 +39,6 @@ namespace Runners.Shared.CodeWrappers.CSharp
             sb.AppendLine("    }");
             sb.AppendLine();
 
-            // include helpers.inline (already filtered by ManifestParser)
             var languageBlocks = manifest.Helpers;
             foreach (var block in languageBlocks)
                 if (!string.IsNullOrWhiteSpace(block.Inline))
@@ -52,14 +47,12 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     sb.AppendLine();
                 }
 
-            // always generate entrypoint container
             sb.AppendLine($"    public static class {entrypointContainerClass}");
             sb.AppendLine("    {");
             sb.AppendLine(userCode ?? string.Empty);
             sb.AppendLine("    }");
             sb.AppendLine();
 
-            // advanced tests code (if provided). Place inside AdvancedTestsContainer
             if (manifest.AdvancedTests != null && manifest.AdvancedTests.Count > 0)
             {
                 sb.AppendLine("    public static class AdvancedTestsContainer");
@@ -73,7 +66,6 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 sb.AppendLine();
             }
 
-            // Program.Main wrapper — ensure we always print PassedTests:<n> to stdout on termination
             sb.AppendLine("    public class Program");
             sb.AppendLine("    {");
             sb.AppendLine("        static int Main(string[] args)");
@@ -97,12 +89,10 @@ namespace Runners.Shared.CodeWrappers.CSharp
             sb.AppendLine("    }");
             sb.AppendLine();
 
-            // GeneratedTests
             sb.AppendLine("    [TestFixture]");
             sb.AppendLine("    public class GeneratedTests");
             sb.AppendLine("    {");
 
-            // Sample tests
             int idx = 0;
             foreach (var st in manifest.SampleTests ?? Enumerable.Empty<SampleTest>())
             {
@@ -112,60 +102,32 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 sb.AppendLine($"        public async Task {testMethodName}()");
                 sb.AppendLine("        {");
 
-                // compute per-test timeout (use long internally)
                 var timeoutMsExpr = (st.TimeoutMs > 0) ? st.TimeoutMs : defaultTimeoutMs;
                 sb.AppendLine($"            var __timeout = TimeSpan.FromMilliseconds({timeoutMsExpr}L);");
 
-                // render inputs into local variables based on signature
                 var paramList = manifest.Signature?.Parameters ?? new List<ParameterDescriptor>();
                 int paramCount = paramList.Count;
 
-                if (st.Inputs.HasValue && paramCount > 0)
-                {
-                    var j = JToken.Parse(st.Inputs.Value.GetRawText());
+                JToken? inputsToken = null;
+                if (st.Inputs.HasValue)
+                    inputsToken = JToken.Parse(st.Inputs.Value.GetRawText());
 
-                    if (paramCount == 1)
-                    {
-                        var pType = paramList[0].Type;
-                        var rendered = CSharpTokenParser.Render(j, pType);
-                        sb.AppendLine($"            var arg0 = {rendered};");
-                    }
-                    else
-                    {
-                        if (j is JArray arr)
-                        {
-                            for (int i = 0; i < paramCount; i++)
-                            {
-                                var pType = i < paramCount ? paramList[i].Type : null;
-                                JToken item = i < arr.Count ? arr[i] : JValue.CreateNull();
-                                var rendered = CSharpTokenParser.Render(item, pType);
-                                sb.AppendLine($"            var arg{i} = {rendered};");
-                            }
-                        }
-                        else
-                        {
-                            var p0Type = paramList[0].Type;
-                            var rendered0 = CSharpTokenParser.Render(j, p0Type);
-                            sb.AppendLine($"            var arg0 = {rendered0};");
-                            for (int i = 1; i < paramCount; i++)
-                                sb.AppendLine($"            var arg{i} = default(object);");
-                        }
-                    }
-                }
-                else
+                var args = InputNormalizer.NormalizeInputs(inputsToken, paramCount, st.Name);
+
+                for (int i = 0; i < paramCount; i++)
                 {
-                    for (int i = 0; i < paramCount; i++)
-                        sb.AppendLine($"            var arg{i} = default(object);");
+                    var pType = paramList[i].Type;
+                    var rendered = CSharpTokenParser.Render(args[i], pType);
+                    sb.AppendLine($"            var arg{i} = {rendered};");
                 }
 
-                // determine return type descriptor (now TypeDescriptor)
+
                 var returnTypeDescriptor = manifest.Signature?.ReturnType ?? new TypeDescriptor { Kind = "primitive", Name = "void" };
+
                 var parsed = ParseReturnType(returnTypeDescriptor);
 
-                // build invocation args string
                 string invocationArgs = GenerateArgsInvocationBySignature(paramCount);
 
-                // If parsed.ResultTypeCSharp is 'object' try to infer type from expected token (if present)
                 string effectiveRt = parsed.ResultTypeCSharp;
                 TypeDescriptor? effectiveRtDescriptor = parsed.ResultTypeDescriptor;
                 bool needRuntimeCast = false;
@@ -182,24 +144,19 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     }
                 }
 
-                // call & await with Task.WaitAsync(timeout)
                 if (!parsed.HasResult)
                 {
-                    // void / no result path
                     sb.AppendLine($"            try");
                     sb.AppendLine($"            {{");
                     sb.AppendLine($"                var __call = Task.Run(() => {{ {entrypointContainerClass}.{manifest.Entrypoint}({invocationArgs}); }});");
                     sb.AppendLine($"                await __call.WaitAsync(__timeout);");
                     sb.AppendLine($"            }}");
                     sb.AppendLine($"            catch (TimeoutException) {{ Assert.Fail(\"Test execution timed out\"); }}");
-
-                    // success -> increment counter
                     sb.AppendLine("            __TestMonitor.Inc();");
                 }
                 else
                 {
                     var rt = effectiveRt;
-                    // declare __actual with concrete/effective type so NUnit/collections get correct types
                     sb.AppendLine($"            {rt} __actual = default({rt});");
                     sb.AppendLine($"            try");
                     sb.AppendLine($"            {{");
@@ -212,7 +169,6 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     sb.AppendLine($"            }}");
                     sb.AppendLine($"            catch (TimeoutException) {{ Assert.Fail(\"Test execution timed out\"); }}");
 
-                    // render expected using effective descriptor (if available) so types match
                     if (st.Expected.HasValue)
                     {
                         var expectedToken = JToken.Parse(st.Expected.Value.GetRawText());
@@ -225,18 +181,14 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     }
 
                     var comparator = string.IsNullOrWhiteSpace(st.Comparator) ? "eq" : st.Comparator;
-                    // call helper that uses NUnit asserts and provides good diagnostics
                     sb.AppendLine($"            RunnerHelpers.AssertCompare(__actual, __expected, \"{comparator}\", \"Sample test '{st.Name}'\");");
-
-                    // success -> increment counter
                     sb.AppendLine("            __TestMonitor.Inc();");
                 }
 
                 sb.AppendLine("        }");
                 sb.AppendLine();
-            } // end sample tests
+            }
 
-            // Advanced tests
             if (manifest.AdvancedTests != null)
             {
                 int advIdx = 0;
@@ -265,8 +217,8 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 }
             }
 
-            sb.AppendLine("    }"); // class
-            sb.AppendLine("}"); // namespace
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
 
             return sb.ToString();
         }

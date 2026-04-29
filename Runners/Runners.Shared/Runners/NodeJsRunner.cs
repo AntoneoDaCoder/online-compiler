@@ -10,22 +10,11 @@ namespace Runners.Shared.Runners
 {
     public partial class NodeJsRunner : IRunner
     {
-        static ProcessStartInfo _pInfo = new ProcessStartInfo()
-        {
-            FileName = "node",
-            Arguments = "/tmp/UserProgram.js",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
-
-        const string _tmpJsFilePath = "/tmp/UserProgram.js";
-
+        const string _basePath = "/tmp";
         const int _maxProcessLifetime = 25000;
 
-        private ITestWrapper _wrapper;
-
-        bool _isDisposed;
+        private readonly ITestWrapper _wrapper;
+        private bool _isDisposed;
 
         public NodeJsRunner(ITestWrapper wrapper)
         {
@@ -49,120 +38,157 @@ namespace Runners.Shared.Runners
                 }
             };
 
-            using var proc = new Process
+            var pInfo = new ProcessStartInfo
             {
-                StartInfo = _pInfo,
+                FileName = "node",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
             };
 
-            proc.Start();
-            if (!proc.WaitForExit(_maxProcessLifetime))
+            pInfo.ArgumentList.Add(data.ExecutablePath);
+
+            using var proc = new Process
             {
-                proc.Kill();
-                result.Status = RequestStatus.Failed;
-                result.Result.Status = ExecutionStatus.TimedOut;
-                result.Result.ExitCode = 124;
-                result.Result.ConsoleOutput = "Execution timed out.";
+                StartInfo = pInfo,
+            };
 
-                File.Delete(_tmpJsFilePath);
-
-                return result;
-            }
-
-            result.Result.ExitCode = proc.ExitCode;
-
-            var stdOut = await proc.StandardOutput.ReadToEndAsync(cancellationToken) ?? string.Empty;
-            var stdErr = await proc.StandardError.ReadToEndAsync(cancellationToken) ?? string.Empty;
-
-            int passedCount = 0;
-            var passedMatch = PassedTestsRegex().Match(stdOut ?? string.Empty);
-
-            if (passedMatch.Success && int.TryParse(passedMatch.Groups[1].Value, out var p))
+            try
             {
-                passedCount = p;
-            }
-            result.Result.PassedTests = passedCount;
+                proc.Start();
 
-            if (proc.ExitCode == 0)
-            {
-                result.Status = RequestStatus.Succeeded;
-                result.Result.Status = ExecutionStatus.Succeeded;
-            }
-            else
-            {
-                result.Status = RequestStatus.Failed;
-                result.Result.Status = ExecutionStatus.RuntimeError;
+                var stdoutTask = proc.StandardOutput.ReadToEndAsync(cancellationToken);
+                var stderrTask = proc.StandardError.ReadToEndAsync(cancellationToken);
 
-                // 1) find FailedTest entries: pattern "FailedTest:<TestName>:<Reason>"
-                var failedMatches = FailedTestsRegex().Matches(stdOut ?? string.Empty);
-                var failedList = new List<(string TestName, string Reason)>();
-                foreach (Match m in failedMatches)
+                if (!proc.WaitForExit(_maxProcessLifetime))
                 {
-                    if (m.Success)
+                    try
                     {
-                        var name = m.Groups[1].Value.Trim();
-                        var reason = m.Groups[2].Value.Trim();
-                        reason = reason.Replace("\r", "").Replace("\n", " ").Trim();
-                        failedList.Add((name, reason));
+                        proc.Kill(entireProcessTree: true);
                     }
+                    catch
+                    {
+                    }
+
+                    result.Status = RequestStatus.Failed;
+                    result.Result.Status = ExecutionStatus.TimedOut;
+                    result.Result.ExitCode = 124;
+                    result.Result.ConsoleOutput = "Execution timed out.";
+
+                    return result;
                 }
 
-                int failedCount = failedList.Count;
+                result.Result.ExitCode = proc.ExitCode;
 
-                if (failedCount > 0)
+                await Task.WhenAll(stdoutTask, stderrTask);
+
+                var stdOut = stdoutTask.Result ?? string.Empty;
+                var stdErr = stderrTask.Result ?? string.Empty;
+
+                var passedMatch = PassedTestsRegex().Match(stdOut);
+                result.Result.PassedTests =
+                    passedMatch.Success && int.TryParse(passedMatch.Groups[1].Value, out var p)
+                        ? p
+                        : 0;
+
+                if (proc.ExitCode == 0)
                 {
-                    // There were test failures — decide if any of them indicate a timeout
-                    bool anyTimeout = failedList.Any(f => f.Reason.Contains("timed out", StringComparison.OrdinalIgnoreCase)
-                                                         || f.Reason.Contains("timeout", StringComparison.OrdinalIgnoreCase)
-                                                         || f.Reason.Contains("Test execution timed out", StringComparison.OrdinalIgnoreCase));
-
-                    result.Result.Status = anyTimeout ? ExecutionStatus.TimedOut : ExecutionStatus.FailedToExecute;
-
-                    var sb = new StringBuilder();
-                    sb.AppendLine("Failed tests:");
-                    foreach (var f in failedList)
-                        sb.AppendLine($"{f.TestName} - {f.Reason}");
-
-                    sb.AppendLine();
-                    sb.AppendLine("--- STDOUT ---");
-                    sb.AppendLine(stdOut.Trim());
-                    sb.AppendLine();
-                    sb.AppendLine("--- STDERR ---");
-                    sb.AppendLine(stdErr.Trim());
-
-                    result.Result.ConsoleOutput = sb.ToString().Trim();
+                    result.Status = RequestStatus.Succeeded;
+                    result.Result.Status = ExecutionStatus.Succeeded;
+                    result.Result.ConsoleOutput = stdOut;
                 }
                 else
                 {
-                    // No explicit FailedTest markers found — try to infer from stdout/stderr contents
-                    var combined = (stdOut + "\n" + stdErr) ?? string.Empty;
-                    if (combined.Contains("timed out", StringComparison.OrdinalIgnoreCase)
-                        || combined.Contains("timeout", StringComparison.OrdinalIgnoreCase))
+                    result.Status = RequestStatus.Failed;
+
+                    var failedMatches = FailedTestsRegex().Matches(stdOut);
+                    var failedList = new List<(string TestName, string Reason)>();
+
+                    foreach (Match m in failedMatches)
                     {
-                        result.Result.Status = ExecutionStatus.TimedOut;
+                        if (!m.Success)
+                        {
+                            continue;
+                        }
+
+                        var name = m.Groups[1].Value.Trim();
+                        var reason = m.Groups[2].Value.Trim()
+                            .Replace("\r", "")
+                            .Replace("\n", " ");
+
+                        failedList.Add((name, reason));
                     }
-                    else if (combined.Contains("assert", StringComparison.OrdinalIgnoreCase)
-                             || combined.Contains("failed", StringComparison.OrdinalIgnoreCase))
+
+                    if (failedList.Count > 0)
                     {
-                        result.Result.Status = ExecutionStatus.FailedToExecute;
+                        bool anyTimeout = failedList.Any(f =>
+                            f.Reason.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
+                            f.Reason.Contains("timeout", StringComparison.OrdinalIgnoreCase) ||
+                            f.Reason.Contains("Test execution timed out", StringComparison.OrdinalIgnoreCase));
+
+                        result.Result.Status = anyTimeout ? ExecutionStatus.TimedOut : ExecutionStatus.FailedToExecute;
+
+                        var sb = new StringBuilder();
+                        sb.AppendLine("Failed tests:");
+                        foreach (var f in failedList)
+                        {
+                            sb.AppendLine($"{f.TestName} - {f.Reason}");
+                        }
+
+                        sb.AppendLine();
+                        sb.AppendLine("--- STDOUT ---");
+                        sb.AppendLine(stdOut.Trim());
+                        sb.AppendLine();
+                        sb.AppendLine("--- STDERR ---");
+                        sb.AppendLine(stdErr.Trim());
+
+                        result.Result.ConsoleOutput = sb.ToString().Trim();
                     }
                     else
                     {
-                        result.Result.Status = ExecutionStatus.RuntimeError;
-                    }
+                        var combined = $"{stdOut}\n{stdErr}";
 
-                    var sb = new StringBuilder();
-                    sb.AppendLine("--- STDOUT ---");
-                    sb.AppendLine(stdOut.Trim());
-                    sb.AppendLine();
-                    sb.AppendLine("--- STDERR ---");
-                    sb.AppendLine(stdErr.Trim());
-                    result.Result.ConsoleOutput = sb.ToString().Trim();
+                        if (combined.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
+                            combined.Contains("timeout", StringComparison.OrdinalIgnoreCase))
+                        {
+                            result.Result.Status = ExecutionStatus.TimedOut;
+                        }
+                        else if (combined.Contains("assert", StringComparison.OrdinalIgnoreCase) ||
+                                 combined.Contains("failed", StringComparison.OrdinalIgnoreCase))
+                        {
+                            result.Result.Status = ExecutionStatus.FailedToExecute;
+                        }
+                        else
+                        {
+                            result.Result.Status = ExecutionStatus.RuntimeError;
+                        }
+
+                        var sb = new StringBuilder();
+                        sb.AppendLine("--- STDOUT ---");
+                        sb.AppendLine(stdOut.Trim());
+                        sb.AppendLine();
+                        sb.AppendLine("--- STDERR ---");
+                        sb.AppendLine(stdErr.Trim());
+
+                        result.Result.ConsoleOutput = sb.ToString().Trim();
+                    }
+                }
+
+                return result;
+            }
+            finally
+            {
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(data.ExecutablePath) && File.Exists(data.ExecutablePath))
+                    {
+                        File.Delete(data.ExecutablePath);
+                    }
+                }
+                catch
+                {
                 }
             }
-
-            File.Delete(_tmpJsFilePath);
-
-            return result;
         }
 
         public Task<CompilationResult> CompileCodeAsync(ProblemSolutionDto userSolution, CancellationToken cancellationToken)
@@ -174,59 +200,59 @@ namespace Runners.Shared.Runners
             }
             catch (InvalidTestTemplateException ex)
             {
-                return Task.FromResult
-                    (
-                    new CompilationResult()
-                    {
-                        Success = false,
-                        CompilationErrors = $"Manifest validation failed: {ex.Message}"
-                    }
-                    );
+                return Task.FromResult(new CompilationResult
+                {
+                    Success = false,
+                    CompilationErrors = $"Manifest validation failed: {ex.Message}",
+                    TotalTests = 0,
+                    ExecutablePath = string.Empty
+                });
             }
             catch (System.Text.Json.JsonException ex)
             {
-                return Task.FromResult
-                  (
-                  new CompilationResult()
-                  {
-                      Success = false,
-                      CompilationErrors = $"Manifest JSON parse error: {ex.Message}"
-                  }
-                  );
+                return Task.FromResult(new CompilationResult
+                {
+                    Success = false,
+                    CompilationErrors = $"Manifest JSON parse error: {ex.Message}",
+                    TotalTests = 0,
+                    ExecutablePath = string.Empty
+                });
             }
             catch (Exception ex)
             {
-                return Task.FromResult
-                    (
-                    new CompilationResult()
-                    {
-                        Success = false,
-                        CompilationErrors = $"Manifest parse error: {ex.Message}"
-                    }
-                    );
+                return Task.FromResult(new CompilationResult
+                {
+                    Success = false,
+                    CompilationErrors = $"Manifest parse error: {ex.Message}",
+                    TotalTests = 0,
+                    ExecutablePath = string.Empty
+                });
             }
 
             if (manifest.SampleTests.Count == 0 && !manifest.AdvancedTests.Any(t => t.LanguageCode == userSolution.LanguageCode))
-                return Task.FromResult
-                   (
-                   new CompilationResult()
-                   {
-                       Success = false,
-                       CompilationErrors = $"Invalid manifest: no tests for {userSolution.LanguageCode} detected"
-                   }
-                   );
+            {
+                return Task.FromResult(new CompilationResult
+                {
+                    Success = false,
+                    CompilationErrors = $"Invalid manifest: no tests for {userSolution.LanguageCode} detected",
+                    TotalTests = 0,
+                    ExecutablePath = string.Empty
+                });
+            }
+
+            var executablePath = Path.Combine(_basePath, $"{userSolution.RequestId:N}.js");
 
             var fullCode = _wrapper.GenerateSource(manifest, userSolution.UserSolution, "SolutionContainer");
 
-            File.WriteAllText(_tmpJsFilePath, fullCode);
+            File.WriteAllText(executablePath, fullCode);
 
-            return Task.FromResult
-                (
-                new CompilationResult()
-                {
-                    Success = true,
-                    TotalTests = manifest.SampleTests.Count + manifest.AdvancedTests.Count
-                });
+            return Task.FromResult(new CompilationResult
+            {
+                Success = true,
+                TotalTests = manifest.SampleTests.Count + manifest.AdvancedTests.Count,
+                ExecutablePath = executablePath,
+                CompilationErrors=null
+            });
         }
 
         public void Dispose()
@@ -241,9 +267,9 @@ namespace Runners.Shared.Runners
             {
                 return;
             }
+
             if (disposing)
             {
-
             }
 
             _isDisposed = true;

@@ -29,6 +29,8 @@ namespace Runners.Shared.CodeWrappers.NodeJs
             if (manifest == null) throw new ArgumentNullException(nameof(manifest));
             var sb = new StringBuilder();
 
+            manifest.Entrypoint = manifest.Entrypoint.ToLowerInvariant();
+
             // Inject base source with banned modules
             var sourceWithBans = NodeBaseSourceCode.Source.Replace("{{BANNED_MODULES}}", JsonConvert.SerializeObject(DefaultBannedModules));
 
@@ -58,8 +60,14 @@ namespace Runners.Shared.CodeWrappers.NodeJs
                 foreach (var l in userLines) sb.AppendLine("    " + l);
             }
             sb.AppendLine("    // user code ends");
+
+            // Auto-export entrypoint
+            string entrypoint = manifest.Entrypoint;
+            sb.AppendLine($"    if (typeof exports[{JsonConvert.SerializeObject(entrypoint)}] === 'undefined' && typeof {entrypoint} !== 'undefined') {{");
+            sb.AppendLine($"        exports[{JsonConvert.SerializeObject(entrypoint)}] = {entrypoint};");
+            sb.AppendLine("    }");
+
             sb.AppendLine($"}})({entrypointContainerClass});");
-            sb.AppendLine();
 
             // Advanced tests container
             if (manifest.AdvancedTests != null && manifest.AdvancedTests.Count > 0)
@@ -93,38 +101,18 @@ namespace Runners.Shared.CodeWrappers.NodeJs
                 // Render inputs based on signature
                 var paramList = manifest.Signature?.Parameters ?? new List<ParameterDescriptor>();
                 int paramCount = paramList.Count;
-                if (st.Inputs.HasValue && paramCount > 0)
+
+                JToken? inputsToken = null;
+                if (st.Inputs.HasValue)
+                    inputsToken = JToken.Parse(st.Inputs.Value.GetRawText());
+
+                var args = InputNormalizer.NormalizeInputs(inputsToken, paramCount, st.Name);
+
+                for (int i = 0; i < paramCount; i++)
                 {
-                    var j = JToken.Parse(st.Inputs.Value.GetRawText());
-                    if (paramCount == 1)
-                    {
-                        var pType = paramList[0].Type;
-                        var rendered = NodeJsTokenParser.Render(j, pType);
-                        sb.AppendLine($"            const arg0 = {rendered};");
-                    }
-                    else
-                    {
-                        if (j is JArray arr)
-                        {
-                            for (int i = 0; i < paramCount; i++)
-                            {
-                                var pType = i < paramCount ? paramList[i].Type : null;
-                                JToken item = i < arr.Count ? arr[i] : JValue.CreateNull();
-                                var rendered = NodeJsTokenParser.Render(item, pType);
-                                sb.AppendLine($"            const arg{i} = {rendered};");
-                            }
-                        }
-                        else
-                        {
-                            var rendered0 = NodeJsTokenParser.Render(j, paramList.Count > 0 ? paramList[0].Type : null);
-                            sb.AppendLine($"            const arg0 = {rendered0};");
-                            for (int i = 1; i < paramCount; i++) sb.AppendLine($"            const arg{i} = undefined;");
-                        }
-                    }
-                }
-                else
-                {
-                    for (int i = 0; i < paramCount; i++) sb.AppendLine($"            const arg{i} = undefined;");
+                    var pType = paramList[i].Type;
+                    var rendered = NodeJsTokenParser.Render(args[i], pType);
+                    sb.AppendLine($"            const arg{i} = {rendered};");
                 }
 
                 var invocationArgs = GenerateArgsInvocationBySignature(paramCount);

@@ -2,8 +2,9 @@
 {
     public class CompilationResult
     {
-        public bool Success { get; set; }
-        public string? CompilationErrors { get; set; }
-        public int TotalTests { get; set; }
+        public required bool Success { get; set; }
+        public required string? CompilationErrors { get; set; }
+        public required int TotalTests { get; set; }
+        public required string ExecutablePath { get; set; }
     }
 }

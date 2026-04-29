@@ -10,32 +10,11 @@ namespace Runners.Shared.Runners
 {
     public partial class TypeScriptRunner : IRunner
     {
-        const string _tmpTsFilePath = "/tmp/UserProgram.ts";
-        const string _tmpJsFilePath = "/tmp/UserProgram.js";
-
+        const string _basePath = "/tmp";
         const int _maxProcessLifetime = 25000;
 
-        private ITestWrapper _codeWrapper;
-
-        bool _isDisposed;
-
-        ProcessStartInfo _tsInfo = new ProcessStartInfo()
-        {
-            FileName = "npx",
-            Arguments = "tsc --target ES2020 --module CommonJS --outDir /tmp /tmp/UserProgram.ts",
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            UseShellExecute = false,
-        };
-
-        ProcessStartInfo _nodeInfo = new ProcessStartInfo()
-        {
-            FileName = "node",
-            Arguments = "/tmp/UserProgram.js",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-        };
+        private readonly ITestWrapper _codeWrapper;
+        private bool _isDisposed;
 
         public TypeScriptRunner(ITestWrapper wrapper)
         {
@@ -44,7 +23,6 @@ namespace Runners.Shared.Runners
 
         public async Task<CompilationResult> CompileCodeAsync(ProblemSolutionDto userSolution, CancellationToken cancellationToken = default)
         {
-
             ManifestDto manifest;
             try
             {
@@ -55,7 +33,9 @@ namespace Runners.Shared.Runners
                 return new CompilationResult()
                 {
                     Success = false,
-                    CompilationErrors = $"Manifest validation failed: {ex.Message}"
+                    CompilationErrors = $"Manifest validation failed: {ex.Message}",
+                    TotalTests = 0,
+                    ExecutablePath = string.Empty
                 };
             }
             catch (System.Text.Json.JsonException ex)
@@ -63,7 +43,9 @@ namespace Runners.Shared.Runners
                 return new CompilationResult()
                 {
                     Success = false,
-                    CompilationErrors = $"Manifest JSON parse error: {ex.Message}"
+                    CompilationErrors = $"Manifest JSON parse error: {ex.Message}",
+                    TotalTests = 0,
+                    ExecutablePath = string.Empty
                 };
             }
             catch (Exception ex)
@@ -71,60 +53,111 @@ namespace Runners.Shared.Runners
                 return new CompilationResult()
                 {
                     Success = false,
-                    CompilationErrors = $"Manifest parse error: {ex.Message}"
+                    CompilationErrors = $"Manifest parse error: {ex.Message}",
+                    TotalTests = 0,
+                    ExecutablePath = string.Empty
                 };
             }
 
             if (manifest.SampleTests.Count == 0 && !manifest.AdvancedTests.Any(t => t.LanguageCode == userSolution.LanguageCode))
-                return
-                   new CompilationResult()
-                   {
-                       Success = false,
-                       CompilationErrors = $"Invalid manifest: no tests for {userSolution.LanguageCode} detected"
-                   };
+            {
+                return new CompilationResult()
+                {
+                    Success = false,
+                    CompilationErrors = $"Invalid manifest: no tests for {userSolution.LanguageCode} detected",
+                    TotalTests = 0,
+                    ExecutablePath = string.Empty
+                };
+            }
+
+            var baseName = userSolution.RequestId.ToString("N");
+            var tsPath = Path.Combine(_basePath, $"{baseName}.ts");
+            var jsPath = Path.Combine(_basePath, $"{baseName}.js");
 
             var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.UserSolution, "SolutionContainer");
+            File.WriteAllText(tsPath, fullCode);
 
-
-            File.WriteAllText(_tmpTsFilePath, fullCode);
-
-            using var process = new Process() { StartInfo = _tsInfo };
-            process.Start();
-
-            if (!process.WaitForExit(_maxProcessLifetime))
+            var pInfo = new ProcessStartInfo
             {
-                process.Kill();
-
-                File.Delete(_tmpTsFilePath);
-
-                return new CompilationResult()
-                {
-                    Success = false,
-                    CompilationErrors = "TypeScript compilation timed out."
-                };
-            }
-
-            var compilationErrors = await process.StandardError.ReadToEndAsync(cancellationToken);
-            var compilationOutput = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-
-            if (process.ExitCode != 0)
-            {
-                File.Delete(_tmpTsFilePath);
-
-                return new CompilationResult()
-                {
-                    Success = false,
-                    CompilationErrors = $"TypeScript compilation failed: {compilationErrors}{compilationOutput}"
-                };
-            }
-
-            File.Delete(_tmpTsFilePath);
-
-            return new CompilationResult()
-            {
-                Success = true,
-                TotalTests = manifest.SampleTests.Count + manifest.AdvancedTests.Count
+                FileName = "tsc",
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true
             };
+
+            pInfo.ArgumentList.Add("--target");
+            pInfo.ArgumentList.Add("ES2020");
+            pInfo.ArgumentList.Add("--module");
+            pInfo.ArgumentList.Add("CommonJS");
+            pInfo.ArgumentList.Add("--outDir");
+            pInfo.ArgumentList.Add(_basePath);
+            pInfo.ArgumentList.Add(tsPath);
+
+            using var process = new Process { StartInfo = pInfo };
+
+            try
+            {
+                process.Start();
+
+                var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+                var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+
+                if (!process.WaitForExit(_maxProcessLifetime))
+                {
+                    try
+                    {
+                        process.Kill(entireProcessTree: true);
+                    }
+                    catch
+                    {
+                    }
+
+                    return new CompilationResult()
+                    {
+                        Success = false,
+                        CompilationErrors = "TypeScript compilation timed out.",
+                        TotalTests = 0,
+                        ExecutablePath = string.Empty
+                    };
+                }
+
+                await Task.WhenAll(stdoutTask, stderrTask);
+
+                var compilationOutput = stdoutTask.Result ?? string.Empty;
+                var compilationErrors = stderrTask.Result ?? string.Empty;
+
+                if (process.ExitCode != 0)
+                {
+                    return new CompilationResult()
+                    {
+                        Success = false,
+                        CompilationErrors = $"TypeScript compilation failed: {compilationErrors}{compilationOutput}",
+                        TotalTests = 0,
+                        ExecutablePath = string.Empty
+                    };
+                }
+
+                return new CompilationResult()
+                {
+                    Success = true,
+                    TotalTests = manifest.SampleTests.Count + manifest.AdvancedTests.Count,
+                    ExecutablePath = jsPath,
+                    CompilationErrors = null
+                };
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(tsPath))
+                    {
+                        File.Delete(tsPath);
+                    }
+                }
+                catch
+                {
+                }
+            }
         }
 
         public async Task<CodeResponseDto> ExecuteCodeAsync(ExecutionData data, CancellationToken cancellationToken = default)
@@ -144,181 +177,222 @@ namespace Runners.Shared.Runners
                 }
             };
 
-            using var proc = new Process
+            var pInfo = new ProcessStartInfo
             {
-                StartInfo = _nodeInfo,
+                FileName = "node",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
             };
 
-            proc.Start();
-            if (!proc.WaitForExit(_maxProcessLifetime))
+            pInfo.ArgumentList.Add(data.ExecutablePath);
+
+            using var proc = new Process
             {
-                proc.Kill();
-                result.Status = RequestStatus.Failed;
-                result.Result.Status = ExecutionStatus.TimedOut;
-                result.Result.ExitCode = 124;
-                result.Result.ConsoleOutput = "Execution timed out.";
+                StartInfo = pInfo,
+            };
 
-                File.Delete(_tmpJsFilePath);
-                File.Delete(_tmpTsFilePath);
-
-                return result;
-            }
-
-            result.Result.ExitCode = proc.ExitCode;
-
-            var stdOut = await proc.StandardOutput.ReadToEndAsync(cancellationToken) ?? string.Empty;
-            var stdErr = await proc.StandardError.ReadToEndAsync(cancellationToken) ?? string.Empty;
-
-            // 1) PassedTests:<n>
-            int passedCount = 0;
-            var passedMatch = PassedTestsRegex().Match(stdOut);
-            if (passedMatch.Success && int.TryParse(passedMatch.Groups[1].Value, out var p))
-                passedCount = p;
-            result.Result.PassedTests = passedCount;
-
-            // If exit code == 0 => success
-            if (proc.ExitCode == 0)
+            try
             {
-                result.Status = RequestStatus.Succeeded;
-                result.Result.Status = ExecutionStatus.Succeeded;
-                // keep stdout for diagnostics
-                result.Result.ConsoleOutput = stdOut?.Trim() ?? string.Empty;
-            }
-            else
-            {
-                // default
-                result.Status = RequestStatus.Failed;
-                result.Result.Status = ExecutionStatus.RuntimeError;
+                proc.Start();
 
-                // 2) parse FailedTest markers from stdout (one-line reasons)
-                // pattern: FailedTest:TestName:Reason  (Reason is single-line, no newlines)
-                var failedMatches = FailedTestsRegex().Matches(stdOut ?? string.Empty);
+                var stdoutTask = proc.StandardOutput.ReadToEndAsync(cancellationToken);
+                var stderrTask = proc.StandardError.ReadToEndAsync(cancellationToken);
 
-                // collect unique failures preserving first-seen reason
-                var failedDict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (Match m in failedMatches)
+                if (!proc.WaitForExit(_maxProcessLifetime))
                 {
-                    if (!m.Success) continue;
-                    var name = m.Groups[1].Value.Trim();
-                    var reason = m.Groups[2].Value.Trim().Replace("\r", "").Replace("\n", " ").Trim();
-                    if (!failedDict.ContainsKey(name))
-                        failedDict[name] = reason;
+                    try
+                    {
+                        proc.Kill(entireProcessTree: true);
+                    }
+                    catch
+                    {
+                    }
+
+                    result.Status = RequestStatus.Failed;
+                    result.Result.Status = ExecutionStatus.TimedOut;
+                    result.Result.ExitCode = 124;
+                    result.Result.ConsoleOutput = "Execution timed out.";
+
+                    return result;
                 }
 
-                // 3) parse detailed stderr blocks like:
-                // [FAILED-DETAIL] TestName: <stack or multiline info>
-                // We'll capture each line that starts with [FAILED-DETAIL] and then take the rest of the line.
+                result.Result.ExitCode = proc.ExitCode;
 
-                // Because stack traces may be multiline, we also capture any subsequent lines up to next [FAILED-DETAIL] marker
-                // Simpler approach: split stderr by lines and group lines starting with marker
-                var stderrLines = (stdErr ?? string.Empty).Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                await Task.WhenAll(stdoutTask, stderrTask);
 
-                var detailMap = new Dictionary<string, StringBuilder>(StringComparer.OrdinalIgnoreCase);
-                string currentKey = null;
+                var stdOut = stdoutTask.Result ?? string.Empty;
+                var stdErr = stderrTask.Result ?? string.Empty;
 
-                for (int i = 0; i < stderrLines.Length; i++)
+                var passedMatch = PassedTestsRegex().Match(stdOut);
+                result.Result.PassedTests =
+                    passedMatch.Success && int.TryParse(passedMatch.Groups[1].Value, out var passedCount)
+                        ? passedCount
+                        : 0;
+
+                if (proc.ExitCode == 0)
                 {
-                    var line = stderrLines[i];
-                    var m = DetailRegex().Match(line);
-                    if (m.Success)
+                    result.Status = RequestStatus.Succeeded;
+                    result.Result.Status = ExecutionStatus.Succeeded;
+                    result.Result.ConsoleOutput = stdOut.Trim();
+                }
+                else
+                {
+                    result.Status = RequestStatus.Failed;
+                    result.Result.Status = ExecutionStatus.RuntimeError;
+
+                    var failedMatches = FailedTestsRegex().Matches(stdOut ?? string.Empty);
+
+                    var failedDict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (Match m in failedMatches)
                     {
-                        currentKey = m.Groups[1].Value.Trim();
-                        var rest = m.Groups[2].Value ?? "";
-                        if (!detailMap.TryGetValue(currentKey, out var sb)) { sb = new StringBuilder(); detailMap[currentKey] = sb; }
-                        if (rest.Length > 0) sb.AppendLine(rest.Trim());
+                        if (!m.Success)
+                        {
+                            continue;
+                        }
+
+                        var name = m.Groups[1].Value.Trim();
+                        var reason = m.Groups[2].Value.Trim()
+                            .Replace("\r", "")
+                            .Replace("\n", " ")
+                            .Trim();
+
+                        if (!failedDict.ContainsKey(name))
+                        {
+                            failedDict[name] = reason;
+                        }
+                    }
+
+                    var stderrLines = (stdErr ?? string.Empty).Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+                    var detailMap = new Dictionary<string, StringBuilder>(StringComparer.OrdinalIgnoreCase);
+                    for (int i = 0; i < stderrLines.Length; i++)
+                    {
+                        var line = stderrLines[i];
+                        var m = DetailRegex().Match(line);
+                        if (!m.Success)
+                        {
+                            continue;
+                        }
+
+                        var currentKey = m.Groups[1].Value.Trim();
+                        var rest = m.Groups[2].Value ?? string.Empty;
+
+                        if (!detailMap.TryGetValue(currentKey, out var sb))
+                        {
+                            sb = new StringBuilder();
+                            detailMap[currentKey] = sb;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(rest))
+                        {
+                            sb.AppendLine(rest.Trim());
+                        }
 
                         int j = i + 1;
-                        while (j < stderrLines.Length && (stderrLines[j].StartsWith(" ") || stderrLines[j].StartsWith('\t') || stderrLines[j].StartsWith("at ")))
+                        while (j < stderrLines.Length &&
+                               (stderrLines[j].StartsWith(" ") ||
+                                stderrLines[j].StartsWith('\t') ||
+                                stderrLines[j].StartsWith("at ")))
                         {
                             sb.AppendLine(stderrLines[j].Trim());
                             j++;
                         }
-                        // continue loop from j-1
+
                         i = j - 1;
+                    }
+
+                    var failedList = new List<(string TestName, string Reason, string Detail)>();
+                    foreach (var kv in failedDict)
+                    {
+                        var name = kv.Key;
+                        var reason = kv.Value;
+                        var detail = detailMap.TryGetValue(name, out var sb) ? sb.ToString().Trim() : string.Empty;
+                        failedList.Add((name, reason, detail));
+                    }
+
+                    if (failedList.Count > 0)
+                    {
+                        bool anyTimeout = failedList.Any(f =>
+                            (f.Reason?.IndexOf("timed out", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                            (f.Reason?.IndexOf("timeout", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                            (f.Detail?.IndexOf("timed out", StringComparison.OrdinalIgnoreCase) >= 0) ||
+                            (f.Detail?.IndexOf("timeout", StringComparison.OrdinalIgnoreCase) >= 0));
+
+                        result.Result.Status = anyTimeout ? ExecutionStatus.TimedOut : ExecutionStatus.FailedToExecute;
+
+                        var sbOut = new StringBuilder();
+                        sbOut.AppendLine("Failed tests:");
+                        foreach (var f in failedList)
+                        {
+                            if (!string.IsNullOrEmpty(f.Detail))
+                            {
+                                sbOut.AppendLine($"{f.TestName} - {f.Reason}");
+                                sbOut.AppendLine("  Details:");
+                                foreach (var dl in f.Detail.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    sbOut.AppendLine("    " + dl);
+                                }
+                            }
+                            else
+                            {
+                                sbOut.AppendLine($"{f.TestName} - {f.Reason}");
+                            }
+                        }
+
+                        sbOut.AppendLine();
+                        sbOut.AppendLine("--- STDOUT ---");
+                        sbOut.AppendLine(stdOut.Trim());
+                        sbOut.AppendLine();
+                        sbOut.AppendLine("--- STDERR ---");
+                        sbOut.AppendLine(stdErr.Trim());
+
+                        result.Result.ConsoleOutput = sbOut.ToString().Trim();
                     }
                     else
                     {
-                        // nothing — ignore other stderr lines (they will be included in final dump)
-                    }
-                }
+                        var combined = $"{stdOut}\n{stdErr}";
 
-                var failedList = new List<(string TestName, string Reason, string Detail)>();
-                foreach (var kv in failedDict)
-                {
-                    var name = kv.Key;
-                    var reason = kv.Value;
-                    var detail = detailMap.TryGetValue(name, out var sb) ? sb.ToString().Trim() : string.Empty;
-                    failedList.Add((name, reason, detail));
-                }
-
-                int failedCount = failedList.Count;
-
-                if (failedCount > 0)
-                {
-                    // decide if any timeout present (look both at short reason and detail text)
-                    bool anyTimeout = failedList.Any(f =>
-                        (f.Reason?.IndexOf("timed out", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                        (f.Reason?.IndexOf("timeout", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                        (f.Detail?.IndexOf("timed out", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                        (f.Detail?.IndexOf("timeout", StringComparison.OrdinalIgnoreCase) >= 0)
-                    );
-
-                    result.Result.Status = anyTimeout ? ExecutionStatus.TimedOut : ExecutionStatus.FailedToExecute;
-
-                    // Build ConsoleOutput: failed list + optional details + stdout/stderr dumps
-                    var sbOut = new StringBuilder();
-                    sbOut.AppendLine("Failed tests:");
-                    foreach (var f in failedList)
-                    {
-                        if (!string.IsNullOrEmpty(f.Detail))
+                        if (combined.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
+                            combined.Contains("timeout", StringComparison.OrdinalIgnoreCase))
                         {
-                            sbOut.AppendLine($"{f.TestName} - {f.Reason}");
-                            sbOut.AppendLine("  Details:");
-                            foreach (var dl in f.Detail.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
-                                sbOut.AppendLine("    " + dl);
+                            result.Result.Status = ExecutionStatus.TimedOut;
+                        }
+                        else if (combined.Contains("assert", StringComparison.OrdinalIgnoreCase) ||
+                                 combined.Contains("failed", StringComparison.OrdinalIgnoreCase))
+                        {
+                            result.Result.Status = ExecutionStatus.FailedToExecute;
                         }
                         else
                         {
-                            sbOut.AppendLine($"{f.TestName} - {f.Reason}");
+                            result.Result.Status = ExecutionStatus.RuntimeError;
                         }
+
+                        var sb = new StringBuilder();
+                        sb.AppendLine("--- STDOUT ---");
+                        sb.AppendLine(stdOut.Trim());
+                        sb.AppendLine();
+                        sb.AppendLine("--- STDERR ---");
+                        sb.AppendLine(stdErr.Trim());
+                        result.Result.ConsoleOutput = sb.ToString().Trim();
                     }
-
-                    sbOut.AppendLine();
-                    sbOut.AppendLine("--- STDOUT ---");
-                    sbOut.AppendLine(stdOut.Trim());
-                    sbOut.AppendLine();
-                    sbOut.AppendLine("--- STDERR ---");
-                    sbOut.AppendLine(stdErr.Trim());
-
-                    result.Result.ConsoleOutput = sbOut.ToString().Trim();
                 }
-                else
-                {
-                    // no FailedTest markers in stdout — fallback heuristics using combined outputs
-                    var combined = (stdOut + "\n" + stdErr) ?? string.Empty;
-                    if (combined.Contains("timed out", StringComparison.OrdinalIgnoreCase)
-                        || combined.Contains("timeout", StringComparison.OrdinalIgnoreCase))
-                        result.Result.Status = ExecutionStatus.TimedOut;
-                    else if (combined.Contains("assert", StringComparison.OrdinalIgnoreCase)
-                             || combined.Contains("failed", StringComparison.OrdinalIgnoreCase))
-                        result.Result.Status = ExecutionStatus.FailedToExecute;
-                    else
-                        result.Result.Status = ExecutionStatus.RuntimeError;
 
-                    var sb = new StringBuilder();
-                    sb.AppendLine("--- STDOUT ---");
-                    sb.AppendLine(stdOut.Trim());
-                    sb.AppendLine();
-                    sb.AppendLine("--- STDERR ---");
-                    sb.AppendLine(stdErr.Trim());
-                    result.Result.ConsoleOutput = sb.ToString().Trim();
+                return result;
+            }
+            finally
+            {
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(data.ExecutablePath) && File.Exists(data.ExecutablePath))
+                    {
+                        File.Delete(data.ExecutablePath);
+                    }
+                }
+                catch
+                {
                 }
             }
-
-            File.Delete(_tmpJsFilePath);
-            File.Delete(_tmpTsFilePath);
-
-            return result;
         }
 
         public void Dispose()
@@ -329,15 +403,13 @@ namespace Runners.Shared.Runners
 
         protected virtual void Dispose(bool disposing)
         {
-            if (_isDisposed) return;
+            if (_isDisposed)
+            {
+                return;
+            }
 
             if (disposing)
             {
-                if (File.Exists(_tmpTsFilePath))
-                    File.Delete(_tmpTsFilePath);
-
-                if (File.Exists(_tmpJsFilePath))
-                    File.Delete(_tmpJsFilePath);
             }
 
             _isDisposed = true;
