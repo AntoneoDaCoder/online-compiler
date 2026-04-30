@@ -227,7 +227,7 @@ namespace ServerAPIApp.Dispatchers
             catch (k8s.Autorest.HttpOperationException createEx) when (
                     createEx.Response.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
-               
+
             }
         }
 
@@ -357,74 +357,97 @@ namespace ServerAPIApp.Dispatchers
 
         private async Task EnsureDeploymentExistsAsync(CancellationToken token)
         {
+            var desired = BuildDesiredDeployment();
+
             try
             {
-                await _client.AppsV1.ReadNamespacedDeploymentAsync(
-                       name: _deploymentName,
-                       namespaceParameter: _namespace,
-                       cancellationToken: token);
-            }
-            catch
-            {
-                var deployment = new V1Deployment
+                var existing = await _client.AppsV1.ReadNamespacedDeploymentAsync(
+                    name: _deploymentName,
+                    namespaceParameter: _namespace,
+                    cancellationToken: token);
+
+                var currentImage = existing.Spec?.Template?.Spec?.Containers?.FirstOrDefault()?.Image;
+                var desiredImage = desired.Spec?.Template?.Spec?.Containers?.FirstOrDefault()?.Image;
+
+                var currentReplicas = existing.Spec?.Replicas;
+                var desiredReplicas = desired.Spec?.Replicas;
+
+                if (currentImage != desiredImage || currentReplicas != desiredReplicas)
                 {
-                    Metadata = new V1ObjectMeta { Name = _deploymentName, NamespaceProperty = _namespace },
-                    Spec = new V1DeploymentSpec
+                    desired.Metadata.ResourceVersion = existing.Metadata.ResourceVersion;
+                    await _client.AppsV1.ReplaceNamespacedDeploymentAsync(
+                        body: desired,
+                        name: _deploymentName,
+                        namespaceParameter: _namespace,
+                        cancellationToken: token);
+                }
+            }
+            catch (k8s.Autorest.HttpOperationException ex) when (ex.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                await _client.AppsV1.CreateNamespacedDeploymentAsync(
+                    body: desired,
+                    namespaceParameter: _namespace,
+                    cancellationToken: token);
+            }
+        }
+
+        private V1Deployment BuildDesiredDeployment()
+        {
+            return new V1Deployment
+            {
+                Metadata = new V1ObjectMeta { Name = _deploymentName, NamespaceProperty = _namespace },
+                Spec = new V1DeploymentSpec
+                {
+                    Replicas = _numReplicas,
+                    Selector = new V1LabelSelector
                     {
-                        Replicas = _numReplicas,
-                        Selector = new V1LabelSelector()
+                        MatchLabels = new Dictionary<string, string>
+                {
+                    { "app", _appLabel }
+                }
+                    },
+                    Template = new V1PodTemplateSpec
+                    {
+                        Metadata = new V1ObjectMeta
                         {
-                            MatchLabels = new Dictionary<string, string>()
-                            {
-                                { "app",  _appLabel },                            }
+                            Labels = new Dictionary<string, string>
+                    {
+                        { "app", _appLabel },
+                        { "readyForExecution", "yes" }
+                    }
                         },
-                        Template = new V1PodTemplateSpec
+                        Spec = new V1PodSpec
                         {
-                            Metadata = new V1ObjectMeta
+                            Containers = new List<V1Container>
+                    {
+                        new V1Container
+                        {
+                            Name = _containerName,
+                            Image = _imageName,
+                            ImagePullPolicy = "IfNotPresent",
+                            Resources = new V1ResourceRequirements
                             {
-                                Labels = new Dictionary<string, string>()
+                                Limits = new Dictionary<string, ResourceQuantity>
                                 {
-                                     { "app",  _appLabel },
-                                    { "readyForExecution", "yes" }
+                                    ["memory"] = new ResourceQuantity($"{_podMemoryLimitMb}Mi")
+                                },
+                                Requests = new Dictionary<string, ResourceQuantity>
+                                {
+                                    ["memory"] = new ResourceQuantity($"{_podMemoryLimitMb}Mi")
                                 }
                             },
-                            Spec = new V1PodSpec
+                            SecurityContext = new V1SecurityContext
                             {
-                                Containers = new List<V1Container>()
-                                {
-                                    new V1Container()
-                                    {
-                                        Name = _containerName,
-                                        Image = _imageName,
-                                        Resources = new V1ResourceRequirements
-                                        {
-                                            Limits = new Dictionary<string, ResourceQuantity>
-                                            {
-                                                ["memory"] = new ResourceQuantity($"{_podMemoryLimitMb}Mi")
-                                            },
-                                            Requests = new Dictionary<string, ResourceQuantity>
-                                            {
-                                                ["memory"] = new ResourceQuantity($"{_podMemoryLimitMb}Mi")
-                                            }
-                                        },
-                                        SecurityContext = new V1SecurityContext
-                                        {
-                                            RunAsNonRoot = true,
-                                            ReadOnlyRootFilesystem = false,
-                                            AllowPrivilegeEscalation = false
-                                        }
-                                    }
-                                }
+                                RunAsNonRoot = true,
+                                ReadOnlyRootFilesystem = false,
+                                AllowPrivilegeEscalation = false
                             }
                         }
                     }
-                };
-
-                await _client.AppsV1.CreateNamespacedDeploymentAsync(
-                        body: deployment,
-                        namespaceParameter: _namespace,
-                        cancellationToken: token);
-            }
+                        }
+                    }
+                }
+            };
         }
     }
 }

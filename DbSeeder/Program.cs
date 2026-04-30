@@ -313,6 +313,8 @@ class Program
 
                 var userData = await keycloakSvc.GetUserByEmailAsync(mail);
 
+                Console.WriteLine(JsonSerializer.Serialize(userData, options: new JsonSerializerOptions { WriteIndented = true }));
+
                 if (userData is null)
                 {
                     adminId = await keycloakSvc.CreateUserWithRolesAsync(mail, name, passw, [adminRole]);
@@ -338,6 +340,7 @@ class Program
                 }
 
                 _adminId = adminId;
+                Console.WriteLine(_adminId);
             }
             catch (Exception ex)
             {

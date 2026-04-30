@@ -11,7 +11,8 @@ spec:
       restartPolicy: Never
       containers:
       - name: db-seeder
-        image: db-seeder:local
+        image: db-seeder:dev
+        imagePullPolicy: IfNotPresent
         env:
         - name: POSTGRES_HOST
           value: "postgres.postgresql.svc.cluster.local"

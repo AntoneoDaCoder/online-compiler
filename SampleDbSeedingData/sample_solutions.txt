@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 public class Solution {
-    public static int[] filterEven(int[] numbers) {
+    public static int[] Solution(int[] numbers) {
         if (numbers == null) return new int[0];
         return Arrays.stream(numbers)
                      .filter(n -> n % 2 == 0)
@@ -24,7 +24,7 @@ public class Solution {
 // Kotlin
 class Solution {
     companion object {
-        fun filterEven(numbers: IntArray?): IntArray {
+        fun Solution(numbers: IntArray?): IntArray {
             return numbers?.filter { it % 2 == 0 }?.toIntArray() ?: intArrayOf()
         }
     }
@@ -40,7 +40,7 @@ export class Solution {
 
 // Node.js
 class Solution {
-    function filterEven(numbers) {
+    function solution(numbers) {
         if (!numbers) return [];
         return numbers.filter(n => n % 2 === 0);
     }
@@ -286,7 +286,7 @@ module.exports = { Solution };
 
 // C#
 public class Solution {
-    public static bool IsPalindrome(string str) {
+    public static bool Solution(string str) {
         if (str == null) return false;
         string cleaned = new string(str.ToLower().Where(char.IsLetterOrDigit).ToArray());
         return cleaned.SequenceEqual(cleaned.Reverse());
@@ -295,7 +295,7 @@ public class Solution {
 
 // Java
 public class Solution {
-    public static boolean isPalindrome(String str) {
+    public static boolean Solution(String str) {
         if (str == null) return false;
         String cleaned = str.toLowerCase().replaceAll("[^a-z0-9]", "");
         return new StringBuilder(cleaned).reverse().toString().equals(cleaned);
@@ -305,7 +305,7 @@ public class Solution {
 // Kotlin
 class Solution {
     companion object {
-        fun isPalindrome(str: String?): Boolean {
+        fun Solution(str: String?): Boolean {
             if (str == null) return false
             val cleaned = str.toLowerCase().filter { it.isLetterOrDigit() }
             return cleaned == cleaned.reversed()
@@ -315,7 +315,7 @@ class Solution {
 
 // TypeScript
 export class Solution {
-    static isPalindrome(str: string | null): boolean {
+    function solution(str: string | null): boolean {
         if (str === null) return false;
         const cleaned = str.toLowerCase().replace(/[^a-z0-9]/g, '');
         return cleaned === cleaned.split('').reverse().join('');
@@ -324,7 +324,7 @@ export class Solution {
 
 // Node.js
 class Solution {
-    static isPalindrome(str) {
+    function solution(str) {
         if (str === null) return false;
         const cleaned = str.toLowerCase().replace(/[^a-z0-9]/g, '');
         return cleaned === cleaned.split('').reverse().join('');
@@ -337,7 +337,7 @@ module.exports = { Solution };
 
 // C#
 public class Solution {
-    public static int MatrixSum(int[][] matrix) {
+    public static int Solution(int[][] matrix) {
         if (matrix == null) return 0;
         int sum = 0;
         foreach (var row in matrix) {
@@ -351,7 +351,7 @@ public class Solution {
 
 // Java
 public class Solution {
-    public static int matrixSum(int[][] matrix) {
+    public static int Solution(int[][] matrix) {
         if (matrix == null) return 0;
         int sum = 0;
         for (int[] row : matrix) {
@@ -366,7 +366,7 @@ public class Solution {
 // Kotlin
 class Solution {
     companion object {
-        fun matrixSum(matrix: Array<IntArray>?): Int {
+        fun Solution(matrix: Array<IntArray>?): Int {
             if (matrix == null) return 0
             var sum = 0
             for (row in matrix) {
@@ -381,7 +381,7 @@ class Solution {
 
 // TypeScript
 export class Solution {
-    static matrixSum(matrix: number[][] | null): number {
+    function solution(matrix: number[][] | null): number {
         if (!matrix) return 0;
         let sum = 0;
         for (let row of matrix) {
@@ -395,7 +395,7 @@ export class Solution {
 
 // Node.js
 class Solution {
-    static matrixSum(matrix) {
+    function solution(matrix) {
         if (!matrix) return 0;
         let sum = 0;
         for (let row of matrix) {
@@ -413,7 +413,7 @@ module.exports = { Solution };
 
 // C#
 public class Solution {
-    public static string[] RemoveDuplicates(string[] items) {
+    public static string[] Solution(string[] items) {
         if (items == null) return new string[0];
         var seen = new HashSet<string>();
         var result = new List<string>();
@@ -433,7 +433,7 @@ import java.util.HashSet;
 import java.util.List;
 
 public class Solution {
-    public static String[] removeDuplicates(String[] items) {
+    public static String[] Solution(String[] items) {
         if (items == null) return new String[0];
         HashSet<String> seen = new HashSet<>();
         List<String> result = new ArrayList<>();
@@ -450,7 +450,7 @@ public class Solution {
 // Kotlin
 class Solution {
     companion object {
-        fun removeDuplicates(items: Array<String>?): Array<String> {
+        fun Solution(items: Array<String>?): Array<String> {
             if (items == null) return emptyArray()
             val seen = mutableSetOf<String>()
             val result = mutableListOf<String>()
@@ -466,7 +466,7 @@ class Solution {
 
 // TypeScript
 export class Solution {
-    static removeDuplicates(items: string[] | null): string[] {
+    function solution(items: string[] | null): string[] {
         if (!items) return [];
         const seen = new Set<string>();
         const result: string[] = [];
@@ -482,7 +482,7 @@ export class Solution {
 
 // Node.js
 class Solution {
-    static removeDuplicates(items) {
+    function solution(items) {
         if (!items) return [];
         const seen = new Set();
         const result = [];

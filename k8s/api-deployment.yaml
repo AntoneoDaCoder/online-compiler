@@ -15,7 +15,8 @@ spec:
       serviceAccountName: api-server-sa
       containers:
       - name: api-server
-        image: api-server:local
+        image: api-server:dev
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:

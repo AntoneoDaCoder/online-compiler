@@ -7,12 +7,15 @@ DB_USER="postgresadmin"
 DB_PASSWORD="admin123"
 BACKUP_DIR="/c/OnlineCompilerMinikubeVolumes/Postgres"
 
-LATEST_BACKUP="$BACKUP_DIR/full-postgres-backup-latest.sql"
+# Находим самый новый файл бэкапа
+LATEST_BACKUP=$(ls -t "$BACKUP_DIR"/backup-*.sql 2>/dev/null | head -1)
 
-if [ ! -f "$LATEST_BACKUP" ]; then
-  echo "No backup found. Skipping restore."
+if [ -z "$LATEST_BACKUP" ] || [ ! -f "$LATEST_BACKUP" ]; then
+  echo "No backup file found in $BACKUP_DIR (pattern: backup-*.sql). Skipping restore."
   exit 10
 fi
+
+echo "Using backup: $LATEST_BACKUP"
 
 echo "Waiting for PostgreSQL pod..."
 kubectl wait --for=condition=ready pod/"$POD_NAME" -n "$NAMESPACE" --timeout=300s

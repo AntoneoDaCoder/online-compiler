@@ -1,64 +1,65 @@
-group "default" {
-  targets = ["api", "csharp", "java", "nodejs", "kotlin", "typescript","seeder"]
+variable "TAG" {
+  default = "dev"
 }
 
-// group "composite" {
-//   targets = ["api-composite", "composite"]
-// }
+group "default" {
+  targets = ["api", "csharp", "java", "nodejs", "kotlin", "typescript", "seeder"]
+}
+
+# group "composite" {
+#   targets = ["api-composite", "composite"]
+# }
 
 target "api" {
   dockerfile = "Dockerfile"
   context    = "ServerAPIApp/"
-  tags       = ["api-server:local"]
+  tags       = ["api-server:${TAG}"]
   contexts = {
-    shared = "Shared/"
-    server-core = "ServerAPIApp.Core/"
-    server-domain = "ServerAPIApp.Domain/"
-    server-dal = "ServerAPIApp.DAL/"
+    shared          = "Shared/"
+    server-core     = "ServerAPIApp.Core/"
+    server-domain   = "ServerAPIApp.Domain/"
+    server-dal      = "ServerAPIApp.DAL/"
     server-contracts = "ServerAPIApp.Contracts/"
   }
-
-  //   args = {
-  //   USE_COMPOSITE = "false"
-  // }
 }
 
-// target "api-composite" {
-//   inherits = ["api"]
-//   args = {
-//     USE_COMPOSITE = "true"
-//   }
-// }
+# target "api-composite" {
+#   inherits = ["api"]
+#   args = {
+#     USE_COMPOSITE = "true"
+#   }
+# }
 
-// target "composite" {
-//   dockerfile = "CompositeRunner/Dockerfile"
-//   context = "Runners/"
-//   tags = ["composite-runner:local"]
-//   contexts = {
-//     shared = "Shared/"
-//   }
-// }
-target "seeder"{
+# target "composite" {
+#   dockerfile = "CompositeRunner/Dockerfile"
+#   context    = "Runners/"
+#   tags       = ["composite-runner:${TAG}"]
+#   contexts = {
+#     shared = "Shared/"
+#   }
+# }
+
+target "seeder" {
   dockerfile = "Dockerfile"
   context    = "DbSeeder/"
-  tags = ["db-seeder:local"]
+  tags       = ["db-seeder:${TAG}"]
   contexts = {
-    shared = "Shared/",
-    server-domain = "ServerAPIApp.Domain/"
-    server-dal = "ServerAPIApp.DAL/"
-    data-seed = "SampleDbSeedingData/"
+    shared          = "Shared/"
+    server-domain   = "ServerAPIApp.Domain/"
+    server-dal      = "ServerAPIApp.DAL/"
+    data-seed       = "SampleDbSeedingData/"
     server-contracts = "ServerAPIApp.Contracts/"
-    server-core = "ServerAPIApp.Core/"
-    appsettings = "ServerAPIApp/"
+    server-core     = "ServerAPIApp.Core/"
+    appsettings     = "ServerAPIApp/"
   }
 }
 
 target "csharp" {
   dockerfile = "Dockerfile"
   context    = "Runners/DotNetRunner/"
-  tags       = ["csharp-runner:local"]
+  tags       = ["csharp-runner:${TAG}"]
   contexts = {
-    shared = "Shared/",
+    shared        = "Shared/"
     runners-shared = "Runners/Runners.Shared/"
     server-domain = "ServerAPIApp.Domain/"
   }
@@ -67,15 +68,15 @@ target "csharp" {
 target "java" {
   dockerfile = "Dockerfile"
   context    = "Runners/JavaRunner/"
-  tags       = ["java-runner:local"]
+  tags       = ["java-runner:${TAG}"]
 }
 
 target "nodejs" {
   dockerfile = "Dockerfile"
   context    = "Runners/NodeJsRunner/"
-  tags       = ["nodejs-runner:local"]
+  tags       = ["nodejs-runner:${TAG}"]
   contexts = {
-    shared = "Shared/",
+    shared        = "Shared/"
     server-domain = "ServerAPIApp.Domain/"
     runners-shared = "Runners/Runners.Shared/"
   }
@@ -84,15 +85,15 @@ target "nodejs" {
 target "kotlin" {
   dockerfile = "Dockerfile"
   context    = "Runners/KotlinRunner/"
-  tags       = ["kotlin-runner:local"]
+  tags       = ["kotlin-runner:${TAG}"]
 }
 
 target "typescript" {
   dockerfile = "Dockerfile"
   context    = "Runners/TypeScriptRunner/"
-  tags       = ["typescript-runner:local"]
+  tags       = ["typescript-runner:${TAG}"]
   contexts = {
-    shared = "Shared/",
+    shared        = "Shared/"
     server-domain = "ServerAPIApp.Domain/"
     runners-shared = "Runners/Runners.Shared/"
   }

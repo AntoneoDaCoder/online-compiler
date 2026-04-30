@@ -9,7 +9,8 @@ BACKUP_DIR="/c/OnlineCompilerMinikubeVolumes/Postgres"
 
 mkdir -p "$BACKUP_DIR"
 
-LATEST_BACKUP="$BACKUP_DIR/full-postgres-backup-latest.sql"
+# Генерируем имя файла с датой и временем
+BACKUP_FILE="$BACKUP_DIR/backup-$(date +%Y%m%d_%H%M%S).sql"
 
 echo "Checking if PostgreSQL pod exists..."
 if ! kubectl get pod "$POD_NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
@@ -26,6 +27,6 @@ fi
 echo "Creating full PostgreSQL cluster backup..."
 kubectl exec -n "$NAMESPACE" "$POD_NAME" -- \
   bash -c "PGPASSWORD=$DB_PASSWORD pg_dumpall -U $DB_USER --clean --if-exists" \
-  > "$LATEST_BACKUP"
+  > "$BACKUP_FILE"
 
-echo "Backup completed successfully: $LATEST_BACKUP"
+echo "Backup completed successfully: $BACKUP_FILE"

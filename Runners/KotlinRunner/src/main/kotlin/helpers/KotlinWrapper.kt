@@ -141,7 +141,7 @@ object KotlinWrapper : ITestWrapper {
                     sb.append("    try {\n")
                     sb.append("      ").append(entrypointContainerClass).append(".").append(manifest.entrypoint)
                         .append("(").append(argsList).append(")\n")
-                    sb.append("    } catch (t: Throwable) { t.printStackTrace(); Assert.fail(\"Test execution threw: ${'$'}t\") }\n")
+                    sb.append("    } catch (t: Throwable) { t.printStackTrace();  throw AssertionError(\"Test execution threw: ${'$'}t\", t)\n}\n")
                 } else {
                     val defaultVal = getDefaultValueForType(rt)
                     if (defaultVal == "null") {
@@ -152,7 +152,7 @@ object KotlinWrapper : ITestWrapper {
                     sb.append("    try {\n")
                     sb.append("      __actual = ").append(entrypointContainerClass).append(".").append(manifest.entrypoint)
                         .append("(").append(argsList).append(")\n")
-                    sb.append("    } catch (t: Throwable) { t.printStackTrace(); Assert.fail(\"Test execution threw:${'$'}t\") }\n")
+                    sb.append("    } catch (t: Throwable) { t.printStackTrace();  throw AssertionError(\"Test execution threw: ${'$'}t\", t)\n}\n")
                 }
 
                 val comparator = st.comparator ?: "eq"
@@ -207,7 +207,7 @@ object KotlinWrapper : ITestWrapper {
             sb.append("  fun ").append(methodName).append("() {\n")
             sb.append("    try {\n")
             sb.append("      AdvancedTestsContainer.").append(sanitizedAdvName).append("()\n")
-            sb.append("    } catch (t: Throwable) { t.printStackTrace(); Assert.fail(\"Advanced test threw:${'$'}t\") }\n")
+            sb.append("    } catch (t: Throwable) { t.printStackTrace();  throw AssertionError(\"Advanced test threw: ${'$'}t\", t)\n}\n")
             sb.append("  }\n\n")
         }
 
@@ -224,8 +224,9 @@ object KotlinWrapper : ITestWrapper {
         sb.append("          System.err.println(\"[TEST FAILED] \" + f.testHeader)\n")
         sb.append("          System.err.println(f.message)\n")
         sb.append("        }\n")
-        sb.append("        val passed = result.runCount - result.failureCount - result.ignoreCount\n")
-        sb.append("        println(\"PassedTests:\" + passed)\n")
+        sb.append("        val total = result.runCount - result.ignoreCount\n")
+        sb.append("        val passed = total - result.failureCount\n")
+        sb.append("        println(\"Passed tests:${'$'}passed/${'$'}total\");")
         sb.append("        System.out.flush()\n")
         sb.append("        if (result.wasSuccessful()) kotlin.system.exitProcess(0) else kotlin.system.exitProcess(1)\n")
         sb.append("      } catch (t: Throwable) { t.printStackTrace(); kotlin.system.exitProcess(2) }\n")

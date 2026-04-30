@@ -273,18 +273,16 @@ class KotlinRunner {
         return sb.toString()
     }
 
-    private val passedPatterns = listOf(
-        Pattern.compile("PassedTests\\s*[:=]\\s*(\\d+)", Pattern.CASE_INSENSITIVE),
-        Pattern.compile("OK \\((\\d+) tests?\\)"), // JUnit summary
-        Pattern.compile("Tests run:\\s*(\\d+)", Pattern.CASE_INSENSITIVE) // другой формат
+    private val junitSummaryRegex = Regex(
+        """Tests run:\s*(\d+),\s*Failures:\s*(\d+)(?:,\s*Ignored:\s*(\d+))?""",
+        RegexOption.IGNORE_CASE
     )
 
     private fun parsePassedTests(output: String): Int {
-        for (p in passedPatterns) {
-            val m = p.matcher(output)
-            if (m.find()) return m.group(1).toInt()
-        }
-        return 0
+        val m = junitSummaryRegex.find(output) ?: return 0
+        val run = m.groupValues[1].toInt()
+        val failures = m.groupValues[2].toInt()
+        val ignored = m.groupValues.getOrNull(3)?.takeIf { it.isNotBlank() }?.toInt() ?: 0
+        return (run - failures - ignored).coerceAtLeast(0)
     }
-
 }
