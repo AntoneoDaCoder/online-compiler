@@ -47,7 +47,7 @@ namespace ServerAPIApp.Controllers
         [HttpGet("users/{userId}")]
         public async Task<IActionResult> GetUsersRealmRolesAsync([FromRoute] string userId, CancellationToken cancellationToken = default)
         {
-            var request = new GetUsersRealmRolesCase(userId);
+            var request = new GetUsersClientRolesCase(userId);
 
             var roles = await _mediator.Send(request, cancellationToken);
 

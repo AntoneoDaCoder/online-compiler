@@ -139,7 +139,7 @@ object KotlinWrapper : ITestWrapper {
 
                 if (!hasResult) {
                     sb.append("    try {\n")
-                    sb.append("      ").append(entrypointContainerClass).append(".").append(manifest.entrypoint)
+                    sb.append("      ").append(entrypointContainerClass).append(".").append(manifest.entrypoint?.lowercase())
                         .append("(").append(argsList).append(")\n")
                     sb.append("    } catch (t: Throwable) { t.printStackTrace();  throw AssertionError(\"Test execution threw: ${'$'}t\", t)\n}\n")
                 } else {
@@ -150,7 +150,7 @@ object KotlinWrapper : ITestWrapper {
                         sb.append("    var __actual: ").append(rt).append(" = ").append(defaultVal).append("\n")
                     }
                     sb.append("    try {\n")
-                    sb.append("      __actual = ").append(entrypointContainerClass).append(".").append(manifest.entrypoint)
+                    sb.append("      __actual = ").append(entrypointContainerClass).append(".").append(manifest.entrypoint?.lowercase())
                         .append("(").append(argsList).append(")\n")
                     sb.append("    } catch (t: Throwable) { t.printStackTrace();  throw AssertionError(\"Test execution threw: ${'$'}t\", t)\n}\n")
                 }

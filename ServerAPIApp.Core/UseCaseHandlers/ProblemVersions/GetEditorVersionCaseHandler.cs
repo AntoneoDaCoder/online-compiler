@@ -1,7 +1,10 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Contracts.DTOs.Problems;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
+using ServerAPIApp.DAL.Confs;
 using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 using Shared.DTOs;
 using Shared.Helpers;
@@ -13,17 +16,23 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
         private IProblemVersionRepository _repo;
         private IObjectStorage _storage;
 
-        private const string _bucketName = "manifestbucket";
+        private readonly string _bucketName;
 
-        public GetEditorVersionCaseHandler(IProblemVersionRepository repo, IObjectStorage storage)
+        public GetEditorVersionCaseHandler(IProblemVersionRepository repo, IObjectStorage storage, IOptions<MinioConfiguration> conf)
         {
             _repo = repo;
             _storage = storage;
+            _bucketName = conf.Value.BucketName;
         }
 
         public async Task<EditorProblemVersionDto?> Handle(GetEditorVersionCase command, CancellationToken cancellationToken)
         {
-            var version = await _repo.GetByIdWithLanguagesAsync(command.VersionId, cancellationToken);
+            var version = await _repo.Query()
+                .AsNoTracking()
+                .Where(x => x.Id == command.VersionId)
+                .Include(x => x.SupportedLanguages)
+                .ThenInclude(x => x.Language)
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (version is null)
                 throw new ResourceNotFoundException("Such version doesn't exist");

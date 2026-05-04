@@ -1,8 +1,9 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
-using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 using ServerAPIApp.Domain.Exceptions.InternalServerExceptions;
+using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 {
@@ -17,7 +18,12 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 
         public async Task Handle(PublishVersionDraftCase command, CancellationToken cancellationToken)
         {
-            var entity = await _repo.GetByIdAsync(command.DraftId, isDraft: true, cancellationToken);
+            var entity = await _repo.Query()
+                 .AsNoTracking()
+                 .Where(x => x.Id == command.DraftId && x.IsDraft)
+                 .Include(x => x.SupportedLanguages)
+                 .ThenInclude(x => x.Language)
+                 .FirstOrDefaultAsync(cancellationToken);
 
             if (entity is null)
                 throw new ResourceNotFoundException("Resource not found");

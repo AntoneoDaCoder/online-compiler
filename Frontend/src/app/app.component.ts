@@ -12,7 +12,7 @@ import { Subscription } from 'rxjs';
   selector: 'app-root',
   standalone: true,
   templateUrl: './app.component.html',
-  imports: [RouterOutlet, CommonModule, ToastComponent]
+  imports: [RouterOutlet, CommonModule, ToastComponent],
 })
 export class AppComponent implements OnInit, OnDestroy {
   private destroyRef = inject(DestroyRef);

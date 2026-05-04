@@ -1,7 +1,8 @@
 ﻿using MediatR;
+using Microsoft.Extensions.Options;
 using ServerAPIApp.Contracts.Abstractions;
-using ServerAPIApp.Core.Helpers;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
+using ServerAPIApp.DAL.Confs;
 using ServerAPIApp.Domain.Exceptions.InternalServerExceptions;
 using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 using System.Text.Json;
@@ -20,26 +21,32 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
         };
 
-        //TODO: move this to config as well
-        const string _bucketName = "manifestbucket";
+        private readonly string _bucketName;
 
-        public UpdateDraftCaseHandler(IProblemVersionRepository repo, IObjectStorage storage)
+        public UpdateDraftCaseHandler(IProblemVersionRepository repo, IObjectStorage storage, IOptions<MinioConfiguration> conf)
         {
             _repo = repo;
             _storage = storage;
+            _bucketName = conf.Value.BucketName;
         }
 
         public async Task Handle(UpdateVersionDraftCase command, CancellationToken cancellationToken)
         {
-            var (entity, manifest) = command.ToEntity();
+            var entity = (await _repo.GetFilteredAsync(x => x.Id == command.VersionId, cancellationToken)).FirstOrDefault();
 
-            if (manifest is not null)
+            if (entity is null)
+                throw new ResourceNotFoundException("Resource not found");
+
+            entity.Statement = command.Statement;
+            entity.TotalTests = command.TotalTests;
+
+            if (command.TestManifest is not null)
             {
                 var key = $"problems/{command.ProblemId}/versions/{command.VersionId}/template.json";
 
                 await _storage.DeleteObjectAsync(_bucketName, key, cancellationToken);
 
-                var manifestJson = JsonSerializer.Serialize(manifest, _opts);
+                var manifestJson = JsonSerializer.Serialize(command.TestManifest, _opts);
 
                 if (!await _storage.UploadStringAsync(_bucketName, key, manifestJson, cancellationToken: cancellationToken))
                     throw new ObjectStorageUploadException("Failed to save tests.");
@@ -47,10 +54,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
                 entity.TestTemplateKey = key;
             }
 
-            var updated = await _repo.UpdateDraftAsync(entity, cancellationToken);
-
-            if (!updated)
-                throw new ResourceNotFoundException("Resource not found");
+            await _repo.UpdateAsync(entity, cancellationToken);
         }
     }
 }

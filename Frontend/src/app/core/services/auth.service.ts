@@ -89,11 +89,10 @@ export class AuthService {
             token?.email ??
             '';
 
-        const realmRoles = this.keycloak.realmAccess?.roles ?? [];
         const clientRoles =
             this.keycloak.resourceAccess?.[environment.keycloakClientId]?.roles ?? [];
 
-        this._userRoles = Array.from(new Set([...realmRoles, ...clientRoles]));
+        this._userRoles = Array.from(new Set([...clientRoles]));
 
         this.cleanAuthUrl();
 

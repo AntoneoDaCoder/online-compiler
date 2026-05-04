@@ -13,11 +13,6 @@ namespace ServerAPIApp.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        private static readonly string[] SupportedLanguages = new[]
-        {
-            "csharp", "java", "nodejs", "kotlin", "typescript"
-        };
-
         public static void AddRoleHandler(this IServiceCollection services)
         {
             services.AddSingleton<IAuthorizationHandler, RoleHandler>();
@@ -25,6 +20,11 @@ namespace ServerAPIApp.Extensions
 
         public static void ConfigureDispatchers(this IServiceCollection services, IConfiguration config)
         {
+            var supportedLanguages = config.GetRequiredSection("SupportedLanguages").Get<string[]>();
+
+            if (supportedLanguages is null || (supportedLanguages.Length == 0))
+                throw new InvalidOperationException("[API] Fatal error. Supported languages are not configured");
+
             services.AddSignalR();
 
             services.AddSingleton<IUserIdProvider, JwtUserIdProvider>();
@@ -53,13 +53,13 @@ namespace ServerAPIApp.Extensions
                         sp.GetRequiredService<IKubernetes>(),
                         sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>());
 
-                    foreach (var lang in SupportedLanguages)
+                    foreach (var lang in supportedLanguages)
                         mgr.RegisterLanguage(lang);
 
                     return mgr;
                 });
 
-                foreach (var lang in SupportedLanguages)
+                foreach (var lang in supportedLanguages)
                 {
                     services.AddSingleton<IKubernetesJobManager>(sp =>
                         new CompositeJobManagerProxy(lang, sp.GetRequiredService<CompositeKubernetesJobManager>()));
@@ -69,12 +69,12 @@ namespace ServerAPIApp.Extensions
             {
                 Console.WriteLine("[API] Server starts in default mode");
 
-                foreach (var lang in SupportedLanguages)
+                foreach (var lang in supportedLanguages)
                 {
                     services.Configure<LanguageConfig>(lang, config.GetSection($"Languages:{lang}"));
                 }
 
-                foreach (var lang in SupportedLanguages)
+                foreach (var lang in supportedLanguages)
                 {
                     services.AddSingleton<IKubernetesJobManager>(sp =>
                     {

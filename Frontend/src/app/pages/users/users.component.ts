@@ -213,11 +213,7 @@ export class UsersComponent implements OnInit, OnDestroy {
         const n = typeof stamp === 'string' ? Number(stamp) : stamp;
         if (!Number.isFinite(n)) return '—';
 
-        const ms = n < 1e12 ? n * 1000 : n; // если вдруг пришли секунды
-        const d = new Date(ms);
-
-        return Number.isNaN(d.getTime())
-            ? '—'
-            : d.toLocaleString('ru-RU');
+        const d = new Date(n); // Keycloak already sends milliseconds
+        return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('ru-RU');
     }
 }

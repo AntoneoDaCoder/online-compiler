@@ -3,6 +3,7 @@ package com.mems.helpers;
 import com.mems.manifest.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.IntStream;
 import java.util.stream.Collectors;
 
@@ -99,13 +100,13 @@ public class JavaWrapper implements ITestWrapper {
 
                 if (!hasResult) {
                     sb.append("    try { ");
-                    sb.append(entrypointContainerClass).append(".").append(manifest.entrypoint).append("(");
+                    sb.append(entrypointContainerClass).append(".").append(manifest.entrypoint.toLowerCase(Locale.ROOT)).append("(");
                     sb.append(IntStream.range(0, paramCount).mapToObj(i -> "arg" + i).collect(Collectors.joining(", ")));
                     sb.append("); } catch (Throwable t) { t.printStackTrace(); Assert.fail(\"Test execution threw: \" + t); }\n");
                 } else {
                     sb.append("    ").append(rt).append(" __actual = ").append(getDefaultValueForType(rt)).append(";\n");
                     sb.append("    try {\n");
-                    sb.append("      __actual = ").append(entrypointContainerClass).append(".").append(manifest.entrypoint).append("(");
+                    sb.append("      __actual = ").append(entrypointContainerClass).append(".").append(manifest.entrypoint.toLowerCase(Locale.ROOT)).append("(");
                     sb.append(IntStream.range(0, paramCount).mapToObj(i -> "arg" + i).collect(Collectors.joining(", ")));
                     sb.append(");\n");
                     sb.append("    } catch (Throwable t) { t.printStackTrace(); Assert.fail(\"Test execution threw: \" + t); }\n");

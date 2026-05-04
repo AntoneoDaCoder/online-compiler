@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 using Shared.DTOs.ManifestHelpers;
+using Shared.Helpers.TypeNameRenderers;
 
 namespace Runners.Shared.CodeWrappers.CSharp
 {
@@ -25,7 +26,7 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 case JTokenType.Array:
                     var arr = token.Children().ToArray();
                     var items = arr.Select(t => Render(t, type?.Items)).ToArray();
-                    var itemType = type != null && type.Kind == "array" && type.Items != null ? RenderTypeName(type.Items) : "object";
+                    var itemType = type != null && type.Kind == "array" && type.Items != null ? CSharpTypeNameRenderer.RenderTypeName(type.Items) : "object";
                     return $"new {itemType}[] {{ {string.Join(", ", items)} }}";
                 case JTokenType.Object:
                     var obj = (JObject)token;
@@ -43,27 +44,6 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 default:
                     return $"@\"{token.ToString().Replace("\"", "\"\"")}\"";
             }
-        }
-
-        public static string RenderTypeName(TypeDescriptor? t)
-        {
-            if (t == null) return "object";
-            if (t.Kind == "primitive")
-            {
-                return t.Name switch
-                {
-                    "int" => "int",
-                    "long" => "long",
-                    "double" => "double",
-                    "string" => "string",
-                    "bool" => "bool",
-                    _ => t.Name ?? "object"
-                };
-            }
-            if (t.Kind == "array") return $"{RenderTypeName(t.Items)}[]";
-            if (t.Kind == "class") return t.Name ?? "object";
-            if (t.Kind == "nullable") return $"{RenderTypeName(t.Of)}?";
-            return "object";
         }
     }
 }

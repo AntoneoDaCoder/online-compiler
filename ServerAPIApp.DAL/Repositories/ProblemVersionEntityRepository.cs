@@ -3,80 +3,12 @@ using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.DAL.Contexts;
 using ServerAPIApp.Domain.Entities;
 using System.Data;
-using System.Linq.Expressions;
 
 namespace ServerAPIApp.DAL.Repositories
 {
-    public class ProblemVersionEntityRepository : IProblemVersionRepository
+    public class ProblemVersionEntityRepository : BaseRepository<ProblemVersionEntity>, IProblemVersionRepository
     {
-        private BaseDbContext _context;
-
-        public ProblemVersionEntityRepository(BaseDbContext context)
-        {
-            _context = context;
-        }
-
-        public async Task<ProblemVersionEntity?> GetByIdAsync
-            (Guid id,
-            bool isDraft = false,
-            CancellationToken cancellationToken = default)
-        {
-            var query = _context.ProblemVersions
-                .AsNoTracking()
-                .Where(x => x.Id == id);
-
-            if (isDraft)
-            {
-                query = query.Where(x => x.IsDraft)
-                    .Include(x => x.SupportedLanguages)
-                    .ThenInclude(x => x.Language);
-            }
-
-            var entity = await query.FirstOrDefaultAsync(cancellationToken);
-
-            return entity;
-        }
-
-        public async Task<ProblemVersionEntity?> GetByIdWithLanguagesAsync
-            (Guid versionId,
-            CancellationToken cancellationToken = default)
-        {
-            return await _context.ProblemVersions
-                .AsNoTracking()
-                .Where(x => x.Id == versionId)
-                .Include(x => x.SupportedLanguages)
-                .ThenInclude(x => x.Language)
-                .FirstOrDefaultAsync(cancellationToken);
-        }
-
-        public async Task<ProblemVersionEntity> CreateDraftAsync
-            (ProblemVersionEntity draft,
-            CancellationToken cancellationToken = default)
-        {
-            var entry = _context.ProblemVersions.Add(draft);
-
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return entry.Entity;
-        }
-
-        public async Task<bool> UpdateDraftAsync
-            (ProblemVersionEntity draft,
-            CancellationToken cancellationToken = default)
-        {
-            var affected = await _context.ProblemVersions
-                .Where(x => x.Id == draft.Id && x.ProblemId == draft.ProblemId && x.IsDraft)
-                .ExecuteUpdateAsync
-                (
-                    x => x
-                    .SetProperty(x => x.Statement, draft.Statement)
-                    .SetProperty(x => x.TotalTests, draft.TotalTests)
-                    .SetProperty(x => x.TestTemplateKey, draft.TestTemplateKey),
-                    cancellationToken
-                );
-
-            return affected > 0;
-        }
+        public ProblemVersionEntityRepository(BaseDbContext context) : base(context) { }
 
         public async Task<ProblemVersionEntity?> PublishDraftAsync(Guid draftId, Guid publisherId, CancellationToken cancellationToken = default)
         {
@@ -146,35 +78,9 @@ namespace ServerAPIApp.DAL.Repositories
             }
         }
 
-
-
-        public async Task<List<ProblemVersionEntity>?> GetFilteredWithLanguagesAsync
-            (Expression<Func<ProblemVersionEntity, bool>> filter,
-            CancellationToken cancellationToken = default)
+        public IQueryable<ProblemVersionEntity> Query()
         {
-            var entries = await _context.ProblemVersions
-                .AsNoTracking()
-                .Where(filter)
-                .Include(x => x.SupportedLanguages)
-                .ToListAsync(cancellationToken);
-
-            return entries;
-        }
-
-        public async Task<bool> DeleteDraftAsync
-            (Guid draftId,
-            CancellationToken cancellationToken = default)
-        {
-            var affected = await _context.ProblemVersions
-                .Where(x => x.Id == draftId && x.IsDraft)
-                .ExecuteDeleteAsync(cancellationToken);
-
-            var entry = _context.ProblemVersions.Local.FirstOrDefault(x => x.Id == draftId && x.IsDraft);
-
-            if (entry is not null)
-                _context.Entry(entry).State = EntityState.Detached;
-
-            return affected > 0;
+            return _dbSet.AsQueryable();
         }
     }
 }

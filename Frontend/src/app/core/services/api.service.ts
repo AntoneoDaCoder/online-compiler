@@ -198,4 +198,11 @@ export class ApiService {
     cancelUserDeletion(userId: string) {
         return this.http.patch(`${environment.apiBaseUrl}/users/${userId}`, null);
     }
+
+    getCodeTemplate(versionId: string, languageId: string) {
+        let params = new HttpParams();
+        params = params.set("languageId", languageId)
+
+        return this.http.get(`${environment.apiBaseUrl}/versions/${versionId}/template/entrypoint`, { params: params, responseType: "text" })
+    }
 }

@@ -161,7 +161,7 @@ namespace ServerAPIApp.Dispatchers
                                     RequestId = request.RequestId,
                                     VersionId = request.ProblemVersionId,
                                     UserId = userId,
-                                    UserSolution = request.Code,
+                                    UserSolution = request.Code.Trim(),
                                     SentAt = request.RequestSentAt,
                                     LanguageCode = request.LanguageCode,
                                     TestManifestJson = manifestString,

@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using ServerAPIApp.Core.Abstractions;
 using ServerAPIApp.Core.AuthorizationRequirements;
 using ServerAPIApp.Core.Configs;
+using ServerAPIApp.Core.Helpers.TemplateGenerators;
 using ServerAPIApp.Core.PipelineBehaviours;
 using ServerAPIApp.Core.Services;
 using ServerAPIApp.Core.UseCaseHandlers.Users;
@@ -88,6 +89,12 @@ namespace ServerAPIApp.Core.Extensions
                     ValidateIssuerSigningKey = true
                 };
             });
+
+            services.AddKeyedSingleton<ITemplateGenerator, CSharpTemplateGenerator>("csharp");
+            services.AddKeyedSingleton<ITemplateGenerator, NodeJsTemplateGenerator>("nodejs");
+            services.AddKeyedSingleton<ITemplateGenerator, TypeScriptTemplateGenerator>("typescript");
+            services.AddKeyedSingleton<ITemplateGenerator, JavaTemplateGenerator>("java");
+            services.AddKeyedSingleton<ITemplateGenerator, KotlinTemplateGenerator>("kotlin");
 
             services.AddScoped<IClaimsTransformation, KeycloakClaimTransformer>();
 

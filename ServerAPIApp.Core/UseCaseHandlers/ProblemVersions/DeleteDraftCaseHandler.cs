@@ -1,6 +1,9 @@
 ﻿using MediatR;
+using Microsoft.Extensions.Options;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
+using ServerAPIApp.DAL.Confs;
+using ServerAPIApp.Domain.Entities;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 {
@@ -9,13 +12,13 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
         private IProblemVersionRepository _repo;
         private IObjectStorage _storage;
 
-        //TODO: move this to config as well
-        const string _bucketName = "manifestbucket";
+        private readonly string _bucketName;
 
-        public DeleteDraftCaseHandler(IProblemVersionRepository repo, IObjectStorage storage)
+        public DeleteDraftCaseHandler(IProblemVersionRepository repo, IObjectStorage storage, IOptions<MinioConfiguration> conf)
         {
             _repo = repo;
             _storage = storage;
+            _bucketName = conf.Value.BucketName;
         }
 
         public async Task Handle(DeleteVersionDraftCase command, CancellationToken cancellationToken)
@@ -24,7 +27,9 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 
             await _storage.DeleteObjectAsync(_bucketName, key, cancellationToken);
 
-            await _repo.DeleteDraftAsync(command.Id, cancellationToken);
+            var entityStub = new ProblemVersionEntity() { Id = command.Id };
+
+            await _repo.DeleteAsync(entityStub, cancellationToken);
         }
     }
 }

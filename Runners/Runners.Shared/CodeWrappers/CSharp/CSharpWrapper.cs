@@ -2,6 +2,7 @@
 using Shared.DTOs;
 using Shared.DTOs.ManifestHelpers;
 using System.Text;
+using Shared.Helpers.TypeNameRenderers;
 
 namespace Runners.Shared.CodeWrappers.CSharp
 {
@@ -23,6 +24,8 @@ namespace Runners.Shared.CodeWrappers.CSharp
         {
             if (manifest == null) throw new ArgumentNullException(nameof(manifest));
             var sb = new StringBuilder();
+
+            manifest.Entrypoint = ToPascalCase(manifest.Entrypoint);
 
             sb.AppendLine(_boilerplateUsings);
             sb.AppendLine("namespace GeneratedSubmission");
@@ -139,7 +142,7 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     if (inferred != null)
                     {
                         effectiveRtDescriptor = inferred;
-                        effectiveRt = CSharpTokenParser.RenderTypeName(inferred);
+                        effectiveRt = CSharpTypeNameRenderer.RenderTypeName(inferred);
                         needRuntimeCast = parsed.ResultTypeCSharp != effectiveRt;
                     }
                 }
@@ -251,7 +254,7 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 return (false, false, "void", td);
 
             // array / primitive / class / nullable
-            var rtName = CSharpTokenParser.RenderTypeName(td);
+            var rtName = CSharpTypeNameRenderer.RenderTypeName(td);
             return (false, true, rtName, td);
         }
 
@@ -317,6 +320,17 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 return TypeDescriptorsEqual(a.Items, b.Items);
             }
             return a.Name == b.Name;
+        }
+
+        private static string ToPascalCase(string word)
+        {
+            if (string.IsNullOrEmpty(word))
+                return word;
+
+            if (word.Length == 1)
+                return word.ToUpperInvariant();
+
+            return char.ToUpperInvariant(word[0]) + word[1..];
         }
     }
 }

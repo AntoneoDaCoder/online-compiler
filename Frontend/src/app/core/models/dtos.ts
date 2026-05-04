@@ -52,7 +52,7 @@ export interface UserDto {
     id: string;
     email: string;
     username: string;
-    created: number;
+    createdTimestamp: number;
 }
 
 export interface UserMetadataDto {

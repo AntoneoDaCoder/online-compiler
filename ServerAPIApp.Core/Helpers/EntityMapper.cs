@@ -128,21 +128,6 @@ namespace ServerAPIApp.Core.Helpers
 
             return (draft, manifest);
         }
-
-        public static (ProblemVersionEntity Entity, ManifestDto? TestManifest) ToEntity(this UpdateVersionDraftCase command)
-        {
-            var manifest = command.TestManifest;
-
-            var draft = new ProblemVersionEntity()
-            {
-                Id = command.VersionId,
-                ProblemId = command.ProblemId,
-                Statement = command.Statement,
-                TotalTests = command.TotalTests,
-            };
-
-            return (draft, manifest);
-        }
         #endregion
 
         #region ProblemDeletionRequestEntity related mapping

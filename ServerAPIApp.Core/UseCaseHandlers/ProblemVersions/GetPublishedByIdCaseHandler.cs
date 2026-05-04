@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Contracts.DTOs.Problems;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
@@ -16,10 +17,12 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 
         public async Task<UserProblemVersionDto?> Handle(GetPublishedByIdCase command, CancellationToken cancellationToken)
         {
-            var entity = await _repo.GetByIdWithLanguagesAsync(command.VersionId, cancellationToken);
-
-            if (entity is not null && !entity.IsPublished)
-                return null;
+            var entity = await _repo.Query()
+              .AsNoTracking()
+              .Where(x => x.Id == command.VersionId && x.IsPublished)
+              .Include(x => x.SupportedLanguages)
+              .ThenInclude(x => x.Language)
+              .FirstOrDefaultAsync(cancellationToken);
 
             return UserProblemVersionDto.From(entity);
         }

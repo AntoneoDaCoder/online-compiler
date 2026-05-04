@@ -38,7 +38,6 @@ class KotlinRunner {
             tmpBaseDir.listFiles()?.forEach { it.deleteRecursively() }
         }
 
-        private val passedRegex = Pattern.compile("PassedTests\\s*[:=]\\s*(\\d+)", Pattern.CASE_INSENSITIVE)
     }
 
 
@@ -278,7 +277,16 @@ class KotlinRunner {
         RegexOption.IGNORE_CASE
     )
 
+    private val junitOkRegex = Regex(
+        """OK\s*\((\d+)\s+tests?\)""",
+        RegexOption.IGNORE_CASE
+    )
+
     private fun parsePassedTests(output: String): Int {
+        junitOkRegex.find(output)?.let { m ->
+            return m.groupValues[1].toInt()
+        }
+
         val m = junitSummaryRegex.find(output) ?: return 0
         val run = m.groupValues[1].toInt()
         val failures = m.groupValues[2].toInt()

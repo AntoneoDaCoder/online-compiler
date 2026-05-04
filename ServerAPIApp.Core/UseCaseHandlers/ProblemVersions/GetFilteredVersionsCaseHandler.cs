@@ -27,7 +27,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
         {
             Expression<Func<ProblemVersionEntity, bool>> filter = x => true;
 
-            var versions = await _repo.GetFilteredWithLanguagesAsync(filter, cancellationToken);
+            var versions = await _repo.GetFilteredAsync(filter, includes: x => x.SupportedLanguages, cancellationToken: cancellationToken);
 
             var result = new List<EditorProblemVersionDto>();
 

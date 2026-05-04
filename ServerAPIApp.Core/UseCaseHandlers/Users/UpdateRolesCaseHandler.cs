@@ -15,7 +15,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
 
         public async Task Handle(UpdateUserRolesCase command, CancellationToken cancellationToken)
         {
-            await _service.UpdateUserRolesAsync(command.UserId, command.RolesToRemove, command.RolesToAdd, cancellationToken);
+            await _service.UpdateUserClientRolesAsync(command.UserId, command.RolesToRemove, command.RolesToAdd, cancellationToken);
         }
     }
 }

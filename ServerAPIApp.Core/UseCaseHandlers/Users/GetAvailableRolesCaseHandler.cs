@@ -16,7 +16,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.Users
 
         public async Task<IEnumerable<ExternalRoleDto>?> Handle(GetAvailableRolesCase request, CancellationToken cancellationToken)
         {
-            var roles = await _service.GetAvailableRolesAsync(cancellationToken);
+            var roles = await _service.GetAvailableClientRolesAsync(cancellationToken);
 
             return roles;
         }

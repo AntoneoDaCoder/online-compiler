@@ -57,7 +57,7 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 
 
             ////???????????? the fucks going on here?
-            await _repo.CreateDraftAsync(draft, cancellationToken);
+            await _repo.CreateAsync(draft, cancellationToken);
 
             foreach (var language in languages)
             {

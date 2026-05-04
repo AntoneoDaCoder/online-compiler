@@ -113,5 +113,16 @@ namespace ServerAPIApp.Controllers
 
             return StatusCode(200);
         }
+
+        [Authorize(Policy = "DefaultAccess")]
+        [HttpGet("versions/{versionId:guid}/template/entrypoint")]
+        public async Task<IActionResult> GetEntrypointCodeTemplate([FromRoute] Guid versionId, [FromQuery] Guid languageId, CancellationToken cancellationToken = default)
+        {
+            var request = new GetEntrypointCodeTemplateCase(versionId, languageId);
+
+            var template = await _mediator.Send(request, cancellationToken);
+
+            return Ok(template);
+        }
     }
 }

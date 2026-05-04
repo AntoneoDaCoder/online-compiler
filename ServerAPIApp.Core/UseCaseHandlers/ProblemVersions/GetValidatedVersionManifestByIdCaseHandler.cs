@@ -1,8 +1,11 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.Core.UseCases.ProblemVersions;
-using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
+using ServerAPIApp.DAL.Confs;
 using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
+using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
 
 namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
 {
@@ -11,18 +14,23 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
         private IProblemVersionRepository _repo;
         private IObjectStorage _storage;
 
-        //TODO: move this to config as well
-        const string _bucketName = "manifestbucket";
+        private readonly string _bucketName = "manifestbucket";
 
-        public GetValidatedVersionManifestByIdCaseHandler(IProblemVersionRepository repo, IObjectStorage storage)
+        public GetValidatedVersionManifestByIdCaseHandler(IProblemVersionRepository repo, IObjectStorage storage, IOptions<MinioConfiguration> conf)
         {
             _repo = repo;
             _storage = storage;
+            _bucketName = conf.Value.BucketName;
         }
 
         public async Task<string> Handle(GetValidatedVersionManifestByIdCase command, CancellationToken cancellationToken)
         {
-            var entity = await _repo.GetByIdWithLanguagesAsync(command.VersionId, cancellationToken);
+            var entity = await _repo.Query()
+                .AsNoTracking()
+                .Where(x => x.Id == command.VersionId)
+                .Include(x => x.SupportedLanguages)
+                .ThenInclude(x => x.Language)
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (entity is null)
                 throw new ResourceNotFoundException("Version not found");

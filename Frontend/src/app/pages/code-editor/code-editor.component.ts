@@ -1,4 +1,4 @@
-import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,12 +7,12 @@ import { LanguageDto } from '../../core/models/dtos';
 import { v4 as uuidv4 } from 'uuid';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { SignalrService } from '../../core/services/signalr.service';
-import { NgZone } from '@angular/core';
+import { MonacoEditorModule } from 'ngx-monaco-editor-v2';
 
 @Component({
     selector: 'app-code-editor',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, MonacoEditorModule],
     templateUrl: './code-editor.component.html',
     styleUrls: ['./code-editor.component.scss']
 })
@@ -23,27 +23,36 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
     @Input() statement: string | null = null;
     @Input() title: string = '';
 
-    selectedLang = '';
+    selectedLangId: string | null = null;
+    disableSelectors = false;
     code = '';
     result = '';
 
+    editor: any;
+
+    editorOptions = {
+        theme: 'vs-dark',
+        language: 'plaintext',
+        automaticLayout: true,
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        fontSize: 14,
+        wordWrap: 'on'
+    };
+
     private codeResponseSubscription = new Subscription();
-
     loading = false;
-    availableLangs: LanguageDto[] = [];
 
-    constructor
-        (private api: ApiService,
-            private route: ActivatedRoute,
-            private router: Router,
-            private signalr: SignalrService,
-            private ngZone: NgZone) { }
+    constructor(
+        private api: ApiService,
+        private route: ActivatedRoute,
+        private router: Router,
+        private signalr: SignalrService,
+        private ngZone: NgZone
+    ) { }
 
     get displayHeading(): string {
-        // Формат: Task-<slug>. <Title>
-        const slugPart = this.problemSlug;
-        const titlePart = this.title;
-        return [slugPart, titlePart].filter(x => x).join('. ');
+        return [this.problemSlug, this.title].filter(x => x).join('. ');
     }
 
     async ngOnInit() {
@@ -53,11 +62,11 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
             if (navState.versionId) this.problemVersionId = navState.versionId;
             if (navState.statement) this.statement = navState.statement;
             if (navState.title) this.title = navState.title;
+
             if (navState.supportedLanguages) {
                 const arr = navState.supportedLanguages as any[];
                 if (arr.length && typeof arr[0] === 'object' && ('displayName' in arr[0] || 'code' in arr[0])) {
-                    this.availableLangs = arr as LanguageDto[];
-                    this.supportedLanguages = this.availableLangs;
+                    this.supportedLanguages = arr as LanguageDto[];
                 } else {
                     const all = await firstValueFrom(this.api.getLanguages());
                     const mapped: LanguageDto[] = [];
@@ -66,13 +75,28 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
                         if (found) mapped.push(found);
                         else mapped.push({ id, code: String(id), displayName: String(id) } as LanguageDto);
                     }
-                    this.availableLangs = mapped;
                     this.supportedLanguages = mapped;
                 }
-                if (navState.solutionLanguage)
-                    this.selectedLang = navState.solutionLanguage
-                else
-                    this.selectedLang = this.availableLangs[0]?.code ?? '';
+
+                this.supportedLanguages = this.supportedLanguages.sort((a, b) => a.code.localeCompare(b.code));
+
+                if (navState.solutionLanguage) {
+                    this.selectedLangId =
+                        this.supportedLanguages.find(x => x.code === navState.solutionLanguage)?.id
+                        ?? this.supportedLanguages[0]?.id
+                        ?? null;
+                } else {
+                    this.selectedLangId = this.supportedLanguages[0]?.id ?? null;
+                }
+            }
+
+            if (navState.code) {
+                this.code = navState.code;
+                this.disableSelectors = true;
+            } else if (this.selectedLangId) {
+                this.loadTemplateForSelectedLanguage();
+            } else {
+                this.code = '';
             }
         }
 
@@ -80,13 +104,13 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
             if (params['slug']) this.problemSlug = params['slug'];
             if (params['versionId']) {
                 this.problemVersionId = params['versionId'];
-                if (!this.statement || !this.availableLangs.length) {
+                if (!this.statement || !this.supportedLanguages.length) {
                     await this.loadVersionAndLanguages(this.problemVersionId);
                 }
             }
         });
 
-        if (this.problemVersionId && (!this.statement || !this.availableLangs.length)) {
+        if (this.problemVersionId && (!this.statement || !this.supportedLanguages.length)) {
             await this.loadVersionAndLanguages(this.problemVersionId);
         }
 
@@ -96,43 +120,92 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
                     const parseDateTimeOffset = (dtOffset: any): Date => {
                         if (!dtOffset) return new Date();
 
-                        // Если это уже строка (ISO)
                         if (typeof dtOffset === 'string') {
                             return new Date(dtOffset);
                         }
 
-                        // Если это объект DateTimeOffset
                         if (typeof dtOffset === 'object' && dtOffset.DateTime) {
-                            // Комбинируем DateTime и Offset
                             let dateStr = dtOffset.DateTime;
-
-                            // Добавляем смещение если есть
-                            if (dtOffset.Offset) {
-                                dateStr += dtOffset.Offset;
-                            } else {
-                                dateStr += 'Z'; // UTC по умолчанию
-                            }
-
+                            dateStr += dtOffset.Offset ? dtOffset.Offset : 'Z';
                             return new Date(dateStr);
                         }
 
-                        console.error('Неизвестный формат даты:', dtOffset);
                         return new Date();
                     };
 
                     const requestSentAt = parseDateTimeOffset(response.result.requestSentAt);
                     const responseSentAt = parseDateTimeOffset(response.result.responseSentAt);
-
                     const elapsedSeconds = (responseSentAt.getTime() - requestSentAt.getTime()) / 1000;
 
-                    this.result = `Status: ${response.result.status}\n\r` +
+                    this.result =
+                        `Status: ${response.result.status}\n\r` +
                         `Tests passed: ${response.result.passedTests}/${response.result.totalTests}\n\r` +
-                        `Elapsed time: ${elapsedSeconds} sec\n\r`
-                    if (response.result.consoleOutput !== null)
-                        this.result += `Console output: \n\r${response.result.consoleOutput}`
-                })
+                        `Elapsed time: ${elapsedSeconds} sec\n\r`;
+
+                    if (response.result.consoleOutput !== null) {
+                        this.result += `Console output: \n\r${response.result.consoleOutput}`;
+                    }
+                });
             })
-        )
+        );
+    }
+
+    onEditorInit(editor: any) {
+        this.editor = editor;
+    }
+
+    private getMonacoLanguageCode(): string {
+        const lang = this.supportedLanguages.find(x => String(x.id) === String(this.selectedLangId));
+        const code = (lang?.code || 'plaintext').toLowerCase();
+
+        const map: Record<string, string> = {
+            py: 'python',
+            cpp: 'cpp',
+            cxx: 'cpp',
+            cc: 'cpp',
+            cs: 'csharp',
+            js: 'javascript',
+            ts: 'typescript',
+            md: 'markdown',
+            yml: 'yaml'
+        };
+
+        return map[code] ?? code;
+    }
+
+    private applyMonacoLanguage(): void {
+        const monacoLang = this.getMonacoLanguageCode();
+
+        this.editorOptions = {
+            ...this.editorOptions,
+            language: monacoLang
+        };
+
+        if (this.editor?.getModel) {
+            const model = this.editor.getModel();
+            if (model && (window as any).monaco?.editor?.setModelLanguage) {
+                (window as any).monaco.editor.setModelLanguage(model, monacoLang);
+            }
+        }
+    }
+
+    private async loadTemplateForSelectedLanguage() {
+        if (!this.selectedLangId) {
+            this.code = '';
+            return;
+        }
+
+        this.applyMonacoLanguage();
+
+        this.api.getCodeTemplate(this.problemVersionId, this.selectedLangId).subscribe({
+            next: (response) => {
+                this.code = response;
+            },
+            error: (error) => {
+                console.log(error);
+                this.code = '';
+            }
+        });
     }
 
     private async loadVersionAndLanguages(versionId: string) {
@@ -144,14 +217,16 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
                 const langs = await firstValueFrom(this.api.getLanguages());
                 const mapped: LanguageDto[] = [];
                 const all = langs || [];
+
                 for (const id of (dto.supportedLanguages ?? [])) {
                     const found = all.find(x => String(x.id) === String(id));
                     if (found) mapped.push(found);
                     else mapped.push({ id, code: String(id), displayName: String(id) } as LanguageDto);
                 }
-                this.availableLangs = mapped;
-                this.supportedLanguages = mapped;
-                this.selectedLang = mapped[0]?.code ?? this.selectedLang;
+
+                this.supportedLanguages = mapped.sort((a, b) => a.code.localeCompare(b.code));
+                this.selectedLangId = mapped[0]?.id ?? null;
+                this.applyMonacoLanguage();
             }
         } catch (err) {
             console.error('Failed to load version or languages', err);
@@ -161,26 +236,28 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
     }
 
     onLangChange() {
-        this.code = '';
+        this.loadTemplateForSelectedLanguage();
     }
 
     onSubmit() {
-        if (!this.selectedLang || !this.problemVersionId) {
+        if (!this.selectedLangId || !this.problemVersionId) {
             this.result = 'Выберите язык и убедитесь, что версия задачи загружена.';
             return;
         }
+
+        const langCode = this.supportedLanguages.find(x => x.id === this.selectedLangId)?.code;
 
         const dto = {
             requestId: uuidv4(),
             problemSlug: this.problemSlug,
             problemVersionId: this.problemVersionId,
-            languageCode: this.selectedLang,
+            languageCode: langCode,
             code: this.code,
             requestSentAt: new Date().toISOString()
         };
 
         this.api.submitCode(dto).subscribe({
-            next: res => { this.result = "Awaiting server's response...." },
+            next: () => { this.result = "Awaiting server's response...."; },
             error: err => { this.result = 'Error: ' + (err?.message ?? JSON.stringify(err)); }
         });
     }

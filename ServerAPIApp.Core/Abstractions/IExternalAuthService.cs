@@ -8,7 +8,7 @@ namespace ServerAPIApp.Core.Abstractions
 
         Task<IEnumerable<ExternalUserResponseDto>?> GetAllUsersAsync(CancellationToken cancellationToken = default);
 
-        Task<IEnumerable<ExternalRoleDto>?> GetUserRealmRolesAsync(
+        Task<IEnumerable<ExternalRoleDto>?> GetUserClientRolesAsync(
            string userId,
            CancellationToken cancellationToken = default);
 
@@ -19,8 +19,8 @@ namespace ServerAPIApp.Core.Abstractions
 
         Task<string?> GetUserEmailByIdAsync(string userId, CancellationToken cancellationToken = default);
 
-        Task<IEnumerable<ExternalRoleDto>?> GetAvailableRolesAsync(CancellationToken cancellationToken = default);
+        Task<IEnumerable<ExternalRoleDto>?> GetAvailableClientRolesAsync(CancellationToken cancellationToken = default);
 
-        Task UpdateUserRolesAsync(string userId, IEnumerable<string> rolesToDelete, IEnumerable<string> rolesToAdd, CancellationToken cancellationToken = default);
+        Task UpdateUserClientRolesAsync(string userId, IEnumerable<string> rolesToDelete, IEnumerable<string> rolesToAdd, CancellationToken cancellationToken = default);
     }
 }

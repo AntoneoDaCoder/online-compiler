@@ -5,9 +5,11 @@
             <div class="controls">
                 <div class="field">
                     <label class="label">Язык решения</label>
-                    <select [(ngModel)]="selectedLang" (change)="onLangChange()" class="select">
+                    <select [disabled]="disableSelectors" [(ngModel)]="selectedLangId" (change)="onLangChange()"
+                        class="select">
                         <option value="" disabled>Выберите язык</option>
-                        <option *ngFor="let l of availableLangs" [value]="l.code">{{ l.displayName || l.code }}</option>
+                        <option *ngFor="let l of supportedLanguages" [value]="l.id">{{ l.displayName || l.code }}
+                        </option>
                     </select>
                 </div>
             </div>
@@ -15,13 +17,16 @@
             <!-- Центр: код — занимает всё доступное пространство -->
             <div class="code-field">
                 <label class="label">Код</label>
-                <textarea class="code-input" [(ngModel)]="code" placeholder="// Введите код здесь..."></textarea>
+
+                <ngx-monaco-editor class="code-input monaco-host" [(ngModel)]="code" [options]="editorOptions"
+                    (onInit)="onEditorInit($event)">
+                </ngx-monaco-editor>
             </div>
 
             <!-- Низ: кнопка (фиксированная высота) -->
             <div class="actions">
                 <button class="btn-primary" (click)="onSubmit()"
-                    [disabled]="!selectedLang || !problemVersionId">Отправить
+                    [disabled]="!selectedLangId || !problemVersionId">Отправить
                     решение</button>
             </div>
         </div>

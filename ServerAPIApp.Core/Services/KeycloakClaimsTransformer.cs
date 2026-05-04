@@ -39,25 +39,6 @@ namespace ServerAPIApp.Core.Services
 
             AddClaimIfMissing(ClaimTypes.NameIdentifier, sub);
 
-            var realmAccess = identity.FindFirst("realm_access")?.Value;
-            if (!string.IsNullOrEmpty(realmAccess))
-            {
-                try
-                {
-                    using var doc = JsonDocument.Parse(realmAccess);
-                    if (doc.RootElement.TryGetProperty("roles", out var rolesElement) &&
-                        rolesElement.ValueKind == JsonValueKind.Array)
-                    {
-                        foreach (var el in rolesElement.EnumerateArray())
-                        {
-                            if (el.ValueKind == JsonValueKind.String)
-                                AddRole(el.GetString()!);
-                        }
-                    }
-                }
-                catch (JsonException) { }
-            }
-
             var resourceAccess = identity.FindFirst("resource_access")?.Value;
             if (!string.IsNullOrEmpty(resourceAccess))
             {

@@ -58,7 +58,8 @@ export class SubmissionDetailComponent implements OnInit {
                 statement: dto.statement,
                 supportedLanguages: dto.supportedLanguages,
                 title: this.submission.title,
-                solutionLanguage: this.submission.solutionLanguage
+                solutionLanguage: this.submission.solutionLanguage,
+                code: this.submission.solution
             };
 
             this.router.navigate(['/code-editor'], { state });
