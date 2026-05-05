@@ -69,6 +69,11 @@ public class JavaWrapper implements ITestWrapper {
         sb.append("public class GeneratedTests {\n\n");
         sb.append("  public GeneratedTests() {}\n\n");
 
+        int totalTests = 0;
+        if (manifest.sampleTests != null) totalTests += manifest.sampleTests.size();
+        if (manifest.advancedTests != null) totalTests += manifest.advancedTests.size();
+        sb.append("  private static final int __TOTAL_TESTS = ").append(totalTests).append(";\n\n");
+
         List<SampleTest> samples = manifest.sampleTests;
         int idx = 0;
         if (samples != null) {
@@ -102,14 +107,14 @@ public class JavaWrapper implements ITestWrapper {
                     sb.append("    try { ");
                     sb.append(entrypointContainerClass).append(".").append(manifest.entrypoint.toLowerCase(Locale.ROOT)).append("(");
                     sb.append(IntStream.range(0, paramCount).mapToObj(i -> "arg" + i).collect(Collectors.joining(", ")));
-                    sb.append("); } catch (Throwable t) { t.printStackTrace(); Assert.fail(\"Test execution threw: \" + t); }\n");
+                    sb.append("); } catch (Throwable t) { Assert.fail(\"Test execution threw: \" + t); }\n");
                 } else {
                     sb.append("    ").append(rt).append(" __actual = ").append(getDefaultValueForType(rt)).append(";\n");
                     sb.append("    try {\n");
                     sb.append("      __actual = ").append(entrypointContainerClass).append(".").append(manifest.entrypoint.toLowerCase(Locale.ROOT)).append("(");
                     sb.append(IntStream.range(0, paramCount).mapToObj(i -> "arg" + i).collect(Collectors.joining(", ")));
                     sb.append(");\n");
-                    sb.append("    } catch (Throwable t) { t.printStackTrace(); Assert.fail(\"Test execution threw: \" + t); }\n");
+                    sb.append("    } catch (Throwable t) { Assert.fail(\"Test execution threw: \" + t); }\n");
                 }
 
                 String comparator = st.comparator == null ? "eq" : st.comparator;
@@ -172,17 +177,16 @@ public class JavaWrapper implements ITestWrapper {
         sb.append("  public static void main(String[] args) {\n");
         sb.append("    try {\n");
         sb.append("      JUnitCore junit = new JUnitCore();\n");
-        sb.append("      junit.addListener(new org.junit.internal.TextListener(System.out));\n");
         sb.append("      Result result = junit.run(GeneratedTests.class);\n");
-        sb.append("      for (Failure f : result.getFailures()) {\n");
-        sb.append("        System.err.println(\"[TEST FAILED] \" + f.getTestHeader());\n");
-        sb.append("        System.err.println(f.getMessage());\n");
-        sb.append("      }\n");
-        sb.append("      int passed = (int)result.getRunCount() - result.getFailureCount() - result.getIgnoreCount();\n");
-        sb.append("      System.out.println(\"PassedTests:\" + passed);\n");
-        sb.append("      System.out.flush();\n");
+        sb.append("      __ReportHelpers.emitReport(__TOTAL_TESTS, result);\n");
         sb.append("      if (result.wasSuccessful()) System.exit(0); else System.exit(1);\n");
-        sb.append("    } catch (Throwable t) { t.printStackTrace(); System.exit(2); }\n");
+        sb.append("    } catch (Throwable t) {\n");
+        sb.append("      try {\n");
+        sb.append("        Result fatal = new Result();\n");
+        sb.append("        __ReportHelpers.emitReport(__TOTAL_TESTS, fatal);\n");
+        sb.append("      } catch (Throwable ignore) {}\n");
+        sb.append("      System.exit(2);\n");
+        sb.append("    }\n");
         sb.append("  }\n");
 
         sb.append("}\n");

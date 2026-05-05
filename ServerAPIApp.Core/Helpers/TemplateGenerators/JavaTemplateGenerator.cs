@@ -9,7 +9,6 @@ namespace ServerAPIApp.Core.Helpers.TemplateGenerators
     {
         public string LanguageCode => "java";
 
-
         public string BuildTemplate(ManifestDto manifest)
         {
             if (manifest == null) throw new ArgumentNullException(nameof(manifest));

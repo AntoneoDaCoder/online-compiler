@@ -1,4 +1,3 @@
-// JavaBaseSourceCode.java
 package com.mems.helpers;
 
 public final class JavaBaseSourceCode {
@@ -6,6 +5,9 @@ public final class JavaBaseSourceCode {
         import java.util.*;
         import java.util.stream.*;
         import org.junit.Assert;
+        import org.junit.runner.Result;
+        import org.junit.runner.notification.Failure;
+        import com.fasterxml.jackson.databind.ObjectMapper;
 
         final class RunnerHelpers {
             private RunnerHelpers() {}
@@ -115,15 +117,70 @@ public final class JavaBaseSourceCode {
             private static Map<Object,Integer> countMultiset(Object[] arr) {
                 Map<Object,Integer> m = new HashMap<>();
                 for (Object o : arr) {
-                    boolean foundKey = false;
-                    // try to use sensible keys: primitives boxed and strings and objects via equals/hash
-                    Object key = o;
-                    Integer c = m.get(key);
-                    if (c == null) m.put(key, 1);
-                    else m.put(key, c + 1);
+                    Integer c = m.get(o);
+                    if (c == null) m.put(o, 1);
+                    else m.put(o, c + 1);
                 }
                 return m;
             }
         }
+
+            final class __ReportHelpers {
+                  private static final ObjectMapper MAPPER = new ObjectMapper();
+              
+                  private __ReportHelpers() {}
+              
+                  static void emitReport(int totalTests, Result result) {
+                      try {
+                          Map<String, Object> report = new LinkedHashMap<>();
+                          report.put("totalTests", totalTests);
+                          report.put("passedTests", Math.max(0, result.getRunCount() - result.getFailureCount() - result.getIgnoreCount()));
+              
+                          List<Map<String, String>> failedTests = new ArrayList<>();
+                          for (Failure f : result.getFailures()) {
+                              Map<String, String> item = new LinkedHashMap<>();
+              
+                              String name = null;
+                              try {
+                                  if (f.getDescription() != null) {
+                                      name = f.getDescription().getMethodName();
+                                  }
+                              } catch (Throwable ignore) {}
+              
+                              if (name == null || name.isEmpty()) {
+                                  try { name = f.getTestHeader(); } catch (Throwable ignore) {}
+                              }
+                              if (name == null || name.isEmpty()) {
+                                  name = "unknown";
+                              }
+              
+                              String reason = null;
+                              try { reason = f.getMessage(); } catch (Throwable ignore) {}
+                              if (reason == null || reason.isEmpty()) {
+                                  try { reason = f.toString(); } catch (Throwable ignore) {}
+                              }
+                              if (reason == null || reason.isEmpty()) {
+                                  reason = "Unknown error";
+                              }
+              
+                              item.put("name", name);
+                              item.put("reason", reason);
+                              failedTests.add(item);
+                          }
+              
+                          report.put("failedTests", failedTests);
+              
+                          System.out.println("__TEST_REPORT_BEGIN__");
+                          System.out.println(MAPPER.writeValueAsString(report));
+                          System.out.println("__TEST_REPORT_END__");
+                          System.out.flush();
+                      } catch (Throwable t) {
+                          System.out.println("__TEST_REPORT_BEGIN__");
+                          System.out.println("{\\"totalTests\\":" + totalTests + ",\\"passedTests\\":0,\\"failedTests\\":[{\\"name\\":\\"Runner\\",\\"reason\\":\\"" + String.valueOf(t).replace("\\"", "\\\\\\"") + "\\"}]}");
+                          System.out.println("__TEST_REPORT_END__");
+                          System.out.flush();
+                      }
+                  }
+              }
         """;
 }

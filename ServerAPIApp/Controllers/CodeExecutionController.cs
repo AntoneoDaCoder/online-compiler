@@ -1,3 +1,4 @@
+using k8s.KubeConfigModels;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,10 +30,10 @@ namespace ServerAPIApp.Controllers
         [HttpPost("jobs/start")]
         public async Task<IActionResult> ScheduleCodeExecutionAsync([FromBody] CodeRequestDto dto, CancellationToken cancellationToken)
         {
+            var userId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
+
             try
             {
-                var userId = IdExtractionHelper.GetIdFromJwtToken(HttpContext);
-
                 await _dispatcher.ScheduleForExecutionAsync(userId, dto, cancellationToken);
 
                 Console.WriteLine($"[API Controller] Received a request [Id:{dto.RequestId}], server time: {DateTime.Now}");
@@ -40,12 +41,17 @@ namespace ServerAPIApp.Controllers
                 var response = new CodeResponseDto()
                 {
                     RequestId = dto.RequestId,
+                    UserId = userId,
+                    UserSolution = dto.Code,
+                    VersionId = dto.ProblemVersionId,
                     Status = RequestStatus.Acknowledged,
                     Language = dto.LanguageCode,
                     Result = new ExecutionResultDto()
                     {
                         Status = ExecutionStatus.Pending,
-                        RequestSentAt = dto.RequestSentAt
+                        RequestSentAt = dto.RequestSentAt,
+                        ResponseSentAt = DateTimeOffset.UtcNow,
+                        TotalTests = 0
                     }
                 };
 
@@ -56,14 +62,18 @@ namespace ServerAPIApp.Controllers
                 var response = new CodeResponseDto()
                 {
                     RequestId = dto.RequestId,
+                    UserId = userId,
+                    UserSolution = dto.Code,
+                    VersionId = dto.ProblemVersionId,
                     Status = RequestStatus.Failed,
                     Language = dto.LanguageCode,
                     Result = new ExecutionResultDto()
                     {
                         Status = ExecutionStatus.FailedToExecute,
-                        ExitCode = -1,
+                        RequestSentAt = dto.RequestSentAt,
+                        ResponseSentAt = DateTimeOffset.UtcNow,
                         ConsoleOutput = ex.Message,
-                        RequestSentAt = dto.RequestSentAt
+                        TotalTests = 0
                     }
 
                 };

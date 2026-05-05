@@ -19,11 +19,11 @@ RUN if [ "$USE_COMPOSITE" = "true" ]; then \
 
 WORKDIR /src/ServerAPIApp/
 
-RUN dotnet restore -r linux-x64
+RUN dotnet restore -r linux-musl-x64
 
 RUN dotnet publish -c Release -o /app/publish \
     -p:PublishReadyToRun=true \
-    -p:SelfContained=false
+    -r linux-musl-x64
 
 FROM base AS final
 WORKDIR /app
@@ -32,4 +32,4 @@ COPY --from=build /src/ServerAPIApp/certs .
 
 USER 1001
 
-ENTRYPOINT ["dotnet", "ServerAPIApp.dll"]
+ENTRYPOINT ["./ServerAPIApp"]

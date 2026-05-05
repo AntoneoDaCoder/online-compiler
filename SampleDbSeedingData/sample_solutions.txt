@@ -52,7 +52,7 @@ module.exports = { Solution };
 
 // C#
 public class Solution {
-    public static int FindMax(int[] arr) {
+    public static int Solution(int[] arr) {
         if (arr == null || arr.Length == 0) {
             throw new ArgumentException("Array cannot be empty");
         }
@@ -66,7 +66,7 @@ public class Solution {
 
 // Java
 public class Solution {
-    public static int findMax(int[] arr) {
+    public static int solution(int[] arr) {
         if (arr == null || arr.length == 0) {
             throw new IllegalArgumentException("Array cannot be empty");
         }
@@ -81,7 +81,7 @@ public class Solution {
 // Kotlin
 class Solution {
     companion object {
-        fun findMax(arr: IntArray?): Int {
+        fun solution(arr: IntArray?): Int {
             require(!(arr == null || arr.isEmpty())) { "Array cannot be empty" }
             var max = arr[0]
             for (i in 1 until arr.size) {
@@ -94,7 +94,7 @@ class Solution {
 
 // TypeScript
 export class Solution {
-    static findMax(arr: number[] | null): number {
+    function solution(arr: number[] | null): number {
         if (!arr || arr.length === 0) {
             throw new Error("Array cannot be empty");
         }
@@ -108,7 +108,7 @@ export class Solution {
 
 // Node.js
 class Solution {
-    static findMax(arr) {
+    function solution(arr) {
         if (!arr || arr.length === 0) {
             throw new Error("Array cannot be empty");
         }
@@ -136,7 +136,7 @@ public class Solution {
 
 // Java
 public class Solution {
-    public static String reverse(String str) {
+    public static String solution(String str) {
         if (str == null) return null;
         return new StringBuilder(str).reverse().toString();
     }
@@ -173,7 +173,7 @@ module.exports = { Solution };
 
 // C#
 public class Solution {
-    public static int CountVowels(string text) {
+    public static int Solution(string text) {
         if (string.IsNullOrEmpty(text)) return 0;
         int count = 0;
         string vowels = "aeiouAEIOU";
@@ -186,7 +186,7 @@ public class Solution {
 
 // Java
 public class Solution {
-    public static int countVowels(String text) {
+    public static int solution(String text) {
         if (text == null) return 0;
         int count = 0;
         String vowels = "aeiouAEIOU";
@@ -200,7 +200,7 @@ public class Solution {
 // Kotlin
 class Solution {
     companion object {
-        fun countVowels(text: String?): Int {
+        fun solution(text: String?): Int {
             if (text.isNullOrEmpty()) return 0
             val vowels = setOf('a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U')
             return text.count { it in vowels }
@@ -210,7 +210,7 @@ class Solution {
 
 // TypeScript
 export class Solution {
-    static countVowels(text: string | null): number {
+    function solution(text: string | null): number {
         if (!text) return 0;
         const vowels = /[aeiou]/gi;
         const matches = text.match(vowels);
@@ -220,7 +220,7 @@ export class Solution {
 
 // Node.js
 class Solution {
-    static countVowels(text) {
+    function solution(text) {
         if (!text) return 0;
         const vowels = /[aeiou]/gi;
         const matches = text.match(vowels);
@@ -295,7 +295,7 @@ public class Solution {
 
 // Java
 public class Solution {
-    public static boolean Solution(String str) {
+    public static boolean solution(String str) {
         if (str == null) return false;
         String cleaned = str.toLowerCase().replaceAll("[^a-z0-9]", "");
         return new StringBuilder(cleaned).reverse().toString().equals(cleaned);
@@ -433,24 +433,24 @@ import java.util.HashSet;
 import java.util.List;
 
 public class Solution {
-    public static String[] Solution(String[] items) {
-        if (items == null) return new String[0];
-        HashSet<String> seen = new HashSet<>();
-        List<String> result = new ArrayList<>();
-        for (String item : items) {
-            if (!seen.contains(item)) {
-                seen.add(item);
-                result.add(item);
+    public static String[] solution(String[] items) {
+            if (items == null) return new String[0];
+            HashSet<String> seen = new HashSet<>();
+            List<String> result = new ArrayList<>();
+            for (String item : items) {
+                if (!seen.contains(item)) {
+                    seen.add(item);
+                    result.add(item);
+                }
             }
-        }
-        return result.toArray(new String[0]);
+            return result.toArray(new String[0]);
     }
 }
 
 // Kotlin
 class Solution {
     companion object {
-        fun Solution(items: Array<String>?): Array<String> {
+        fun solution(items: Array<String>?): Array<String> {
             if (items == null) return emptyArray()
             val seen = mutableSetOf<String>()
             val result = mutableListOf<String>()
@@ -576,7 +576,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Solution {
-    public static int[] Solution(int[] arr1, int[] arr2) {
+    public static int[] solution(int[] arr1, int[] arr2) {
         List<Integer> list = new ArrayList<>();
         if (arr1 != null) {
             for (int num : arr1) list.add(num);

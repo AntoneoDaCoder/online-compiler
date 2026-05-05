@@ -3,18 +3,26 @@ using Shared.DTOs;
 using Shared.Enums;
 using Shared.Helpers;
 using System.Diagnostics;
-using System.Text;
-using System.Text.RegularExpressions;
+using System.Text.Json;
 
 namespace Runners.Shared.Runners
 {
-    public partial class TypeScriptRunner : IRunner
+    public class TypeScriptRunner : IRunner
     {
         const string _basePath = "/tmp";
         const int _maxProcessLifetime = 25000;
 
         private readonly ITestWrapper _codeWrapper;
         private bool _isDisposed;
+
+        static readonly ProcessStartInfo _supervisorPsi = new ProcessStartInfo
+        {
+            FileName = "RunnerSupervisor",
+            UseShellExecute = false,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
 
         public TypeScriptRunner(ITestWrapper wrapper)
         {
@@ -177,222 +185,66 @@ namespace Runners.Shared.Runners
                 }
             };
 
-            var pInfo = new ProcessStartInfo
+            var runRequest = new RunRequestDto()
             {
-                FileName = "node",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
+                ExecutorFileName = "node",
+                ExecutableFileName = data.ExecutablePath,
+                MaxProcessLifetime = _maxProcessLifetime
             };
 
-            pInfo.ArgumentList.Add(data.ExecutablePath);
+            var serializedRequest = JsonSerializer.Serialize(runRequest);
 
-            using var proc = new Process
+            using var supervisorProc = new Process()
             {
-                StartInfo = pInfo,
+                StartInfo = _supervisorPsi
             };
 
-            try
+            supervisorProc.Start();
+
+            await supervisorProc.StandardInput.WriteAsync(serializedRequest);
+
+            supervisorProc.StandardInput.Close();
+
+            var stdoutTask = supervisorProc.StandardOutput.ReadToEndAsync(cancellationToken);
+            var stderrTask = supervisorProc.StandardError.ReadToEndAsync(cancellationToken);
+
+            if (!supervisorProc.WaitForExit(_maxProcessLifetime))
             {
-                proc.Start();
+                supervisorProc.Kill();
+                result.Status = RequestStatus.Failed;
+                result.Result.Status = ExecutionStatus.TimedOut;
+                result.Result.ExitCode = 124;
+                result.Result.ConsoleOutput = "Supervisor timed out.";
 
-                var stdoutTask = proc.StandardOutput.ReadToEndAsync(cancellationToken);
-                var stderrTask = proc.StandardError.ReadToEndAsync(cancellationToken);
-
-                if (!proc.WaitForExit(_maxProcessLifetime))
-                {
-                    try
-                    {
-                        proc.Kill(entireProcessTree: true);
-                    }
-                    catch
-                    {
-                    }
-
-                    result.Status = RequestStatus.Failed;
-                    result.Result.Status = ExecutionStatus.TimedOut;
-                    result.Result.ExitCode = 124;
-                    result.Result.ConsoleOutput = "Execution timed out.";
-
-                    return result;
-                }
-
-                result.Result.ExitCode = proc.ExitCode;
-
-                await Task.WhenAll(stdoutTask, stderrTask);
-
-                var stdOut = stdoutTask.Result ?? string.Empty;
-                var stdErr = stderrTask.Result ?? string.Empty;
-
-                var passedMatch = PassedTestsRegex().Match(stdOut);
-                result.Result.PassedTests =
-                    passedMatch.Success && int.TryParse(passedMatch.Groups[1].Value, out var passedCount)
-                        ? passedCount
-                        : 0;
-
-                if (proc.ExitCode == 0)
-                {
-                    result.Status = RequestStatus.Succeeded;
-                    result.Result.Status = ExecutionStatus.Succeeded;
-                    result.Result.ConsoleOutput = stdOut.Trim();
-                }
-                else
-                {
-                    result.Status = RequestStatus.Failed;
-                    result.Result.Status = ExecutionStatus.RuntimeError;
-
-                    var failedMatches = FailedTestsRegex().Matches(stdOut ?? string.Empty);
-
-                    var failedDict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                    foreach (Match m in failedMatches)
-                    {
-                        if (!m.Success)
-                        {
-                            continue;
-                        }
-
-                        var name = m.Groups[1].Value.Trim();
-                        var reason = m.Groups[2].Value.Trim()
-                            .Replace("\r", "")
-                            .Replace("\n", " ")
-                            .Trim();
-
-                        if (!failedDict.ContainsKey(name))
-                        {
-                            failedDict[name] = reason;
-                        }
-                    }
-
-                    var stderrLines = (stdErr ?? string.Empty).Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
-
-                    var detailMap = new Dictionary<string, StringBuilder>(StringComparer.OrdinalIgnoreCase);
-                    for (int i = 0; i < stderrLines.Length; i++)
-                    {
-                        var line = stderrLines[i];
-                        var m = DetailRegex().Match(line);
-                        if (!m.Success)
-                        {
-                            continue;
-                        }
-
-                        var currentKey = m.Groups[1].Value.Trim();
-                        var rest = m.Groups[2].Value ?? string.Empty;
-
-                        if (!detailMap.TryGetValue(currentKey, out var sb))
-                        {
-                            sb = new StringBuilder();
-                            detailMap[currentKey] = sb;
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(rest))
-                        {
-                            sb.AppendLine(rest.Trim());
-                        }
-
-                        int j = i + 1;
-                        while (j < stderrLines.Length &&
-                               (stderrLines[j].StartsWith(" ") ||
-                                stderrLines[j].StartsWith('\t') ||
-                                stderrLines[j].StartsWith("at ")))
-                        {
-                            sb.AppendLine(stderrLines[j].Trim());
-                            j++;
-                        }
-
-                        i = j - 1;
-                    }
-
-                    var failedList = new List<(string TestName, string Reason, string Detail)>();
-                    foreach (var kv in failedDict)
-                    {
-                        var name = kv.Key;
-                        var reason = kv.Value;
-                        var detail = detailMap.TryGetValue(name, out var sb) ? sb.ToString().Trim() : string.Empty;
-                        failedList.Add((name, reason, detail));
-                    }
-
-                    if (failedList.Count > 0)
-                    {
-                        bool anyTimeout = failedList.Any(f =>
-                            (f.Reason?.IndexOf("timed out", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                            (f.Reason?.IndexOf("timeout", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                            (f.Detail?.IndexOf("timed out", StringComparison.OrdinalIgnoreCase) >= 0) ||
-                            (f.Detail?.IndexOf("timeout", StringComparison.OrdinalIgnoreCase) >= 0));
-
-                        result.Result.Status = anyTimeout ? ExecutionStatus.TimedOut : ExecutionStatus.FailedToExecute;
-
-                        var sbOut = new StringBuilder();
-                        sbOut.AppendLine("Failed tests:");
-                        foreach (var f in failedList)
-                        {
-                            if (!string.IsNullOrEmpty(f.Detail))
-                            {
-                                sbOut.AppendLine($"{f.TestName} - {f.Reason}");
-                                sbOut.AppendLine("  Details:");
-                                foreach (var dl in f.Detail.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
-                                {
-                                    sbOut.AppendLine("    " + dl);
-                                }
-                            }
-                            else
-                            {
-                                sbOut.AppendLine($"{f.TestName} - {f.Reason}");
-                            }
-                        }
-
-                        sbOut.AppendLine();
-                        sbOut.AppendLine("--- STDOUT ---");
-                        sbOut.AppendLine(stdOut.Trim());
-                        sbOut.AppendLine();
-                        sbOut.AppendLine("--- STDERR ---");
-                        sbOut.AppendLine(stdErr.Trim());
-
-                        result.Result.ConsoleOutput = sbOut.ToString().Trim();
-                    }
-                    else
-                    {
-                        var combined = $"{stdOut}\n{stdErr}";
-
-                        if (combined.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
-                            combined.Contains("timeout", StringComparison.OrdinalIgnoreCase))
-                        {
-                            result.Result.Status = ExecutionStatus.TimedOut;
-                        }
-                        else if (combined.Contains("assert", StringComparison.OrdinalIgnoreCase) ||
-                                 combined.Contains("failed", StringComparison.OrdinalIgnoreCase))
-                        {
-                            result.Result.Status = ExecutionStatus.FailedToExecute;
-                        }
-                        else
-                        {
-                            result.Result.Status = ExecutionStatus.RuntimeError;
-                        }
-
-                        var sb = new StringBuilder();
-                        sb.AppendLine("--- STDOUT ---");
-                        sb.AppendLine(stdOut.Trim());
-                        sb.AppendLine();
-                        sb.AppendLine("--- STDERR ---");
-                        sb.AppendLine(stdErr.Trim());
-                        result.Result.ConsoleOutput = sb.ToString().Trim();
-                    }
-                }
+                File.Delete(data.ExecutablePath);
 
                 return result;
             }
-            finally
+
+            await Task.WhenAll(stdoutTask, stderrTask);
+
+            var stdout = stdoutTask.Result;
+            var stderr = stderrTask.Result;
+
+            var testResult = JsonSerializer.Deserialize<RunResultDto>(stdout);
+
+            if (testResult is null)
             {
-                try
-                {
-                    if (!string.IsNullOrWhiteSpace(data.ExecutablePath) && File.Exists(data.ExecutablePath))
-                    {
-                        File.Delete(data.ExecutablePath);
-                    }
-                }
-                catch
-                {
-                }
+                result.Status = RequestStatus.Failed;
+                result.Result.Status = ExecutionStatus.FailedToExecute;
+                result.Result.ExitCode = 1;
+                result.Result.ConsoleOutput = "Failed to parse test execution result.";
+
+                File.Delete(data.ExecutablePath);
+
+                return result;
             }
+
+            result = RunnerOutputParser.BuildExecutionReportOnProcOutput(result, testResult);
+
+            File.Delete(data.ExecutablePath);
+
+            return result;
         }
 
         public void Dispose()
@@ -414,14 +266,5 @@ namespace Runners.Shared.Runners
 
             _isDisposed = true;
         }
-
-        [GeneratedRegex(@"PassedTests\s*[:=]\s*(\d+)", RegexOptions.IgnoreCase)]
-        private static partial Regex PassedTestsRegex();
-
-        [GeneratedRegex(@"FailedTest:([^:]+):([^\r\n]*)", RegexOptions.IgnoreCase)]
-        private static partial Regex FailedTestsRegex();
-
-        [GeneratedRegex(@"\[FAILED-DETAIL\]\s*([^:]+):\s*(.*)", RegexOptions.IgnoreCase)]
-        private static partial Regex DetailRegex();
     }
 }

@@ -3,6 +3,7 @@ using Shared.DTOs;
 using Shared.DTOs.ManifestHelpers;
 using System.Text;
 using Shared.Helpers.TypeNameRenderers;
+using System.Text.Json;
 
 namespace Runners.Shared.CodeWrappers.CSharp
 {
@@ -12,11 +13,13 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 using System;
                 using System.Collections;
                 using System.Collections.Generic;
+                using System.Collections.Concurrent;
                 using System.Linq;
                 using System.Text;
                 using System.Threading.Tasks;
                 using System.Threading;
                 using NUnit.Framework;
+                using System.Text.Json;
                 using NUnitLite;
                 """;
 
@@ -32,14 +35,6 @@ namespace Runners.Shared.CodeWrappers.CSharp
             sb.AppendLine("{");
 
             sb.AppendLine(CSharpBaseSourceCode.Source);
-            sb.AppendLine();
-
-            sb.AppendLine("    public static class __TestMonitor");
-            sb.AppendLine("    {");
-            sb.AppendLine("        private static int _passed = 0;");
-            sb.AppendLine("        public static void Inc() => System.Threading.Interlocked.Increment(ref _passed);");
-            sb.AppendLine("        public static int Get() => System.Threading.Volatile.Read(ref _passed);");
-            sb.AppendLine("    }");
             sb.AppendLine();
 
             var languageBlocks = manifest.Helpers;
@@ -69,8 +64,11 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 sb.AppendLine();
             }
 
+            var totalTests = (manifest.SampleTests?.Count ?? 0) + (manifest.AdvancedTests?.Count ?? 0);
+
             sb.AppendLine("    public class Program");
             sb.AppendLine("    {");
+            sb.AppendLine("        private const int __TotalTests = " + totalTests + ";");
             sb.AppendLine("        static int Main(string[] args)");
             sb.AppendLine("        {");
             sb.AppendLine("            try");
@@ -83,7 +81,15 @@ namespace Runners.Shared.CodeWrappers.CSharp
             sb.AppendLine("            {");
             sb.AppendLine("                try");
             sb.AppendLine("                {");
-            sb.AppendLine("                    Console.WriteLine($\"PassedTests:{__TestMonitor.Get()}\");");
+            sb.AppendLine("                    var report = new __TestReport");
+            sb.AppendLine("                    {");
+            sb.AppendLine("                        totalTests = __TotalTests,");
+            sb.AppendLine("                        passedTests = __TestMonitor.GetPassed(),");
+            sb.AppendLine("                        failedTests = __TestMonitor.GetFailed()");
+            sb.AppendLine("                    };");
+            sb.AppendLine("                    Console.Out.WriteLine(\"__TEST_REPORT_BEGIN__\");");
+            sb.AppendLine("                    Console.Out.WriteLine(JsonSerializer.Serialize(report, new JsonSerializerOptions(){WriteIndented=true}));");
+            sb.AppendLine("                    Console.Out.WriteLine(\"__TEST_REPORT_END__\");");
             sb.AppendLine("                    Console.Out.Flush();");
             sb.AppendLine("                }");
             sb.AppendLine("                catch { }");
@@ -104,6 +110,8 @@ namespace Runners.Shared.CodeWrappers.CSharp
                 sb.AppendLine("        [Test]");
                 sb.AppendLine($"        public async Task {testMethodName}()");
                 sb.AppendLine("        {");
+                sb.AppendLine("            try");
+                sb.AppendLine("            {");
 
                 var timeoutMsExpr = (st.TimeoutMs > 0) ? st.TimeoutMs : defaultTimeoutMs;
                 sb.AppendLine($"            var __timeout = TimeSpan.FromMilliseconds({timeoutMsExpr}L);");
@@ -155,7 +163,14 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     sb.AppendLine($"                await __call.WaitAsync(__timeout);");
                     sb.AppendLine($"            }}");
                     sb.AppendLine($"            catch (TimeoutException) {{ Assert.Fail(\"Test execution timed out\"); }}");
-                    sb.AppendLine("            __TestMonitor.Inc();");
+                    sb.AppendLine("                __TestMonitor.Inc();");
+                    sb.AppendLine("            }");
+                    sb.AppendLine("            catch (Exception ex)");
+                    sb.AppendLine("            {");
+                    sb.AppendLine($"                __TestMonitor.AddFailure(\"Sample test '{st.Name}'\", ex.Message);");
+                    sb.AppendLine("                throw;");
+                    sb.AppendLine("            }");
+                    sb.AppendLine("        }");
                 }
                 else
                 {
@@ -184,13 +199,21 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     }
 
                     var comparator = string.IsNullOrWhiteSpace(st.Comparator) ? "eq" : st.Comparator;
-                    sb.AppendLine($"            RunnerHelpers.AssertCompare(__actual, __expected, \"{comparator}\", \"Sample test '{st.Name}'\");");
-                    sb.AppendLine("            __TestMonitor.Inc();");
+                    sb.AppendLine($" RunnerHelpers.AssertCompare(__actual, __expected, \"{comparator}\", \"Sample test '{st.Name}'\");");
+                    sb.AppendLine("                __TestMonitor.Inc();");
+                    sb.AppendLine("            }");
+                    sb.AppendLine("            catch (Exception ex)");
+                    sb.AppendLine("            {");
+                    sb.AppendLine($"                __TestMonitor.AddFailure(\"Sample test '{st.Name}'\", ex.Message);");
+                    sb.AppendLine("                throw;");
+                    sb.AppendLine("            }");
+                    sb.AppendLine("        }");
                 }
 
-                sb.AppendLine("        }");
                 sb.AppendLine();
             }
+            sb.AppendLine();
+
 
             if (manifest.AdvancedTests != null)
             {
@@ -203,6 +226,9 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     sb.AppendLine("        [Test]");
                     sb.AppendLine($"        public async Task {testMethodName}()");
                     sb.AppendLine("        {");
+                    sb.AppendLine("            try");
+                    sb.AppendLine("            {");
+
 
                     var advTimeout = adv.TimeoutMs > 0 ? adv.TimeoutMs : defaultTimeoutMs;
                     sb.AppendLine($"            var __timeout = TimeSpan.FromMilliseconds({advTimeout}L);");
@@ -214,9 +240,14 @@ namespace Runners.Shared.CodeWrappers.CSharp
                     sb.AppendLine($"            }}");
                     sb.AppendLine($"            catch (TimeoutException) {{ Assert.Fail(\"Advanced test timed out\"); }}");
 
-                    sb.AppendLine("            __TestMonitor.Inc();");
+                    sb.AppendLine("                __TestMonitor.Inc();");
+                    sb.AppendLine("            }");
+                    sb.AppendLine("            catch (Exception ex)");
+                    sb.AppendLine("            {");
+                    sb.AppendLine($"                __TestMonitor.AddFailure(\"Advanced test '{methodName}'\", ex.Message);");
+                    sb.AppendLine("                throw;");
+                    sb.AppendLine("            }");
                     sb.AppendLine("        }");
-                    sb.AppendLine();
                 }
             }
 

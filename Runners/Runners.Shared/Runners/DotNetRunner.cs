@@ -2,18 +2,17 @@
 using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 using NUnitLite;
-using Shared.Helpers;
+using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
 using Shared.DTOs;
 using Shared.Enums;
+using Shared.Helpers;
 using System.Diagnostics;
 using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
-using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
+using System.Text.Json;
 
 namespace Runners.Shared.Runners
 {
-    public partial class DotNetRunner : IRunner
+    public class DotNetRunner : IRunner
     {
         const int _maxProcessLifetime = 25000;
         const string _basePath = "/tmp";
@@ -48,6 +47,16 @@ namespace Runners.Shared.Runners
 
         private ITestWrapper _codeWrapper;
 
+        static readonly ProcessStartInfo _supervisorPsi = new ProcessStartInfo
+        {
+            FileName = "RunnerSupervisor",
+            UseShellExecute = false,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+
+
         static DotNetRunner()
         {
             _metadataCache = new List<AssemblyMetadata>();
@@ -62,6 +71,7 @@ namespace Runners.Shared.Runners
                 typeof(Task).Assembly.Location,
                 typeof(Assert).Assembly.Location,
                 typeof(AutoRun).Assembly.Location,
+                typeof(JsonSerializer).Assembly.Location
             };
 
             foreach (var dll in systemAssemblies)
@@ -177,12 +187,6 @@ namespace Runners.Shared.Runners
 
             var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.UserSolution, "SolutionContainer");
 
-
-
-            File.WriteAllText(Path.Combine(_basePath, $"{userSolution.RequestId:N}.txt"), fullCode);
-
-
-
             var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
 
             var options = new CSharpCompilationOptions(
@@ -245,104 +249,63 @@ namespace Runners.Shared.Runners
                 }
             };
 
-            var pInfo = new ProcessStartInfo
+            var runRequest = new RunRequestDto()
             {
-                FileName = "dotnet",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+                ExecutorFileName = "dotnet",
+                CommandLineArguments = ["exec", "--runtimeconfig", _tmpRuntimeConfigPath],
+                ExecutableFileName = data.ExecutablePath,
+                MaxProcessLifetime = _maxProcessLifetime
             };
 
-            pInfo.ArgumentList.Add("exec");
-            pInfo.ArgumentList.Add("--runtimeconfig");
-            pInfo.ArgumentList.Add(_tmpRuntimeConfigPath);
-            pInfo.ArgumentList.Add(data.ExecutablePath);
+            var serializedRequest = JsonSerializer.Serialize(runRequest);
 
-            using var proc = new Process
+            using var supervisorProc = new Process()
             {
-                StartInfo = pInfo,
+                StartInfo = _supervisorPsi
             };
 
-            proc.Start();
+            supervisorProc.Start();
 
-            var stdoutTask = proc.StandardOutput.ReadToEndAsync(cancellationToken);
-            var stderrTask = proc.StandardError.ReadToEndAsync(cancellationToken);
+            await supervisorProc.StandardInput.WriteAsync(serializedRequest);
 
-            if (!proc.WaitForExit(_maxProcessLifetime))
+            supervisorProc.StandardInput.Close();
+
+            var stdoutTask = supervisorProc.StandardOutput.ReadToEndAsync(cancellationToken);
+            var stderrTask = supervisorProc.StandardError.ReadToEndAsync(cancellationToken);
+
+            if (!supervisorProc.WaitForExit(_maxProcessLifetime))
             {
-                proc.Kill();
+                supervisorProc.Kill();
                 result.Status = RequestStatus.Failed;
                 result.Result.Status = ExecutionStatus.TimedOut;
                 result.Result.ExitCode = 124;
-                result.Result.ConsoleOutput = "Execution timed out.";
+                result.Result.ConsoleOutput = "Supervisor timed out.";
 
                 File.Delete(data.ExecutablePath);
 
                 return result;
             }
 
-            result.Result.ExitCode = proc.ExitCode;
-
             await Task.WhenAll(stdoutTask, stderrTask);
 
             var stdout = stdoutTask.Result;
             var stderr = stderrTask.Result;
 
-            var passedMatch = PassedTestsRegex().Match(stdout ?? string.Empty);
-            if (passedMatch.Success && int.TryParse(passedMatch.Groups[1].Value, out var passedCount))
-            {
-                result.Result.PassedTests = passedCount;
-            }
-            else
-            {
-                result.Result.PassedTests = 0;
-            }
+            var testResult = JsonSerializer.Deserialize<RunResultDto>(stdout);
 
-            if (proc.ExitCode != 0)
+            if (testResult is null)
             {
                 result.Status = RequestStatus.Failed;
-                result.Result.Status = ExecutionStatus.RuntimeError;
+                result.Result.Status = ExecutionStatus.FailedToExecute;
+                result.Result.ExitCode = 1;
+                result.Result.ConsoleOutput = "Failed to parse test execution result.";
 
-                //because nunitlite writes results to stdout (including failures)
-                var combined = (stdout ?? "") + (stderr ?? "");
+                File.Delete(data.ExecutablePath);
 
-                if (combined.Contains("Test execution timed out"))
-                {
-                    result.Result.Status = ExecutionStatus.TimedOut;
-                }
-                else if (combined.Contains("AssertionException") || combined.Contains("Failed :", StringComparison.OrdinalIgnoreCase))
-                {
-                    result.Result.Status = ExecutionStatus.FailedToExecute;
-                }
-                else
-                {
-                    result.Result.Status = ExecutionStatus.RuntimeError;
-                }
-
-                var failedTestNames = new StringBuilder();
-
-                var matchCollection = FailedTestsRegex().Matches(combined);
-
-                foreach (Match match in matchCollection)
-                {
-                    failedTestNames.AppendLine(match.Groups[1].Value);
-                }
-
-                var sbOut = new StringBuilder();
-                sbOut.AppendLine(failedTestNames.ToString().Trim());
-                sbOut.AppendLine("--- STDOUT ---");
-                sbOut.AppendLine(stdout);
-                sbOut.AppendLine("--- STDERR ---");
-                sbOut.AppendLine(stderr);
-
-                result.Result.ConsoleOutput = sbOut.ToString().Trim();
+                return result;
             }
-            else
-            {
-                result.Status = RequestStatus.Succeeded;
-                result.Result.Status = ExecutionStatus.Succeeded;
 
-                result.Result.ConsoleOutput = stdout;
-            }
+            result = RunnerOutputParser.BuildExecutionReportOnProcOutput(result, testResult);
 
             File.Delete(data.ExecutablePath);
 
@@ -384,11 +347,5 @@ namespace Runners.Shared.Runners
         {
             return _metadataCache.Select(am => am.GetReference());
         }
-
-        [GeneratedRegex(@"PassedTests\s*:\s*(\d+)", RegexOptions.IgnoreCase)]
-        private static partial Regex PassedTestsRegex();
-
-        [GeneratedRegex(@"\d+\)\s+Failed\s+:\s+([\w\.]+)", RegexOptions.IgnoreCase)]
-        private static partial Regex FailedTestsRegex();
     }
 }

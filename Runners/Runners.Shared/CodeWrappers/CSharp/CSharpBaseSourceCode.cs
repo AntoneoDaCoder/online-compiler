@@ -7,8 +7,32 @@ namespace Runners.Shared.CodeWrappers.CSharp
     public static class CSharpBaseSourceCode
     {
         public const string Source = @"
+
+        public sealed class __FailedTest
+        {
+            public string name { get; set; } = string.Empty;
+            public string reason { get; set; } = string.Empty;
+        }
+
+        public sealed class __TestReport
+        {
+            public int totalTests { get; set; }
+            public int passedTests { get; set; }
+            public __FailedTest[] failedTests { get; set; } = Array.Empty<__FailedTest>();
+        }
+
+        public static class __TestMonitor
+        {
+            private static int _passed = 0;
+            private static readonly ConcurrentQueue<__FailedTest> _failed = new();
+            public static void Inc() => Interlocked.Increment(ref _passed);
+            public static int GetPassed() => Volatile.Read(ref _passed);
+            public static void AddFailure(string name, string reason) => _failed.Enqueue(new __FailedTest { name = name, reason = reason });
+            public static __FailedTest[] GetFailed() => _failed.ToArray();
+        }
+
 	public static class RunnerHelpers
-{
+    {
     private static IEnumerable<object?>? AsEnumerable(object? value)
     {
         if (value == null) return null;

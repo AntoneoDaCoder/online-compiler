@@ -62,6 +62,7 @@ target "csharp" {
     shared        = "Shared/"
     runners-shared = "Runners/Runners.Shared/"
     server-domain = "ServerAPIApp.Domain/"
+    supervisor =  "RunnerSupervisor/"
   }
 }
 
@@ -79,6 +80,7 @@ target "nodejs" {
     shared        = "Shared/"
     server-domain = "ServerAPIApp.Domain/"
     runners-shared = "Runners/Runners.Shared/"
+    supervisor =  "RunnerSupervisor/"
   }
 }
 
@@ -96,5 +98,6 @@ target "typescript" {
     shared        = "Shared/"
     server-domain = "ServerAPIApp.Domain/"
     runners-shared = "Runners/Runners.Shared/"
+    supervisor =  "RunnerSupervisor/"
   }
 }

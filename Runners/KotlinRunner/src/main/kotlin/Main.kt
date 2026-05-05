@@ -15,7 +15,7 @@ fun main(args: Array<String>) {
                 logger.info("[Main] Received input (${input.length} chars)")
 
                 // Используем JsonUtils.objectMapper
-                val request = JsonUtils.objectMapper.readValue(input,ProblemSolutionDto::class.java)
+                val request = JsonUtils.objectMapper.readValue(input, ProblemSolutionDto::class.java)
                 logger.info("[Main] Parsed request: RequestId=${request.RequestId}, Manifest length=${request.TestManifestJson?.length}")
 
                 val response: CodeResponseDto = runner.run(request, logger)

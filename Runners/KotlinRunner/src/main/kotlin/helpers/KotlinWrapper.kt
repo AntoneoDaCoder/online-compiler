@@ -4,17 +4,6 @@ import manifest.*
 
 object KotlinWrapper : ITestWrapper {
 
-    private const val BOILERPLATE_IMPORTS = """
-        import kotlin.*
-        import kotlin.collections.*
-        import org.junit.*
-        import org.junit.runner.*
-        import org.junit.runners.*
-        import org.junit.Assert
-        import java.util.Locale
-        import org.junit.runner.notification.Failure
-        """
-
     @Throws(Exception::class)
     override fun generateSource(
         manifest: ManifestDto,
@@ -28,7 +17,6 @@ object KotlinWrapper : ITestWrapper {
         if (entrypointContainerClass.isNullOrEmpty()) entrypointContainerClass = "SolutionContainer"
 
         val sb = StringBuilder()
-        sb.append(BOILERPLATE_IMPORTS).append("\n")
         sb.append(KotlinBaseSourceCode.SOURCE).append("\n\n")
 
         // inline helpers (filter by languageCode)
@@ -75,6 +63,7 @@ object KotlinWrapper : ITestWrapper {
 
 
         // Generated tests class
+        val totalTests = (manifest.sampleTests?.size ?: 0) + (manifest.advancedTests?.size ?: 0)
         sb.append("class GeneratedTests {\n\n")
         // no-arg constructor not needed in Kotlin
 
@@ -141,7 +130,7 @@ object KotlinWrapper : ITestWrapper {
                     sb.append("    try {\n")
                     sb.append("      ").append(entrypointContainerClass).append(".").append(manifest.entrypoint?.lowercase())
                         .append("(").append(argsList).append(")\n")
-                    sb.append("    } catch (t: Throwable) { t.printStackTrace();  throw AssertionError(\"Test execution threw: ${'$'}t\", t)\n}\n")
+                    sb.append("    } catch (t: Throwable) { throw AssertionError(\"Test execution threw: ${'$'}t\", t)\n}\n")
                 } else {
                     val defaultVal = getDefaultValueForType(rt)
                     if (defaultVal == "null") {
@@ -152,7 +141,7 @@ object KotlinWrapper : ITestWrapper {
                     sb.append("    try {\n")
                     sb.append("      __actual = ").append(entrypointContainerClass).append(".").append(manifest.entrypoint?.lowercase())
                         .append("(").append(argsList).append(")\n")
-                    sb.append("    } catch (t: Throwable) { t.printStackTrace();  throw AssertionError(\"Test execution threw: ${'$'}t\", t)\n}\n")
+                    sb.append("    } catch (t: Throwable) { throw AssertionError(\"Test execution threw: ${'$'}t\", t)\n}\n")
                 }
 
                 val comparator = st.comparator ?: "eq"
@@ -207,31 +196,29 @@ object KotlinWrapper : ITestWrapper {
             sb.append("  fun ").append(methodName).append("() {\n")
             sb.append("    try {\n")
             sb.append("      AdvancedTestsContainer.").append(sanitizedAdvName).append("()\n")
-            sb.append("    } catch (t: Throwable) { t.printStackTrace();  throw AssertionError(\"Advanced test threw: ${'$'}t\", t)\n}\n")
+            sb.append("    } catch (t: Throwable) { throw AssertionError(\"Advanced test threw: ${'$'}t\", t)\n}\n")
             sb.append("  }\n\n")
         }
 
 
         // main function as companion object
         sb.append("  companion object {\n")
+        sb.append("    private const val __TOTAL_TESTS = ").append(totalTests).append("\n")
         sb.append("    @JvmStatic\n")
         sb.append("    fun main(args: Array<String>) {\n")
         sb.append("      try {\n")
         sb.append("        val junit = JUnitCore()\n")
-        sb.append("        junit.addListener(org.junit.internal.TextListener(System.out))\n")
         sb.append("        val result = junit.run(GeneratedTests::class.java)\n")
-        sb.append("        for (f in result.failures) {\n")
-        sb.append("          System.err.println(\"[TEST FAILED] \" + f.testHeader)\n")
-        sb.append("          System.err.println(f.message)\n")
-        sb.append("        }\n")
-        sb.append("        val total = result.runCount - result.ignoreCount\n")
-        sb.append("        val passed = total - result.failureCount\n")
-        sb.append("        println(\"Passed tests:${'$'}passed/${'$'}total\");")
-        sb.append("        System.out.flush()\n")
+        sb.append("        __ReportHelpers.emitReport(__TOTAL_TESTS, result)\n")
         sb.append("        if (result.wasSuccessful()) kotlin.system.exitProcess(0) else kotlin.system.exitProcess(1)\n")
-        sb.append("      } catch (t: Throwable) { t.printStackTrace(); kotlin.system.exitProcess(2) }\n")
+        sb.append("      } catch (t: Throwable) {\n")
+        sb.append("        try {\n")
+        sb.append("          __ReportHelpers.emitFatalReport(__TOTAL_TESTS, t)\n")
+        sb.append("        } catch (_: Throwable) {}\n")
+        sb.append("        kotlin.system.exitProcess(2)\n")
+        sb.append("      }\n")
         sb.append("    }\n")
-        sb.append("  }\n") // end companion
+        sb.append("  }\n")
 
         sb.append("}\n") // end GeneratedTests
 
@@ -279,3 +266,4 @@ object KotlinWrapper : ITestWrapper {
         }
     }
 }
+

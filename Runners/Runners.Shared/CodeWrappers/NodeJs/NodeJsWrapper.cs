@@ -2,10 +2,7 @@
 using Newtonsoft.Json.Linq;
 using Shared.DTOs;
 using Shared.DTOs.ManifestHelpers;
-using Shared.Helpers;
-using System;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Runners.Shared.CodeWrappers.NodeJs
 {
@@ -143,18 +140,17 @@ namespace Runners.Shared.CodeWrappers.NodeJs
                 sb.AppendLine($"                const __cmp = RunnerHelpers.assertCompare(__result, __expected, {JsonConvert.SerializeObject(comparator)}, {JsonConvert.SerializeObject($"Sample test '{st.Name}'")});");
                 sb.AppendLine("                if (__cmp && __cmp.ok) { __TestMonitor.inc(); } else {");
                 sb.AppendLine("                    __hadFailures = true;");
-                sb.AppendLine("                    console.log('FailedTest:' + " + JsonConvert.SerializeObject(testName) + " + ':' + (__cmp && __cmp.reason ? __cmp.reason : 'Comparator failed'));");
+                sb.AppendLine($"                    __TestMonitor.addFailure({JsonConvert.SerializeObject(testName)}, (__cmp && __cmp.reason ? __cmp.reason : 'Comparator failed'));");
                 sb.AppendLine("                }");
 
 
 
                 sb.AppendLine("            } catch (err) {");
+                sb.AppendLine("                __hadFailures = true;");
                 sb.AppendLine("                if (err && err.message === 'timeout') {");
-                sb.AppendLine("                    __hadFailures = true;");
-                sb.AppendLine($"                    console.log('FailedTest:' + {JsonConvert.SerializeObject(testName)} + ':Test execution timed out');");
+                sb.AppendLine($"                    __TestMonitor.addFailure({JsonConvert.SerializeObject(testName)}, 'Test execution timed out');");
                 sb.AppendLine("                } else {");
-                sb.AppendLine("                    __hadFailures = true;");
-                sb.AppendLine($"                    console.log('FailedTest:' + {JsonConvert.SerializeObject(testName)} + ':Error during execution: ' + __formatErrorForOutput(err));");
+                sb.AppendLine($"                    __TestMonitor.addFailure({JsonConvert.SerializeObject(testName)}, 'Error during execution: ' + __formatErrorForOutput(err));");
                 sb.AppendLine("                }");
                 sb.AppendLine("            }");
 
@@ -162,7 +158,7 @@ namespace Runners.Shared.CodeWrappers.NodeJs
 
                 sb.AppendLine("        } catch (outerErr) {");
                 sb.AppendLine("            __hadFailures = true;");
-                sb.AppendLine("            console.log('FailedTest:' + " + JsonConvert.SerializeObject(testName) + " + ':Setup error: ' + (outerErr && outerErr.message ? outerErr.message : String(outerErr)));");
+                sb.AppendLine($"            __TestMonitor.addFailure({JsonConvert.SerializeObject(testName)}, 'Setup error: ' + (outerErr && outerErr.message ? outerErr.message : String(outerErr)));");
                 sb.AppendLine("        }");
 
                 sb.AppendLine();
@@ -188,18 +184,17 @@ namespace Runners.Shared.CodeWrappers.NodeJs
                     sb.AppendLine("                await Promise.race([__advPromise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), __advTimeoutMs))]);");
                     sb.AppendLine("                __TestMonitor.inc();");
                     sb.AppendLine("            } catch (err) {");
+                    sb.AppendLine("                __hadFailures = true;");
                     sb.AppendLine("                if (err && err.message === 'timeout') {");
-                    sb.AppendLine("                    __hadFailures = true;");
-                    sb.AppendLine("                    console.log('FailedTest:' + " + JsonConvert.SerializeObject(testName) + " + ':Advanced test timed out');");
+                    sb.AppendLine($"                    __TestMonitor.addFailure({JsonConvert.SerializeObject(testName)}, 'Advanced test timed out');");
                     sb.AppendLine("                } else {");
-                    sb.AppendLine("                    __hadFailures = true;");
-                    sb.AppendLine("                    console.log('FailedTest:' + " + JsonConvert.SerializeObject(testName) + " + ':Error during execution: ' + __formatErrorForOutput(err));");
+                    sb.AppendLine($"                    __TestMonitor.addFailure({JsonConvert.SerializeObject(testName)}, 'Error during execution: ' + __formatErrorForOutput(err));");
                     sb.AppendLine("                }");
                     sb.AppendLine("            }");
 
                     sb.AppendLine("        } catch (outer) {");
                     sb.AppendLine("            __hadFailures = true;");
-                    sb.AppendLine("            console.log('FailedTest:' + " + JsonConvert.SerializeObject(testName) + " + ':Setup error: ' + String(outer));");
+                    sb.AppendLine($"            __TestMonitor.addFailure({JsonConvert.SerializeObject(testName)}, 'Setup error: ' + String(outer));");
                     sb.AppendLine("        }");
 
                 }
@@ -207,17 +202,34 @@ namespace Runners.Shared.CodeWrappers.NodeJs
 
             sb.AppendLine("    } finally {");
             sb.AppendLine("        try {");
-            sb.AppendLine("            console.log('PassedTests:' + __TestMonitor.get());");
+            sb.AppendLine("            const __report = {");
+            sb.AppendLine("                totalTests: " + ((manifest.SampleTests?.Count ?? 0) + (manifest.AdvancedTests?.Count ?? 0)) + ",");
+            sb.AppendLine("                passedTests: __TestMonitor.getPassed(),");
+            sb.AppendLine("                failedTests: __TestMonitor.getFailed()");
+            sb.AppendLine("            };");
+            sb.AppendLine("            console.log('__TEST_REPORT_BEGIN__');");
+            sb.AppendLine("            console.log(JSON.stringify(__report));");
+            sb.AppendLine("            console.log('__TEST_REPORT_END__');");
             sb.AppendLine("            try { if (typeof process !== 'undefined' && process) process.exitCode = __hadFailures ? 1 : 0; } catch(e) {}");
             sb.AppendLine("        } catch (e) {}");
-            sb.AppendLine("    }}"); // end __runAllTests
+            sb.AppendLine("    }}");
 
             sb.AppendLine();
             sb.AppendLine("__runAllTests().catch(function(err) {");
-            sb.AppendLine("    try { console.log('FailedTest:Runner:Fatal error: ' + (err && err.message ? err.message : String(err))); } catch (e) {}");
-            sb.AppendLine("console.log('PassedTests:' + __TestMonitor.get());\r\ntry {\r\n    if (typeof process !== 'undefined' && process) {\r\n " +
-                "       // если были ошибки, выставляем exit code 1, иначе 0\r\n        process.exitCode = __hadFailures ? 1 : 0;\r\n    }\r\n} catch(e) {}\r\n");
-            sb.AppendLine("})");
+            sb.AppendLine("    try {");
+            sb.AppendLine("        __hadFailures = true;");
+            sb.AppendLine("        __TestMonitor.addFailure('Runner', 'Fatal error: ' + (err && err.message ? err.message : String(err)));");
+            sb.AppendLine("        const __report = {");
+            sb.AppendLine("            totalTests: " + ((manifest.SampleTests?.Count ?? 0) + (manifest.AdvancedTests?.Count ?? 0)) + ",");
+            sb.AppendLine("            passedTests: __TestMonitor.getPassed(),");
+            sb.AppendLine("            failedTests: __TestMonitor.getFailed()");
+            sb.AppendLine("        };");
+            sb.AppendLine("        console.log('__TEST_REPORT_BEGIN__');");
+            sb.AppendLine("        console.log(JSON.stringify(__report));");
+            sb.AppendLine("        console.log('__TEST_REPORT_END__');");
+            sb.AppendLine("    } catch (e) {}");
+            sb.AppendLine("    try { if (typeof process !== 'undefined' && process) process.exitCode = 1; } catch(e) {}");
+            sb.AppendLine("});");
 
             return sb.ToString();
         }

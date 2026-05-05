@@ -8,9 +8,9 @@ namespace Shared.DTOs
         public int ExitCode { get; set; }
         public string? ConsoleOutput { get; set; }
         public int PassedTests { get; set; }
-        public int TotalTests { get; set; }
-        public DateTimeOffset RequestSentAt { get; set; }
-        public DateTimeOffset ResponseSentAt { get; set; }
+        public required int TotalTests { get; set; }
+        public required DateTimeOffset RequestSentAt { get; set; }
+        public required DateTimeOffset ResponseSentAt { get; set; }
         public double LatencyInSeconds => (ResponseSentAt - RequestSentAt).TotalSeconds;
     }
 }

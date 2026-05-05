@@ -39,37 +39,14 @@
               try {
                 const stack = (err && (err as any).stack) ? String((err as any).stack) : null;
                 if (stack) {
-                  // take first stack line after message if present
                   const lines = stack.split('\n').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
                   if (lines.length > 1) {
                     msg += ' at ' + lines[1];
                   }
                 }
               } catch(e) {}
-              // remove newlines to keep a single-line reason and normalize whitespace
               msg = msg.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
               return userPrefix + msg;
-            }
-            
-            // write failure marker to both stderr and stdout so parsers see it
-            function logTestFail(name: string, reason: string, detailed?: any) {
-              // sanitize reason for single-line marker
-              const oneLine = String(reason).replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
-              try { console.log(`FailedTest:${name}:${oneLine}`); } catch(e) {}
-              // write a more verbose version to stderr (stack etc.) for debugging
-              try {
-                if (detailed) {
-                  // if caller passed original error object, print stack if available
-                  if ((detailed as any).stack) {
-                    try { process.stderr.write(`[FAILED-DETAIL] ${name}: ${String((detailed as any).stack)}\n`); } catch(e) {}
-                  } else {
-                    try { process.stderr.write(`[FAILED-DETAIL] ${name}: ${String(detailed)}\n`); } catch(e) {}
-                  }
-                } else {
-                  // fallback: print the one-line reason to stderr too (less duplication)
-                  try { process.stderr.write(`[FAILED-REASON] ${name}: ${oneLine}\n`); } catch(e) {}
-                }
-              } catch(e) {}
             }
 
             const RunnerHelpers = {
@@ -168,9 +145,25 @@
 
             const __TestMonitor = {
               _passed: 0,
+              _failed: [] as Array<{ name: string; reason: string }>,
               inc() { this._passed = this._passed + 1; },
-              get() { return this._passed; }
+              addFailure(name: string, reason: string) {
+                this._failed.push({ name, reason: String(reason || 'Unknown error') });
+              },
+              getPassed() { return this._passed; },
+              getFailed() { return this._failed.slice(); }
             };
+
+            function __emitReport(totalTests: number) {
+              const report = {
+                totalTests: totalTests,
+                passedTests: __TestMonitor.getPassed(),
+                failedTests: __TestMonitor.getFailed()
+              };
+              console.log('__TEST_REPORT_BEGIN__');
+              console.log(JSON.stringify(report));
+              console.log('__TEST_REPORT_END__');
+            }
 
             var __hadFailures = false;
             """;

@@ -3,18 +3,26 @@ using Shared.DTOs;
 using Shared.Enums;
 using Shared.Helpers;
 using System.Diagnostics;
-using System.Text;
-using System.Text.RegularExpressions;
+using System.Text.Json;
 
 namespace Runners.Shared.Runners
 {
-    public partial class NodeJsRunner : IRunner
+    public class NodeJsRunner : IRunner
     {
         const string _basePath = "/tmp";
         const int _maxProcessLifetime = 25000;
 
         private readonly ITestWrapper _wrapper;
         private bool _isDisposed;
+
+        static readonly ProcessStartInfo _supervisorPsi = new ProcessStartInfo
+        {
+            FileName = "RunnerSupervisor",
+            UseShellExecute = false,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
 
         public NodeJsRunner(ITestWrapper wrapper)
         {
@@ -38,157 +46,66 @@ namespace Runners.Shared.Runners
                 }
             };
 
-            var pInfo = new ProcessStartInfo
+            var runRequest = new RunRequestDto()
             {
-                FileName = "node",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
+                ExecutorFileName = "node",
+                ExecutableFileName = data.ExecutablePath,
+                MaxProcessLifetime = _maxProcessLifetime
             };
 
-            pInfo.ArgumentList.Add(data.ExecutablePath);
+            var serializedRequest = JsonSerializer.Serialize(runRequest);
 
-            using var proc = new Process
+            using var supervisorProc = new Process()
             {
-                StartInfo = pInfo,
+                StartInfo = _supervisorPsi
             };
 
-            try
+            supervisorProc.Start();
+
+            await supervisorProc.StandardInput.WriteAsync(serializedRequest);
+
+            supervisorProc.StandardInput.Close();
+
+            var stdoutTask = supervisorProc.StandardOutput.ReadToEndAsync(cancellationToken);
+            var stderrTask = supervisorProc.StandardError.ReadToEndAsync(cancellationToken);
+
+            if (!supervisorProc.WaitForExit(_maxProcessLifetime))
             {
-                proc.Start();
+                supervisorProc.Kill();
+                result.Status = RequestStatus.Failed;
+                result.Result.Status = ExecutionStatus.TimedOut;
+                result.Result.ExitCode = 124;
+                result.Result.ConsoleOutput = "Supervisor timed out.";
 
-                var stdoutTask = proc.StandardOutput.ReadToEndAsync(cancellationToken);
-                var stderrTask = proc.StandardError.ReadToEndAsync(cancellationToken);
-
-                if (!proc.WaitForExit(_maxProcessLifetime))
-                {
-                    try
-                    {
-                        proc.Kill(entireProcessTree: true);
-                    }
-                    catch
-                    {
-                    }
-
-                    result.Status = RequestStatus.Failed;
-                    result.Result.Status = ExecutionStatus.TimedOut;
-                    result.Result.ExitCode = 124;
-                    result.Result.ConsoleOutput = "Execution timed out.";
-
-                    return result;
-                }
-
-                result.Result.ExitCode = proc.ExitCode;
-
-                await Task.WhenAll(stdoutTask, stderrTask);
-
-                var stdOut = stdoutTask.Result ?? string.Empty;
-                var stdErr = stderrTask.Result ?? string.Empty;
-
-                var passedMatch = PassedTestsRegex().Match(stdOut);
-                result.Result.PassedTests =
-                    passedMatch.Success && int.TryParse(passedMatch.Groups[1].Value, out var p)
-                        ? p
-                        : 0;
-
-                if (proc.ExitCode == 0)
-                {
-                    result.Status = RequestStatus.Succeeded;
-                    result.Result.Status = ExecutionStatus.Succeeded;
-                    result.Result.ConsoleOutput = stdOut;
-                }
-                else
-                {
-                    result.Status = RequestStatus.Failed;
-
-                    var failedMatches = FailedTestsRegex().Matches(stdOut);
-                    var failedList = new List<(string TestName, string Reason)>();
-
-                    foreach (Match m in failedMatches)
-                    {
-                        if (!m.Success)
-                        {
-                            continue;
-                        }
-
-                        var name = m.Groups[1].Value.Trim();
-                        var reason = m.Groups[2].Value.Trim()
-                            .Replace("\r", "")
-                            .Replace("\n", " ");
-
-                        failedList.Add((name, reason));
-                    }
-
-                    if (failedList.Count > 0)
-                    {
-                        bool anyTimeout = failedList.Any(f =>
-                            f.Reason.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
-                            f.Reason.Contains("timeout", StringComparison.OrdinalIgnoreCase) ||
-                            f.Reason.Contains("Test execution timed out", StringComparison.OrdinalIgnoreCase));
-
-                        result.Result.Status = anyTimeout ? ExecutionStatus.TimedOut : ExecutionStatus.FailedToExecute;
-
-                        var sb = new StringBuilder();
-                        sb.AppendLine("Failed tests:");
-                        foreach (var f in failedList)
-                        {
-                            sb.AppendLine($"{f.TestName} - {f.Reason}");
-                        }
-
-                        sb.AppendLine();
-                        sb.AppendLine("--- STDOUT ---");
-                        sb.AppendLine(stdOut.Trim());
-                        sb.AppendLine();
-                        sb.AppendLine("--- STDERR ---");
-                        sb.AppendLine(stdErr.Trim());
-
-                        result.Result.ConsoleOutput = sb.ToString().Trim();
-                    }
-                    else
-                    {
-                        var combined = $"{stdOut}\n{stdErr}";
-
-                        if (combined.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
-                            combined.Contains("timeout", StringComparison.OrdinalIgnoreCase))
-                        {
-                            result.Result.Status = ExecutionStatus.TimedOut;
-                        }
-                        else if (combined.Contains("assert", StringComparison.OrdinalIgnoreCase) ||
-                                 combined.Contains("failed", StringComparison.OrdinalIgnoreCase))
-                        {
-                            result.Result.Status = ExecutionStatus.FailedToExecute;
-                        }
-                        else
-                        {
-                            result.Result.Status = ExecutionStatus.RuntimeError;
-                        }
-
-                        var sb = new StringBuilder();
-                        sb.AppendLine("--- STDOUT ---");
-                        sb.AppendLine(stdOut.Trim());
-                        sb.AppendLine();
-                        sb.AppendLine("--- STDERR ---");
-                        sb.AppendLine(stdErr.Trim());
-
-                        result.Result.ConsoleOutput = sb.ToString().Trim();
-                    }
-                }
+                File.Delete(data.ExecutablePath);
 
                 return result;
             }
-            finally
+
+            await Task.WhenAll(stdoutTask, stderrTask);
+
+            var stdout = stdoutTask.Result;
+            var stderr = stderrTask.Result;
+
+            var testResult = JsonSerializer.Deserialize<RunResultDto>(stdout);
+
+            if (testResult is null)
             {
-                try
-                {
-                    if (!string.IsNullOrWhiteSpace(data.ExecutablePath) && File.Exists(data.ExecutablePath))
-                    {
-                        File.Delete(data.ExecutablePath);
-                    }
-                }
-                catch
-                {
-                }
+                result.Status = RequestStatus.Failed;
+                result.Result.Status = ExecutionStatus.FailedToExecute;
+                result.Result.ExitCode = 1;
+                result.Result.ConsoleOutput = "Failed to parse test execution result.";
+
+                File.Delete(data.ExecutablePath);
+
+                return result;
             }
+
+            result = RunnerOutputParser.BuildExecutionReportOnProcOutput(result, testResult);
+
+            File.Delete(data.ExecutablePath);
+
+            return result;
         }
 
         public Task<CompilationResult> CompileCodeAsync(ProblemSolutionDto userSolution, CancellationToken cancellationToken)
@@ -251,7 +168,7 @@ namespace Runners.Shared.Runners
                 Success = true,
                 TotalTests = manifest.SampleTests.Count + manifest.AdvancedTests.Count,
                 ExecutablePath = executablePath,
-                CompilationErrors=null
+                CompilationErrors = null
             });
         }
 
@@ -274,11 +191,5 @@ namespace Runners.Shared.Runners
 
             _isDisposed = true;
         }
-
-        [GeneratedRegex(@"PassedTests\s*[:=]\s*(\d+)", RegexOptions.IgnoreCase)]
-        private static partial Regex PassedTestsRegex();
-
-        [GeneratedRegex(@"FailedTest:([^\:]+):(.*)", RegexOptions.IgnoreCase)]
-        private static partial Regex FailedTestsRegex();
     }
 }

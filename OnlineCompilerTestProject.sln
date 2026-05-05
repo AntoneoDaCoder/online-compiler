@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerAPIApp.DAL", "ServerA
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbSeeder", "DbSeeder\DbSeeder.csproj", "{51D762CE-11E3-4EE8-886A-AD6FDE11FF0B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RunnerSupervisor", "RunnerSupervisor\RunnerSupervisor.csproj", "{A9264FC5-2DE3-4107-8D59-D5410505B002}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,10 @@ Global
 		{51D762CE-11E3-4EE8-886A-AD6FDE11FF0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{51D762CE-11E3-4EE8-886A-AD6FDE11FF0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{51D762CE-11E3-4EE8-886A-AD6FDE11FF0B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A9264FC5-2DE3-4107-8D59-D5410505B002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A9264FC5-2DE3-4107-8D59-D5410505B002}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A9264FC5-2DE3-4107-8D59-D5410505B002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A9264FC5-2DE3-4107-8D59-D5410505B002}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

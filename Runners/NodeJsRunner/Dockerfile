@@ -10,22 +10,33 @@ COPY . "Runners/NodeJsRunner/"
 COPY --from=runners-shared / "Runners/Runners.Shared/"
 COPY --from=server-domain / "ServerAPIApp.Domain/"
 COPY --from=shared / "Shared/"
-
-RUN dotnet restore "Runners/NodeJsRunner/NodeJsRunner.csproj"
+COPY --from=supervisor / "RunnerSupervisor/"
 
 WORKDIR /src/Runners/NodeJsRunner
-RUN dotnet build -c Release -o /app/build
 
-FROM build AS publish
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet restore -r linux-musl-x64
+
+RUN dotnet publish -c Release -o /app/publish/NodeJs/ \
+    -p:PublishReadyToRun=true \
+    -r linux-musl-x64
+
+WORKDIR /src/RunnerSupervisor
+
+RUN dotnet restore -r linux-musl-x64
+
+RUN dotnet publish -c Release -o /app/publish/Supervisor/ \
+    -p:PublishReadyToRun=true \
+    -r linux-musl-x64
+
 
 FROM base AS final
 
 RUN apk add --no-cache nodejs npm
 
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish/NodeJs .
+COPY --from=build /app/publish/Supervisor .
 
 USER 1001
 
-ENTRYPOINT ["dotnet", "NodeJsRunner.dll"]
+ENTRYPOINT ["./NodeJsRunner"]

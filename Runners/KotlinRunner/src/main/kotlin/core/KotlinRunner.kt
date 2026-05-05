@@ -1,12 +1,16 @@
 package core
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.databind.ObjectMapper
 import dto.CodeResponseDto
 import dto.ExecutionResultDto
 import dto.ProblemSolutionDto
 import enums.ExecutionStatus
 import enums.RequestStatus
+import helpers.ITestWrapper
+import helpers.KotlinWrapper
 import helpers.ManifestParser
-import manifest.*
+import manifest.ManifestDto
 import org.jetbrains.kotlin.cli.common.ExitCode
 import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
 import org.slf4j.Logger
@@ -14,12 +18,101 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
 import java.time.OffsetDateTime
-import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.regex.Pattern
-import helpers.*
+import java.util.stream.Collectors
+
 
 class KotlinRunner {
+
+    private val REPORT_BEGIN_MARKER = "__TEST_REPORT_BEGIN__"
+    private val REPORT_END_MARKER = "__TEST_REPORT_END__"
+
+    private val objectMapper: ObjectMapper = JsonUtils.objectMapper;
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    class TestRunReportDto {
+        var totalTests: Int = 0
+        var passedTests: Int = 0
+        var failedTests: List<FailedTestDto> = ArrayList()
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    class FailedTestDto {
+        var name: String? = null
+        var reason: String? = null
+    }
+
+    private fun tryParseReport(output: String?): TestRunReportDto? {
+        if (output == null || output.isBlank()) return null
+
+        var begin = output.indexOf(REPORT_BEGIN_MARKER)
+        if (begin < 0) return null
+        begin += REPORT_BEGIN_MARKER.length
+
+        val end = output.indexOf(REPORT_END_MARKER, begin)
+        if (end < 0 || end <= begin) return null
+
+        val json = output.substring(begin, end).trim { it <= ' ' }
+        if (json.isEmpty()) return null
+
+        return try {
+            objectMapper.readValue(json, TestRunReportDto::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun buildConsoleOutput(report: TestRunReportDto?, rawOutput: String?): String {
+        if (report != null) {
+            if (report.failedTests.isNullOrEmpty()) return ""
+            return report.failedTests.joinToString("\n") { f ->
+                "${f.name ?: "unknown"}: ${f.reason ?: ""}"
+            }
+        }
+
+        return extractLegacyFailureSummary(rawOutput)
+    }
+
+    private fun extractLegacyFailureSummary(output: String?): String {
+        if (output.isNullOrBlank()) return ""
+
+        val lines = output.lines()
+        val result = mutableListOf<String>()
+
+        var i = 0
+        while (i < lines.size) {
+            val line = lines[i].trim()
+            val header = Regex("""^\d+\)\s*(.+)$""").find(line)
+            if (header != null) {
+                val testName = header.groupValues[1].substringBefore("(").trim().ifBlank { "unknown" }
+
+                var reason = ""
+                var j = i + 1
+                while (j < lines.size) {
+                    val candidate = lines[j].trim()
+                    if (candidate.isBlank()) {
+                        j++
+                        continue
+                    }
+                    if (candidate.startsWith("at ") ||
+                        candidate.startsWith("Caused by:") ||
+                        candidate.startsWith("FAILURES!!!") ||
+                        candidate.startsWith("Tests run:") ||
+                        candidate.startsWith("Time:")
+                    ) break
+
+                    reason = candidate
+                    break
+                }
+
+                result.add("$testName: $reason".trim())
+            }
+            i++
+        }
+
+        return result.joinToString("\n")
+    }
+
     companion object {
         // JUnit jars — пути в образе/контейнере
         private const val junitClasspath: String = "/libs/junit-4.13.2.jar:/libs/hamcrest-core-1.3.jar"
@@ -79,18 +172,27 @@ class KotlinRunner {
         logger.info("[Runner] Running tests for request [Id:${solution.RequestId}]")
         val (exitCode, output) = runTestsInProcess(logger)
 
-        val passed = parsePassedTests(output)
+        val report = tryParseReport(output)
+        val passed = report?.passedTests ?: 0
+        val actualTotal = report?.totalTests ?: total
 
-        // parse failures/timeouts/exceptions
-        val failures = parseJUnitFailures(output)
-        val timedOutDetected = detectTimeout(output) || exitCode == 124
+        val consoleSummary = buildConsoleOutput(report, output)
 
-        val (status, reqStatus, consoleSummary) = when {
-            timedOutDetected -> Triple(ExecutionStatus.TimedOut, RequestStatus.Failed, buildTimeoutSummary(output, failures))
-            failures.isNotEmpty() -> Triple(ExecutionStatus.FailedToExecute, RequestStatus.Failed, buildFailuresSummary(failures, output))
-            exitCode == 0 -> Triple(ExecutionStatus.Succeeded, RequestStatus.Succeeded, buildSuccessSummary(output, passed))
-            output.contains("Exception") || output.contains("Error") -> Triple(ExecutionStatus.RuntimeError, RequestStatus.Failed, buildRuntimeErrorSummary(output))
-            else -> Triple(ExecutionStatus.NoStatus, RequestStatus.Failed, buildRuntimeErrorSummary(output))
+        val (status, reqStatus) = when {
+            report != null && report.failedTests.isNullOrEmpty() ->
+                ExecutionStatus.Succeeded to RequestStatus.Succeeded
+
+            report != null ->
+                ExecutionStatus.FailedToExecute to RequestStatus.Failed
+
+            detectTimeout(output) || exitCode == 124 ->
+                ExecutionStatus.TimedOut to RequestStatus.Failed
+
+            output.contains("Exception", ignoreCase = true) || output.contains("Error", ignoreCase = true) ->
+                ExecutionStatus.RuntimeError to RequestStatus.Failed
+
+            else ->
+                ExecutionStatus.NoStatus to RequestStatus.Failed
         }
 
         logger.info("[Runner] Finished request [Id:${solution.RequestId}] with status $status")
@@ -110,7 +212,7 @@ class KotlinRunner {
                 this.RequestSentAt = solution.SentAt
                 this.ResponseSentAt = now
                 this.PassedTests = passed
-                this.TotalTests = total
+                this.TotalTests = actualTotal
             }
         }
     }
@@ -148,7 +250,6 @@ class KotlinRunner {
             javaBin,
             "-cp",
             classpath,
-            "org.junit.runner.JUnitCore",
             "GeneratedTests"
         )
         val processBuilder = ProcessBuilder(cmd).redirectErrorStream(true)
@@ -182,115 +283,11 @@ class KotlinRunner {
     }
 
 
-    private data class FailureInfo(val testName: String, val message: String)
-
-    private fun parseJUnitFailures(output: String): List<FailureInfo> {
-        val res = mutableListOf<FailureInfo>()
-        if (output.isBlank()) return res
-
-        val headerRegex = Regex("""(?m)^\s*\d+\)\s*(.+)$""", RegexOption.MULTILINE)
-        val matches = headerRegex.findAll(output).toList()
-        if (matches.isEmpty()) return res
-
-        for ((i, m) in matches.withIndex()) {
-            val start = m.range.first
-            val end = if (i + 1 < matches.size) matches[i + 1].range.first else output.length
-            val block = output.substring(start, end).trim()
-            // First line is header "1) testMethod(ClassName)"
-            val headerLine = m.groupValues[1].trim()
-            val nameMatch = Regex("""^([^\(]+)\(([^)]+)\)""").find(headerLine)
-            val testName = if (nameMatch != null) nameMatch.groupValues[1].trim() else headerLine
-
-            // extract message lines — skip header line, take lines until stacktrace 'at ' appears
-            val blockLines = block.split(Regex("\r?\n"))
-            val afterHeader = if (blockLines.size > 1) blockLines.subList(1, blockLines.size) else emptyList()
-            val messageLines = mutableListOf<String>()
-            for (ln in afterHeader) {
-                val trimmed = ln.trim()
-                if (trimmed.isEmpty()) continue
-                if (trimmed.startsWith("at ") || trimmed.startsWith("\tat ") || trimmed.startsWith("Caused by:")) break
-                // skip lines that are just indentation markers
-                messageLines.add(trimmed)
-                if (messageLines.size >= 3) break // limit message length
-            }
-            val message = if (messageLines.isNotEmpty()) messageLines.joinToString(" | ") else {
-                // fallback: try to find "AssertionError" or first non-empty after header
-                val fallback = afterHeader.firstOrNull { it.trim().isNotEmpty() }?.trim() ?: ""
-                fallback
-            }
-            res.add(FailureInfo(testName, message))
-        }
-        return res
-    }
-
     private fun detectTimeout(output: String): Boolean {
         if (output.isBlank()) return false
         val lower = output.lowercase()
         if (lower.contains("timed out") || lower.contains("test timed out") || lower.contains("junit.framework.AssertionFailedError: test timed out")) return true
         if (lower.contains("testtimeoutexception") || lower.contains("testtimedoutexception")) return true
         return false
-    }
-
-    private fun buildFailuresSummary(failures: List<FailureInfo>, fullOut: String): String {
-        val sb = StringBuilder()
-        sb.appendLine("FAILED TESTS:")
-        for (f in failures) {
-            sb.appendLine("${f.testName}: ${f.message}")
-        }
-        sb.appendLine("--- FULL OUTPUT ---")
-        sb.appendLine(fullOut)
-        return sb.toString()
-    }
-
-    private fun buildTimeoutSummary(fullOut: String, failures: List<FailureInfo>): String {
-        val sb = StringBuilder()
-        if (failures.isNotEmpty()) {
-            sb.appendLine("TIMEOUT and FAILURES (mixed):")
-            for (f in failures) sb.appendLine("${f.testName}: ${f.message}")
-        } else {
-            sb.appendLine("TIMEOUT: test process exceeded allowed time")
-        }
-        sb.appendLine("--- FULL OUTPUT ---")
-        sb.appendLine(fullOut)
-        return sb.toString()
-    }
-
-    private fun buildRuntimeErrorSummary(fullOut: String): String {
-        val sb = StringBuilder()
-        sb.appendLine("RUNTIME ERROR or UNEXPECTED OUTPUT")
-        sb.appendLine("--- FULL OUTPUT ---")
-        sb.appendLine(fullOut)
-        return sb.toString()
-    }
-
-    private fun buildSuccessSummary(fullOut: String, passed: Int): String {
-        val sb = StringBuilder()
-        sb.appendLine("All tests passed (or no failures detected).")
-        sb.appendLine("PassedTests: $passed")
-        sb.appendLine("--- FULL OUTPUT ---")
-        sb.appendLine(fullOut)
-        return sb.toString()
-    }
-
-    private val junitSummaryRegex = Regex(
-        """Tests run:\s*(\d+),\s*Failures:\s*(\d+)(?:,\s*Ignored:\s*(\d+))?""",
-        RegexOption.IGNORE_CASE
-    )
-
-    private val junitOkRegex = Regex(
-        """OK\s*\((\d+)\s+tests?\)""",
-        RegexOption.IGNORE_CASE
-    )
-
-    private fun parsePassedTests(output: String): Int {
-        junitOkRegex.find(output)?.let { m ->
-            return m.groupValues[1].toInt()
-        }
-
-        val m = junitSummaryRegex.find(output) ?: return 0
-        val run = m.groupValues[1].toInt()
-        val failures = m.groupValues[2].toInt()
-        val ignored = m.groupValues.getOrNull(3)?.takeIf { it.isNotBlank() }?.toInt() ?: 0
-        return (run - failures - ignored).coerceAtLeast(0)
     }
 }

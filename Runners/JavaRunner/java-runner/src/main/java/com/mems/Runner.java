@@ -37,10 +37,56 @@ import com.mems.Shared.DTOs.ProblemSolutionDto;
 import com.mems.Shared.Enums.ExecutionStatus;
 import com.mems.Shared.Enums.RequestStatus;
 import java.time.OffsetDateTime;
-import com.mems.helpers.ManifestParser;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 public class Runner 
 {
+    private static final String REPORT_BEGIN_MARKER = "__TEST_REPORT_BEGIN__";
+    private static final String REPORT_END_MARKER = "__TEST_REPORT_END__";
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class TestRunReportDto {
+        public int totalTests;
+        public int passedTests;
+        public List<FailedTestDto> failedTests = new ArrayList<>();
+    }
+
+    private static TestRunReportDto tryParseReport(String output) {
+        if (output == null || output.isBlank()) return null;
+
+        int begin = output.indexOf(REPORT_BEGIN_MARKER);
+        if (begin < 0) return null;
+        begin += REPORT_BEGIN_MARKER.length();
+
+        int end = output.indexOf(REPORT_END_MARKER, begin);
+        if (end < 0 || end <= begin) return null;
+
+        String json = output.substring(begin, end).trim();
+        if (json.isEmpty()) return null;
+
+        try {
+            return objectMapper.readValue(json, TestRunReportDto.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String buildConsoleOutput(TestRunReportDto report, String rawOutput) {
+        if (report != null) {
+            if (report.failedTests == null || report.failedTests.isEmpty()) return "";
+            return report.failedTests.stream()
+                    .map(f -> (f.name == null ? "unknown" : f.name) + ": " + (f.reason == null ? "" : f.reason))
+                    .collect(Collectors.joining("\n"));
+        }
+        return rawOutput == null ? "" : rawOutput.trim();
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class FailedTestDto {
+        public String name;
+        public String reason;
+    }
+
     private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
     private static final String LANG_CODE = "java";
     private static final String TMP_CLASS_NAME = "GeneratedTests";
@@ -49,18 +95,7 @@ public class Runner
     private static final String API_CALLBACK_URL = "http://api-server.default.svc.cluster.local:8080/api/jobs/complete";
     private static final int MAX_PROCESS_LIFETIME_MS = 25000;
     private static final int RUNNER_PORT = 5000;
-    
-    private static final String BOILERPLATE_IMPORTS = """
-        import java.util.*;
-        import java.util.stream.*;
-        import java.io.*;
-        import org.junit.*;
-        import org.junit.runner.*;
-        import org.junit.runners.*;
-        import static org.junit.Assert.*;
-        import org.junit.internal.*;
-        import org.junit.runner.notification.Failure;
-        """;
+
     
     private static final HttpClient httpClient = HttpClient.newHttpClient();
     private static final ObjectMapper objectMapper = JsonUtils.getObjectMapper();
@@ -306,21 +341,33 @@ public class Runner
             } else {
                 response.Result.ExitCode = process.exitValue();
                 String fullOut = output.toString();
+                TestRunReportDto report = tryParseReport(fullOut);
 
-                // extract PassedTests:<n>
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("PassedTests\\s*[:=]\\s*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(fullOut);
-                if (m.find()) response.Result.PassedTests = Integer.parseInt(m.group(1));
-                else response.Result.PassedTests = 0;
+                if (report != null) {
+                    response.Result.TotalTests = report.totalTests;
+                    response.Result.PassedTests = report.passedTests;
+                    response.Result.ConsoleOutput = buildConsoleOutput(report, fullOut);
 
-                response.Result.ConsoleOutput = fullOut;
-                response.Result.ResponseSentAt = OffsetDateTime.now();
-
-                if (process.exitValue() == 0) {
-                    response.Status = RequestStatus.SUCCEEDED;
-                    response.Result.Status = ExecutionStatus.SUCCEEDED;
+                    if (report.failedTests == null || report.failedTests.isEmpty()) {
+                        response.Status = RequestStatus.SUCCEEDED;
+                        response.Result.Status = ExecutionStatus.SUCCEEDED;
+                        response.Result.ExitCode = process.exitValue();
+                    } else {
+                        response.Status = RequestStatus.FAILED;
+                        response.Result.Status = ExecutionStatus.FAILED_TO_EXECUTE;
+                        response.Result.ExitCode = process.exitValue() != 0 ? process.exitValue() : 1;
+                    }
                 } else {
                     response.Status = RequestStatus.FAILED;
-                    response.Result.Status = parseTestResults(fullOut);
+                    response.Result.ExitCode = process.exitValue();
+
+                    if (process.exitValue() == 0) {
+                        response.Result.Status = ExecutionStatus.RUNTIME_ERROR;
+                    } else {
+                        response.Result.Status = ExecutionStatus.RUNTIME_ERROR;
+                    }
+
+                    response.Result.ConsoleOutput = fullOut.trim();
                 }
             }
         } catch (Exception e) {
@@ -475,21 +522,33 @@ public class Runner
             } else {
                 response.Result.ExitCode = process.exitValue();
                 String fullOut = output.toString();
+                TestRunReportDto report = tryParseReport(fullOut);
 
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("PassedTests\\s*[:=]\\s*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(fullOut);
-                if (m.find()) response.Result.PassedTests = Integer.parseInt(m.group(1));
-                else response.Result.PassedTests = 0;
+                if (report != null) {
+                    response.Result.TotalTests = report.totalTests;
+                    response.Result.PassedTests = report.passedTests;
+                    response.Result.ConsoleOutput = buildConsoleOutput(report, fullOut);
 
-                response.Result.ConsoleOutput = fullOut;
-                response.Result.ResponseSentAt = OffsetDateTime.now();
-
-                if (process.exitValue() == 0) {
-                    response.Status = RequestStatus.SUCCEEDED;
-                    response.Result.Status = ExecutionStatus.SUCCEEDED;
+                    if (report.failedTests == null || report.failedTests.isEmpty()) {
+                        response.Status = RequestStatus.SUCCEEDED;
+                        response.Result.Status = ExecutionStatus.SUCCEEDED;
+                        response.Result.ExitCode = process.exitValue();
+                    } else {
+                        response.Status = RequestStatus.FAILED;
+                        response.Result.Status = ExecutionStatus.FAILED_TO_EXECUTE;
+                        response.Result.ExitCode = process.exitValue() != 0 ? process.exitValue() : 1;
+                    }
                 } else {
                     response.Status = RequestStatus.FAILED;
-                    response.Result.Status = parseTestResults(fullOut);
-                    response.Result.ConsoleOutput = extractFailedTestNames(fullOut);
+                    response.Result.ExitCode = process.exitValue();
+
+                    if (process.exitValue() == 0) {
+                        response.Result.Status = ExecutionStatus.RUNTIME_ERROR;
+                    } else {
+                        response.Result.Status = ExecutionStatus.RUNTIME_ERROR;
+                    }
+
+                    response.Result.ConsoleOutput = fullOut.trim();
                 }
             }
         } catch (Exception e) {
@@ -549,30 +608,6 @@ public class Runner
 
         // keep previous behavior: strip package declarations
         return fullSource.replaceFirst("(?m)^\\s*package\\s+[^;]+;\\s*", "");
-    }
-
-
-    private static ExecutionStatus parseTestResults(String output) {
-        if (output.contains("test timed out")) {
-            return ExecutionStatus.TIMED_OUT;
-        } else if (output.contains("FAILURES!!!")) {
-            return ExecutionStatus.FAILED_TO_EXECUTE;
-        } else if (output.contains("Exception") || output.contains("at ")) {
-            return ExecutionStatus.RUNTIME_ERROR;
-        }
-        return ExecutionStatus.NO_STATUS;
-    }
-    
-    private static String extractFailedTestNames(String output) {
-        return Arrays.stream(output.split("\n"))
-            .filter(line -> line.startsWith("[TEST FAILED]"))
-            .map(line -> {
-                int start = "[TEST FAILED] ".length();
-                int end = line.indexOf('(');
-                if (end == -1) end = line.length();
-                return line.substring(start, end).trim();
-            })
-            .collect(Collectors.joining("\n"));
     }
     
     private static void notifyJobManager(CodeResponseDto response) {
