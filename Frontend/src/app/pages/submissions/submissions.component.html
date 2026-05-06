@@ -13,6 +13,11 @@
                 <option value="failed">Failed</option>
             </select>
 
+            <select [(ngModel)]="sortOrder" (change)="applyFilters()">
+                <option value="descending">Сначала новые</option>
+                <option value="ascending">Сначала старые</option>
+            </select>
+
 
             <div class="row">
                 <button (click)="clearFilters()">Очистить</button>
@@ -28,8 +33,9 @@
                     </div>
 
                     <div class="status">
-                         <span class="lang">{{ formatLanguage(v.submission.solutionLanguage) }}</span>
-                        <span class="tests"> {{ v.submission.passedTests }}/{{ v.submission.totalTests }}</span>
+                        <span class="lang">{{ formatLanguage(v.submission.solutionLanguage) }}</span>
+                        <span class="tests"> {{ v.submission.passedTests }}/{{ v.submission.totalTests }},
+                            {{v.created}}</span>
                     </div>
                 </div>
 

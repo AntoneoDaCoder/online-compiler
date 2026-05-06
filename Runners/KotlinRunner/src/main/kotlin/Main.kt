@@ -5,8 +5,13 @@ import core.JsonUtils
 import org.slf4j.LoggerFactory
 
 fun main(args: Array<String>) {
+    val supervisorProcessBuilder = ProcessBuilder("./RunnerSupervisor"
+    ).apply {
+        redirectErrorStream(false)
+    }
+
     val logger = LoggerFactory.getLogger("Main")
-    val runner = KotlinRunner()
+    val runner = KotlinRunner(supervisorProcessBuilder)
 
     when {
         args.contains("--once") -> {

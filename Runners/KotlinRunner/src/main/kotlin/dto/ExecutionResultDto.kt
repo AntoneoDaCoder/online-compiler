@@ -21,6 +21,13 @@ data class ExecutionResultDto(
     @field:JsonProperty("TotalTests")
     var TotalTests: Int = 0,
 
+    @field:JsonProperty("WallTimeMs")
+    var WallTimeMs: Long = 0,
+    @field:JsonProperty("PeakMemoryBytes")
+    var PeakMemoryBytes: Long = 0,
+    @field:JsonProperty("CpuTimeUs")
+    var CpuTimeUs: Long = 0,
+
     @field:JsonProperty("RequestSentAt")
     @field:JsonFormat(shape = JsonFormat.Shape.STRING)
     var RequestSentAt: OffsetDateTime? = null,

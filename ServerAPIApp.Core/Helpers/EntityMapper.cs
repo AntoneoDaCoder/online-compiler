@@ -93,7 +93,10 @@ namespace ServerAPIApp.Core.Helpers
                 Solution = command.Response.UserSolution,
                 SolutionLanguage = command.Response.Language,
                 PassedTests = command.Response.Result.PassedTests,
-                TotalTests = command.Response.Result.TotalTests
+                TotalTests = command.Response.Result.TotalTests,
+                CpuTimeUs = command.Response.Result.CpuTimeUs,
+                WallTimeMs = command.Response.Result.WallTimeMs,
+                PeakMemoryBytes = command.Response.Result.PeakMemoryBytes
             };
 
             return entity;

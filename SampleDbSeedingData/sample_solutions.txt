@@ -305,7 +305,7 @@ public class Solution {
 // Kotlin
 class Solution {
     companion object {
-        fun Solution(str: String?): Boolean {
+        fun solution(str: String?): Boolean {
             if (str == null) return false
             val cleaned = str.toLowerCase().filter { it.isLetterOrDigit() }
             return cleaned == cleaned.reversed()

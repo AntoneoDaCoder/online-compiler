@@ -135,12 +135,13 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
 
                     const requestSentAt = parseDateTimeOffset(response.result.requestSentAt);
                     const responseSentAt = parseDateTimeOffset(response.result.responseSentAt);
-                    const elapsedSeconds = (responseSentAt.getTime() - requestSentAt.getTime()) / 1000;
 
                     this.result =
-                        `Status: ${response.result.status}\n\r` +
+                        `Status: ${response.status}\n\r` +
                         `Tests passed: ${response.result.passedTests}/${response.result.totalTests}\n\r` +
-                        `Elapsed time: ${elapsedSeconds} sec\n\r`;
+                        `Allocated memory for the test process: ${response.result.peakMemoryBytes} bytes\n\r` +
+                        `CPU time usage: ${response.result.cpuTimeUs}\n\r` +
+                        `Elapsed time: ${response.result.wallTimeMs} ms\n\r`;
 
                     if (response.result.consoleOutput !== null) {
                         this.result += `Console output: \n\r${response.result.consoleOutput}`;

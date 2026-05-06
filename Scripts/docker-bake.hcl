@@ -70,6 +70,11 @@ target "java" {
   dockerfile = "Dockerfile"
   context    = "Runners/JavaRunner/"
   tags       = ["java-runner:${TAG}"]
+    contexts   = {
+    shared        = "Shared/"
+    supervisor =  "RunnerSupervisor/"
+    server-domain = "ServerAPIApp.Domain/"
+  }
 }
 
 target "nodejs" {
@@ -88,6 +93,11 @@ target "kotlin" {
   dockerfile = "Dockerfile"
   context    = "Runners/KotlinRunner/"
   tags       = ["kotlin-runner:${TAG}"]
+  contexts   = {
+    shared        = "Shared/"
+    supervisor =  "RunnerSupervisor/"
+    server-domain = "ServerAPIApp.Domain/"
+  }
 }
 
 target "typescript" {

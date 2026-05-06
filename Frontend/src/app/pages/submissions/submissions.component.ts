@@ -12,10 +12,12 @@ import { AuthService } from '../../core/services/auth.service';
 
 
 type ShowStatus = 'all' | 'passed' | 'failed';
+type SortOrder = 'ascending' | 'descending';
 
 interface SubmissionView {
     submission: ShortSubmissionDto;
     isPassed: boolean;
+    created: Date;
 }
 
 @Component({
@@ -32,6 +34,8 @@ export class SubmissionsComponent implements OnInit {
 
     filterLanguage = '';
     showOnlyStatus: ShowStatus = 'all';
+    sortOrder: SortOrder = 'descending';
+
 
     private subs = new Subscription();
 
@@ -57,10 +61,12 @@ export class SubmissionsComponent implements OnInit {
         }));
     }
 
+
+
     applyFilters() {
         const mapToView = (s: ShortSubmissionDto): SubmissionView => {
             const isPassed = (s.passedTests === s.totalTests);
-            return { submission: s, isPassed };
+            return { submission: s, isPassed, created: this.parseDateTimeOffset(s.created) };
         };
 
         this.filtered = this.submissions
@@ -77,7 +83,38 @@ export class SubmissionsComponent implements OnInit {
 
                 return true;
             });
+
+        switch(this.sortOrder)
+        {
+            case 'ascending':
+                this.filtered = this.filtered.sort((a, b) => a.created.getTime() - b.created.getTime())
+                break;
+            case 'descending':
+                this.filtered = this.filtered.sort((a, b) => b.created.getTime() - a.created.getTime())
+                break;
+
+            default:
+                this.filtered = this.filtered.sort((a, b) => b.created.getTime() - a.created.getTime())
+                break;
+        }
     }
+
+    private parseDateTimeOffset(dtOffset: any): Date {
+        if (!dtOffset) return new Date();
+
+        if (typeof dtOffset === 'string') {
+            return new Date(dtOffset);
+        }
+
+        if (typeof dtOffset === 'object' && dtOffset.DateTime) {
+            let dateStr = dtOffset.DateTime;
+            dateStr += dtOffset.Offset ? dtOffset.Offset : 'Z';
+            return new Date(dateStr);
+        }
+
+        return new Date();
+    }
+
 
     clearFilters() {
         this.filterLanguage = '';

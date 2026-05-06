@@ -20,7 +20,6 @@ object KotlinWrapper : ITestWrapper {
         sb.append(KotlinBaseSourceCode.SOURCE).append("\n\n")
 
         // inline helpers (filter by languageCode)
-        // вместо: if (manifest.helpers != null) { for (hb in manifest.helpers) { ... } }
         val helpers = manifest.helpers ?: emptyList()
         for (hb in helpers) {
             val lang = hb.languageCode ?: ""
@@ -29,7 +28,6 @@ object KotlinWrapper : ITestWrapper {
                 sb.append(hb.inline).append("\n\n")
             }
         }
-
 
         // user code wrapped into an object so we can call functions as ObjectName.func(...)
         sb.append("object ").append(entrypointContainerClass).append(" {\n")
@@ -61,11 +59,9 @@ object KotlinWrapper : ITestWrapper {
             sb.append("}\n\n")
         }
 
-
         // Generated tests class
         val totalTests = (manifest.sampleTests?.size ?: 0) + (manifest.advancedTests?.size ?: 0)
         sb.append("class GeneratedTests {\n\n")
-        // no-arg constructor not needed in Kotlin
 
         val samples = manifest.sampleTests
         var idx = 0
@@ -79,7 +75,7 @@ object KotlinWrapper : ITestWrapper {
 
                 val paramCount = manifest.signature.parameters.size
 
-                // inputs может быть null, массивом или одиночным значением
+                // inputs may be null, array or single value
                 val inputsNode = st.inputs
                 val arrNode = if (inputsNode != null && inputsNode.isArray)
                     inputsNode as com.fasterxml.jackson.databind.node.ArrayNode
@@ -87,7 +83,6 @@ object KotlinWrapper : ITestWrapper {
 
                 if (paramCount > 0) {
                     if (paramCount == 1) {
-                        // один параметр — если inputs массив, берём первый элемент, иначе используем сам inputs
                         val nodeForParam = when {
                             arrNode != null -> if (arrNode.size() > 0) arrNode.get(0) else com.fasterxml.jackson.databind.node.NullNode.instance
                             inputsNode != null -> inputsNode
@@ -97,7 +92,6 @@ object KotlinWrapper : ITestWrapper {
                         val rendered = KotlinTokenParser.render(nodeForParam, p.type)
                         sb.append("    ").append(renderedDeclaration(p.type, "arg0", rendered)).append("\n")
                     } else {
-                        // несколько параметров — ожидаем массив; если не массив, используем inputs как первый параметр и дефолты для остальных
                         if (arrNode != null) {
                             for (i in 0 until paramCount) {
                                 val p = manifest.signature.parameters[i]
@@ -106,7 +100,6 @@ object KotlinWrapper : ITestWrapper {
                                 sb.append("    ").append(renderedDeclaration(p.type, "arg$i", rendered)).append("\n")
                             }
                         } else {
-                            // inputs не массив — попытка использовать как первый параметр, остальные — дефолты
                             val firstNode = inputsNode ?: com.fasterxml.jackson.databind.node.NullNode.instance
                             val p0 = manifest.signature.parameters[0]
                             val rendered0 = KotlinTokenParser.render(firstNode, p0.type)
@@ -118,19 +111,18 @@ object KotlinWrapper : ITestWrapper {
                             }
                         }
                     }
-                } // else: paramCount == 0 -> ничего не объявляем
+                }
 
                 val rtDescriptor = manifest.signature.returnType
                 val rt = KotlinTokenParser.renderTypeName(rtDescriptor)
-                val hasResult =  rt != "Unit"
-
+                val hasResult = rt != "Unit"
                 val argsList = (0 until paramCount).joinToString(", ") { "arg$it" }
 
                 if (!hasResult) {
                     sb.append("    try {\n")
                     sb.append("      ").append(entrypointContainerClass).append(".").append(manifest.entrypoint?.lowercase())
                         .append("(").append(argsList).append(")\n")
-                    sb.append("    } catch (t: Throwable) { throw AssertionError(\"Test execution threw: ${'$'}t\", t)\n}\n")
+                    sb.append("    } catch (ae: AssertionError) { throw ae } catch (t: Throwable) { throw AssertionError(\"Test execution threw: ${'$'}{t.message ?: t}\", t) }\n")
                 } else {
                     val defaultVal = getDefaultValueForType(rt)
                     if (defaultVal == "null") {
@@ -141,7 +133,7 @@ object KotlinWrapper : ITestWrapper {
                     sb.append("    try {\n")
                     sb.append("      __actual = ").append(entrypointContainerClass).append(".").append(manifest.entrypoint?.lowercase())
                         .append("(").append(argsList).append(")\n")
-                    sb.append("    } catch (t: Throwable) { throw AssertionError(\"Test execution threw: ${'$'}t\", t)\n}\n")
+                    sb.append("    } catch (ae: AssertionError) { throw ae } catch (t: Throwable) { throw AssertionError(\"Test execution threw: ${'$'}{t.message ?: t}\", t) }\n")
                 }
 
                 val comparator = st.comparator ?: "eq"
@@ -183,23 +175,21 @@ object KotlinWrapper : ITestWrapper {
             }
         }
 
-
         // Advanced tests wrapper methods calling AdvancedTestsContainer functions
         val list = manifest.advancedTests ?: emptyList()
         var aidx = 0
         for (adv in list) {
             aidx++
             val sanitizedAdvName = sanitizeMethodName(adv.name)
-            val timeout = if (adv.timeoutMs > 0L) adv.timeoutMs  else defaultTimeoutMs
+            val timeout = if (adv.timeoutMs > 0L) adv.timeoutMs else defaultTimeoutMs
             sb.append("  @Test(timeout = $timeout)\n")
             val methodName = sanitizeMethodName("Advanced_${adv.name}_$aidx")
             sb.append("  fun ").append(methodName).append("() {\n")
             sb.append("    try {\n")
             sb.append("      AdvancedTestsContainer.").append(sanitizedAdvName).append("()\n")
-            sb.append("    } catch (t: Throwable) { throw AssertionError(\"Advanced test threw: ${'$'}t\", t)\n}\n")
+            sb.append("    } catch (ae: AssertionError) { throw ae } catch (t: Throwable) { throw AssertionError(\"Advanced test threw: ${'$'}{t.message ?: t}\", t) }\n")
             sb.append("  }\n\n")
         }
-
 
         // main function as companion object
         sb.append("  companion object {\n")
@@ -220,7 +210,7 @@ object KotlinWrapper : ITestWrapper {
         sb.append("    }\n")
         sb.append("  }\n")
 
-        sb.append("}\n") // end GeneratedTests
+        sb.append("}\n")
 
         return sb.toString()
     }
@@ -237,14 +227,11 @@ object KotlinWrapper : ITestWrapper {
             "Long" -> "0L"
             "Double" -> "0.0"
             "Boolean" -> "false"
-            "Unit" -> "" // treated as no-result
+            "Unit" -> ""
             "IntArray" -> "intArrayOf()"
             "LongArray" -> "longArrayOf()"
             "DoubleArray" -> "doubleArrayOf()"
-            else -> {
-                // For other arrays like Array<T> or classes/strings - return null (declare nullable)
-                "null"
-            }
+            else -> "null"
         }
     }
 
@@ -266,4 +253,3 @@ object KotlinWrapper : ITestWrapper {
         }
     }
 }
-

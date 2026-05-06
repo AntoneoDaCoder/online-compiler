@@ -6,7 +6,7 @@ namespace Shared.DTOs.TestReports
     {
         [JsonPropertyName("name")]
         public string Name { get; set; } = string.Empty;
-        [JsonPropertyName("Reason")]
+        [JsonPropertyName("reason")]
         public string Reason { get; set; } = string.Empty;
     }
 }

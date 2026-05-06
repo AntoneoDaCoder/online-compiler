@@ -3,6 +3,7 @@ package com.mems.Shared.DTOs;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mems.Shared.Enums.ExecutionStatus;
+
 import java.time.OffsetDateTime;
 
 public class ExecutionResultDto {
@@ -20,6 +21,14 @@ public class ExecutionResultDto {
 
     @JsonProperty("TotalTests")
     public int TotalTests;
+
+    @JsonProperty("WallTimeMs")
+    public Long WallTimeMs = 0L;
+    @JsonProperty("PeakMemoryBytes")
+    public Long PeakMemoryBytes = 0L;
+    @JsonProperty("CpuTimeUs")
+
+    public Long CpuTimeUs = 0L;
 
     @JsonProperty("RequestSentAt")
     @JsonFormat(shape = JsonFormat.Shape.STRING)

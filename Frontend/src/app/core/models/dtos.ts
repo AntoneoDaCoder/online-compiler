@@ -87,6 +87,7 @@ export interface ShortSubmissionDto {
     solutionLanguage: string;
     passedTests: number;
     totalTests: number;
+    created: string;//iso
 }
 
 
@@ -99,6 +100,9 @@ export interface SubmissionDto {
     solution: string;
     numPassedTests: number;
     totalTests: number;
+    cpuTimeUs: number;
+    wallTimeMs: number;
+    peakMemoryBytes: number;
 }
 
 
@@ -187,13 +191,16 @@ export interface ExecutionResultDto {
     consoleOutput?: string | null;
     passedTests: number;
     totalTests: number;
+    peakMemoryBytes: number;
+    cpuTimeUs: number;
+    wallTimeMs: number;
     requestSentAt: string; //iso
     responseSentAt: string; //iso
 }
 
 export interface CodeResponseDto {
     requestId: string;
-    requestStatus: RequestStatus;
+    status: RequestStatus;
     versionId: string;
     userId: string;
     userSolution: string;

@@ -607,6 +607,7 @@ button.ghost {
 
 .submission-detail .body {
     height: 60%;
+    margin-top: 3%;
 }
 
 .submission-detail .code-field {
@@ -619,6 +620,7 @@ button.ghost {
 
 .submission-page .card {
     flex: 6 1 0;
+    height: 600px;
 }
 
 .submission-detail .header {
@@ -894,4 +896,10 @@ app-sidebar.profile-sidebar .sidebar {
 
 .profile-modal__footer {
     justify-content: flex-end;
+}
+
+.submission-page__header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }

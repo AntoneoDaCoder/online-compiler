@@ -7,13 +7,18 @@
 
 
         public DateTimeOffset? CreatedAt { get; set; } = DateTimeOffset.MinValue;
-        public Guid? CreatedBy { get; set; } = Guid.Empty;//index
+        public Guid? CreatedBy { get; set; } = Guid.Empty;
         public UserEntity? Creator { get; set; }
 
 
         public string Solution { get; set; } = "Sample solution";
         public int PassedTests { get; set; }
         public int TotalTests { get; set; }
+
+        public long CpuTimeUs { get; set; } = 0;
+        public long WallTimeMs { get; set; } = 0;
+        public long PeakMemoryBytes { get; set; } = 0;
+
         //why not language entity lol????
         public string SolutionLanguage { get; set; } = "Sample language";
     }

@@ -10,10 +10,10 @@ namespace Shared.DTOs
         public long WallTimeMs { get; set; }
 
         [JsonPropertyName("cpuTimeUs")]
-        public ulong CpuTimeUs { get; set; }
+        public long CpuTimeUs { get; set; }
 
         [JsonPropertyName("peakMemoryBytes")]
-        public ulong PeakMemoryBytes { get; set; }
+        public long PeakMemoryBytes { get; set; }
 
         [JsonPropertyName("testReport")]
         public TestRunReportDto? TestReport { get; set; }

@@ -50,14 +50,17 @@ namespace Shared.Helpers
             result.Result.TotalTests = report?.TestReport?.TotalTests ?? 0;
             result.Result.PassedTests = report?.TestReport?.PassedTests ?? 0;
 
+            result.Result.CpuTimeUs = report?.CpuTimeUs ?? 0;
+            result.Result.WallTimeMs = report?.WallTimeMs ?? 0;
+            result.Result.PeakMemoryBytes = report?.PeakMemoryBytes ?? 0;
+
             result.Result.Status = report!.Status;
 
-            result.Result.ConsoleOutput = $"State: {report.State}, WallTime (ms): {report.WallTimeMs}, Peak Memory (bytes): {report.PeakMemoryBytes}\n" 
-                + BuildConsoleOutput(report!.TestReport, report.StdOut, report.StdErr);
+            result.Result.ConsoleOutput = $"State: {report.State}\n" + BuildConsoleOutput(report!.TestReport, report.StdOut, report.StdErr);
 
             if (report!.TestReport != null)
             {
-                if (report.TestReport.FailedTests == null || report.TestReport.FailedTests.Length == 0)
+                if (report.TestReport.PassedTests == report.TestReport.TotalTests)
                 {
                     result.Status = RequestStatus.Succeeded;
                 }
@@ -71,7 +74,6 @@ namespace Shared.Helpers
                 if (report.Status == ExecutionStatus.Succeeded)
                 {
                     result.Status = RequestStatus.Succeeded;
-
                 }
                 else
                 {

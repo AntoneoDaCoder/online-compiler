@@ -1,6 +1,7 @@
 package core
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import dto.CodeResponseDto
 import dto.ExecutionResultDto
@@ -18,208 +19,172 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
 import java.time.OffsetDateTime
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
-import java.util.stream.Collectors
+import java.util.concurrent.atomic.AtomicBoolean
 
+class KotlinRunner(
+    private val supervisorProcessBuilder: ProcessBuilder
+) {
+    private val objectMapper: ObjectMapper = JsonUtils.objectMapper
 
-class KotlinRunner {
-
-    private val REPORT_BEGIN_MARKER = "__TEST_REPORT_BEGIN__"
-    private val REPORT_END_MARKER = "__TEST_REPORT_END__"
-
-    private val objectMapper: ObjectMapper = JsonUtils.objectMapper;
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    class TestRunReportDto {
-        var totalTests: Int = 0
-        var passedTests: Int = 0
-        var failedTests: List<FailedTestDto> = ArrayList()
-    }
+    private val languageCode: String = "kotlin"
+    private val globalTimeoutMs: Long = 25_000L
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    class FailedTestDto {
-        var name: String? = null
+    private data class RunRequestDto(
+        @JsonProperty("executorFileName")
+        var executorFileName: String = "",
+
+        @JsonProperty("commandLineArguments")
+        var commandLineArguments: List<String> = emptyList(),
+
+        @JsonProperty("executableFileName")
+        var executableFileName: String = "",
+
+        @JsonProperty("maxProcessLifetime")
+        var maxProcessLifetime: Int = 0
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private data class RunResultDto(
+        @JsonProperty("wallTimeMs")
+        var wallTimeMs: Long = 0,
+
+        @JsonProperty("cpuTimeUs")
+        var cpuTimeUs: Long = 0,
+
+        @JsonProperty("peakMemoryBytes")
+        var peakMemoryBytes: Long = 0,
+
+        @JsonProperty("testReport")
+        var testReport: TestRunReportDto? = null,
+
+        @JsonProperty("status")
+        var status: ExecutionStatus = ExecutionStatus.NoStatus,
+
+        @JsonProperty("state")
+        var state: String = "",
+
+        @JsonProperty("stdOut")
+        var stdOut: String? = null,
+
+        @JsonProperty("stdErr")
+        var stdErr: String? = null,
+
+        @JsonProperty("exitCode")
+        var exitCode: Int = 0
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private data class TestRunReportDto(
+        @JsonProperty("totalTests")
+        var totalTests: Int = 0,
+
+        @JsonProperty("passedTests")
+        var passedTests: Int = 0,
+
+        @JsonProperty("failedTests")
+        var failedTests: List<FailedTestDto> = emptyList()
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private data class FailedTestDto(
+        @JsonProperty("name")
+        var name: String? = null,
+
+        @JsonProperty("reason")
         var reason: String? = null
-    }
+    )
 
-    private fun tryParseReport(output: String?): TestRunReportDto? {
-        if (output == null || output.isBlank()) return null
-
-        var begin = output.indexOf(REPORT_BEGIN_MARKER)
-        if (begin < 0) return null
-        begin += REPORT_BEGIN_MARKER.length
-
-        val end = output.indexOf(REPORT_END_MARKER, begin)
-        if (end < 0 || end <= begin) return null
-
-        val json = output.substring(begin, end).trim { it <= ' ' }
-        if (json.isEmpty()) return null
-
-        return try {
-            objectMapper.readValue(json, TestRunReportDto::class.java)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun buildConsoleOutput(report: TestRunReportDto?, rawOutput: String?): String {
-        if (report != null) {
-            if (report.failedTests.isNullOrEmpty()) return ""
-            return report.failedTests.joinToString("\n") { f ->
-                "${f.name ?: "unknown"}: ${f.reason ?: ""}"
-            }
-        }
-
-        return extractLegacyFailureSummary(rawOutput)
-    }
-
-    private fun extractLegacyFailureSummary(output: String?): String {
-        if (output.isNullOrBlank()) return ""
-
-        val lines = output.lines()
-        val result = mutableListOf<String>()
-
-        var i = 0
-        while (i < lines.size) {
-            val line = lines[i].trim()
-            val header = Regex("""^\d+\)\s*(.+)$""").find(line)
-            if (header != null) {
-                val testName = header.groupValues[1].substringBefore("(").trim().ifBlank { "unknown" }
-
-                var reason = ""
-                var j = i + 1
-                while (j < lines.size) {
-                    val candidate = lines[j].trim()
-                    if (candidate.isBlank()) {
-                        j++
-                        continue
-                    }
-                    if (candidate.startsWith("at ") ||
-                        candidate.startsWith("Caused by:") ||
-                        candidate.startsWith("FAILURES!!!") ||
-                        candidate.startsWith("Tests run:") ||
-                        candidate.startsWith("Time:")
-                    ) break
-
-                    reason = candidate
-                    break
-                }
-
-                result.add("$testName: $reason".trim())
-            }
-            i++
-        }
-
-        return result.joinToString("\n")
-    }
-
-    companion object {
-        // JUnit jars — пути в образе/контейнере
-        private const val junitClasspath: String = "/libs/junit-4.13.2.jar:/libs/hamcrest-core-1.3.jar"
-
-        private const val languageCode: String = "kotlin";
-
-        private val runtimeClasspath: String =
-            System.getProperty("java.class.path") + File.pathSeparator + junitClasspath
-
-        private val tmpBaseDir: File = File(
-            System.getProperty("java.io.tmpdir"),
-            "kotlinc"
-        ).apply { mkdirs() }
-
-        private fun cleanTmpDir() {
-            tmpBaseDir.listFiles()?.forEach { it.deleteRecursively() }
-        }
-
-    }
-
+    private data class CompileResult(
+        val success: Boolean,
+        val output: String?
+    )
 
     fun run(solution: ProblemSolutionDto, logger: Logger): CodeResponseDto {
         val now = OffsetDateTime.now()
         logger.info("[Runner] Wrapping code for request [Id:${solution.RequestId}]")
 
-        val testManifest:ManifestDto = ManifestParser.parse(solution.TestManifestJson, languageCode);
+        val testManifest: ManifestDto = ManifestParser.parse(solution.TestManifestJson, languageCode)
+        val wrapped = wrapCode(solution, testManifest)
 
-        val wrapped = wrapCode(solution,testManifest)
+        val totalTests =
+            (testManifest.sampleTests?.size ?: 0) +
+                    (testManifest.advancedTests?.size ?: 0)
 
-        logger.info("[Runner] Compiling code for request [Id:${solution.RequestId}]")
+        try {
+            logger.info("[Runner] Compiling code for request [Id:${solution.RequestId}]")
 
-        val compiledRes = compileToTmpDir(wrapped, logger)
+            val compiledRes = compileToTmpDir(wrapped, logger)
+            if (!compiledRes.success) {
+                logger.info("[Runner] Compilation failed for request [Id:${solution.RequestId}]")
 
-        val total = testManifest.sampleTests!!.size + testManifest.advancedTests!!.size;
-
-        if (!compiledRes.first) {
-            logger.info("[Runner] Compilation failed for request [Id:${solution.RequestId}]")
-            return CodeResponseDto().apply {
-                RequestId =solution.RequestId
-                UserId = solution.UserId
-                VersionId = solution.VersionId
-                Status = RequestStatus.Failed
-                Language = languageCode
-                UserSolution = solution.UserSolution
-                Result = ExecutionResultDto().apply {
-                    Status = ExecutionStatus.CompileError
-                    ExitCode = 1
-                    ConsoleOutput = "Compilation failed: ${compiledRes.second}"
-                    RequestSentAt = solution.SentAt
-                    ResponseSentAt = now
-                     this.PassedTests =0
-                    this.TotalTests = total
+                return CodeResponseDto().apply {
+                    RequestId = solution.RequestId
+                    UserId = solution.UserId
+                    VersionId = solution.VersionId
+                    Status = RequestStatus.Failed
+                    Language = languageCode
+                    UserSolution = solution.UserSolution
+                    Result = ExecutionResultDto().apply {
+                        Status = ExecutionStatus.CompileError
+                        ExitCode = 1
+                        ConsoleOutput = "Compilation failed: ${compiledRes.output}"
+                        RequestSentAt = solution.SentAt
+                        ResponseSentAt = now
+                        PassedTests = 0
+                        TotalTests = totalTests
+                    }
                 }
             }
-        }
 
-        logger.info("[Runner] Running tests for request [Id:${solution.RequestId}]")
-        val (exitCode, output) = runTestsInProcess(logger)
+            logger.info("[Runner] Running tests for request [Id:${solution.RequestId}]")
 
-        val report = tryParseReport(output)
-        val passed = report?.passedTests ?: 0
-        val actualTotal = report?.totalTests ?: total
+            val runResult = runTestsViaSupervisor(logger)
 
-        val consoleSummary = buildConsoleOutput(report, output)
+            val report = runResult.testReport
 
-        val (status, reqStatus) = when {
-            report != null && report.failedTests.isNullOrEmpty() ->
-                ExecutionStatus.Succeeded to RequestStatus.Succeeded
+            logger.info(objectMapper.writeValueAsString(report));
 
-            report != null ->
-                ExecutionStatus.FailedToExecute to RequestStatus.Failed
+            val passed = report?.passedTests ?: 0
+            val actualTotal = report?.totalTests ?: totalTests
+            val consoleSummary = buildConsoleOutput(report, runResult.stdOut, runResult.stdErr)
 
-            detectTimeout(output) || exitCode == 124 ->
-                ExecutionStatus.TimedOut to RequestStatus.Failed
-
-            output.contains("Exception", ignoreCase = true) || output.contains("Error", ignoreCase = true) ->
-                ExecutionStatus.RuntimeError to RequestStatus.Failed
-
-            else ->
-                ExecutionStatus.NoStatus to RequestStatus.Failed
-        }
-
-        logger.info("[Runner] Finished request [Id:${solution.RequestId}] with status $status")
-
-        return CodeResponseDto().apply {
-            RequestId = solution.RequestId
-            UserId = solution.UserId
-            VersionId = solution.VersionId
-            Status = reqStatus
-            Language = languageCode
-            UserSolution = solution.UserSolution
-            Result = ExecutionResultDto().apply {
-                this.Status = status
-                this.ExitCode = exitCode
-                this.ConsoleOutput = consoleSummary
-                this.PassedTests = passed
-                this.RequestSentAt = solution.SentAt
-                this.ResponseSentAt = now
-                this.PassedTests = passed
-                this.TotalTests = actualTotal
+            val response = CodeResponseDto().apply {
+                RequestId = solution.RequestId
+                UserId = solution.UserId
+                VersionId = solution.VersionId
+                Language = languageCode
+                UserSolution = solution.UserSolution
+                Status = if (isRequestSucceeded(runResult)) RequestStatus.Succeeded else RequestStatus.Failed
+                Result = ExecutionResultDto().apply {
+                    Status = runResult.status
+                    ExitCode = runResult.exitCode
+                    PassedTests = passed
+                    TotalTests = actualTotal
+                    RequestSentAt = solution.SentAt
+                    ResponseSentAt = now
+                    CpuTimeUs = runResult.cpuTimeUs
+                    PeakMemoryBytes = runResult.peakMemoryBytes
+                    WallTimeMs = runResult.wallTimeMs
+                    ConsoleOutput ="State: ${runResult.state}\n" + consoleSummary
+                }
             }
+
+            logger.info("[Runner] Finished request [Id:${solution.RequestId}] with status ${response.Status}")
+            return response
+        } finally {
+            cleanTmpDir()
         }
     }
 
-    fun compileToTmpDir(code: String, logger: Logger): Pair<Boolean,String?> {
+    private fun compileToTmpDir(code: String, logger: Logger): CompileResult {
         cleanTmpDir()
-        val srcFile = File(tmpBaseDir, "UserProgram.kt").apply { writeText(code) }
+
+        val srcFile = File(tmpBaseDir, "UserProgram.kt").apply {
+            writeText(code)
+        }
 
         val args = arrayOf(
             "-no-stdlib",
@@ -233,61 +198,176 @@ class KotlinRunner {
         val compiler = K2JVMCompiler()
         val baos = ByteArrayOutputStream()
         val ps = PrintStream(baos)
+
         val exit = compiler.exec(ps, *args)
-        var compileOutput: String? = null
-        if (exit != ExitCode.OK) {
-            compileOutput = baos.toString()
-            logger.info("[Runner] Compiler output: $compileOutput")
-        }
-        return Pair(exit == ExitCode.OK, compileOutput);
-    }
-
-    private fun runTestsInProcess(logger: Logger): Pair<Int, String> {
-        val globalTimeoutMs = 25_000L
-        val classpath = "${tmpBaseDir.absolutePath}${File.pathSeparator}$runtimeClasspath"
-        val javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java"
-        val cmd = listOf(
-            javaBin,
-            "-cp",
-            classpath,
-            "GeneratedTests"
-        )
-        val processBuilder = ProcessBuilder(cmd).redirectErrorStream(true)
-        val process = processBuilder.start()
-        val finished = process.waitFor(globalTimeoutMs, TimeUnit.MILLISECONDS)
-        return if (!finished) {
-            process.destroyForcibly()
-            124 to "Execution timed out after ${globalTimeoutMs}ms"
+        val compileOutput = if (exit == ExitCode.OK) {
+            null
         } else {
-            val output = process.inputStream.bufferedReader().readText()
-            tmpBaseDir.listFiles()?.forEach { it.deleteRecursively() }
-            process.exitValue() to output
+            baos.toString(Charsets.UTF_8.name()).also {
+                logger.info("[Runner] Compiler output: $it")
+            }
+        }
+
+        return CompileResult(exit == ExitCode.OK, compileOutput)
+    }
+
+    private fun runTestsViaSupervisor(logger: Logger): RunResultDto {
+        val classpath = "${tmpBaseDir.absolutePath}${File.pathSeparator}$runtimeClasspath"
+
+        val javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java"
+
+        val request = RunRequestDto(
+            executorFileName = javaBin,
+            commandLineArguments = listOf("-cp", classpath),
+            executableFileName = "GeneratedTests",
+            maxProcessLifetime = globalTimeoutMs.toInt()
+        )
+
+        val serializedRequest = objectMapper.writeValueAsString(request)
+
+        val proc = supervisorProcessBuilder.start()
+
+        val stdoutFuture = CompletableFuture.supplyAsync {
+            proc.inputStream.bufferedReader().use { it.readText() }
+        }
+        val stderrFuture = CompletableFuture.supplyAsync {
+            proc.errorStream.bufferedReader().use { it.readText() }
+        }
+
+        proc.outputStream.bufferedWriter().use { writer ->
+            writer.write(serializedRequest)
+            writer.flush()
+        }
+
+        val startedAt = System.nanoTime()
+        val finished = proc.waitFor(globalTimeoutMs, TimeUnit.MILLISECONDS)
+
+        if (!finished) {
+            try {
+                proc.destroyForcibly()
+            } catch (_: Exception) {
+            }
+
+            val stdout = safeGet(stdoutFuture)
+            val stderr = safeGet(stderrFuture)
+
+            return RunResultDto(
+                status = ExecutionStatus.TimedOut,
+                state = "Supervisor timed out.",
+                exitCode = 124,
+                wallTimeMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt),
+                stdOut = stdout,
+                stdErr = stderr
+            )
+        }
+
+        val stdout = safeGet(stdoutFuture)
+        val stderr = safeGet(stderrFuture)
+
+        val parsed = tryParseSupervisorResult(stdout, logger)
+        if (parsed != null) {
+            return parsed
+        }
+
+        logger.info("[Runner] Failed to parse supervisor output. stdout=$stdout stderr=$stderr")
+
+        return RunResultDto(
+            status = ExecutionStatus.FailedToExecute,
+            state = "Failed to parse test execution result.",
+            exitCode = 1,
+            wallTimeMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt),
+            stdOut = stdout,
+            stdErr = stderr
+        )
+    }
+
+    private fun tryParseSupervisorResult(output: String?, logger: Logger): RunResultDto? {
+        if (output.isNullOrBlank()) return null
+        return try {
+            objectMapper.readValue(output, RunResultDto::class.java)
+        } catch (e: Exception) {
+            logger.info("[Runner] JSON parse failed: ${e.message}")
+            null
         }
     }
 
-    private fun wrapCode(solution: ProblemSolutionDto,manifest:ManifestDto): String {
-        val userCode = if (solution.UserSolution == null) "" else solution.UserSolution
+    private fun buildConsoleOutput(
+        report: TestRunReportDto?,
+        stdout: String?,
+        stderr: String?
+    ): String {
+        if (report != null) {
+            if (report.failedTests.isEmpty()) return ""
+
+            return report.failedTests.joinToString("\n") { f ->
+                "${f.name ?: "unknown"}: ${f.reason ?: ""}"
+            }.trim()
+        }
+
+        val combined = StringBuilder()
+
+        if (!stdout.isNullOrBlank()) {
+            combined.appendLine("--- STDOUT ---")
+            combined.appendLine(stdout.trim())
+        }
+
+        if (!stderr.isNullOrBlank()) {
+            combined.appendLine("--- STDERR ---")
+            combined.appendLine(stderr.trim())
+        }
+
+        return combined.toString().trim()
+    }
+
+    private fun isRequestSucceeded(runResult: RunResultDto): Boolean {
+        val report = runResult.testReport
+        if (report == null)
+            return false;
+
+        return report.passedTests == report.totalTests
+    }
+
+    private fun wrapCode(solution: ProblemSolutionDto, manifest: ManifestDto): String {
+        val userCode = solution.UserSolution ?: ""
         val defaultTimeoutMs = 2000L
 
         val wrapper: ITestWrapper = KotlinWrapper
         val fullSource: String = wrapper.generateSource(
             manifest,
-            if (solution.LanguageCode == null) languageCode else solution.LanguageCode,
+            solution.LanguageCode ?: languageCode,
             userCode,
             "SolutionContainer",
             defaultTimeoutMs
         )
 
-        // keep previous behavior: strip package declarations
-        return fullSource.replaceFirst("(?m)^\\s*package\\s+[^;]+;\\s*".toRegex(), "")
+        return fullSource.replaceFirst(
+            Regex("(?m)^\\s*package\\s+[^;]+;\\s*"),
+            ""
+        )
     }
 
 
-    private fun detectTimeout(output: String): Boolean {
-        if (output.isBlank()) return false
-        val lower = output.lowercase()
-        if (lower.contains("timed out") || lower.contains("test timed out") || lower.contains("junit.framework.AssertionFailedError: test timed out")) return true
-        if (lower.contains("testtimeoutexception") || lower.contains("testtimedoutexception")) return true
-        return false
+    private fun cleanTmpDir() {
+        tmpBaseDir.listFiles()?.forEach { it.deleteRecursively() }
+    }
+
+    private fun safeGet(future: CompletableFuture<String>): String? {
+        return try {
+            future.get()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    companion object {
+        private const val junitClasspath: String = "/libs/junit-4.13.2.jar:/libs/hamcrest-core-1.3.jar"
+
+        private val runtimeClasspath: String =
+            System.getProperty("java.class.path") + File.pathSeparator + junitClasspath
+
+        private val tmpBaseDir: File = File(
+            System.getProperty("java.io.tmpdir"),
+            "kotlinc"
+        ).apply { mkdirs() }
     }
 }

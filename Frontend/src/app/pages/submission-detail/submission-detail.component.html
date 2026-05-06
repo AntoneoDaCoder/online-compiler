@@ -5,6 +5,9 @@
             <div style="margin-top: 1%;"><strong>Жетон задачи:</strong> {{ submission.problemSlug }}</div>
             <div class="status"><strong>Пройдено тестов/всего:</strong> {{ submission.numPassedTests }}/{{
                 submission.totalTests }}</div>
+            <div><strong>Выделено памяти под тестовый процесс (байт):</strong> {{submission.peakMemoryBytes}}</div>
+            <div><strong>Время исполнения (мс):</strong> {{submission.wallTimeMs}}</div>
+            <div><strong>Использование процессорого времени тестовым процессом:</strong> {{submission.cpuTimeUs}}</div>
             <div><strong>Язык решения:</strong> {{langDisplayName}}</div>
         </div>
 

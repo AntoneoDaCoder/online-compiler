@@ -48,12 +48,28 @@ namespace ServerAPIApp.DAL.Confs
                 .HasColumnName("total_tests")
                 .IsRequired();
 
+            b.Property(x => x.CpuTimeUs)
+           .HasColumnName("cpu_time_us")
+           .IsRequired();
+
+            b.Property(x => x.WallTimeMs)
+           .HasColumnName("wall_time_ms")
+           .IsRequired();
+
+            b.Property(x => x.PeakMemoryBytes)
+           .HasColumnName("peak_memory_bytes")
+           .IsRequired();
+
             b.Property(x => x.SolutionLanguage)
                 .HasColumnName("solution_language")
                 .HasMaxLength(100)
                 .IsRequired();
 
-            b.HasIndex(x => x.CreatedBy).HasDatabaseName("ix_submissions_createdby");
+            b.HasOne(x => x.Creator)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedBy)
+                .OnDelete(DeleteBehavior.Cascade);
+
             b.HasIndex(x => x.ProblemVersionId).HasDatabaseName("ix_submissions_problemversion");
             b.HasIndex(x => x.CreatedAt).HasDatabaseName("ix_submissions_createdat");
         }

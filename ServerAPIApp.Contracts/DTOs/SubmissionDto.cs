@@ -2,18 +2,20 @@
 
 namespace ServerAPIApp.Contracts.DTOs
 {
-    public record SubmissionDto(Guid SubmissionId, Guid VersionId, string ProblemSlug, string Title, string SolutionLanguage, string Solution, int NumPassedTests, int TotalTests)
+    public record SubmissionDto(Guid SubmissionId, Guid VersionId, string ProblemSlug, string Title, string SolutionLanguage, string Solution, int NumPassedTests, int TotalTests,
+        long WallTimeMs, long CpuTimeUs, long PeakMemoryBytes)
     {
-        public static SubmissionDto From(Guid subId, Guid verId, string pSlug, string title, string sLang, string solution, int numPassed, int numTotal)
+        public static SubmissionDto From(Guid subId, Guid verId, string pSlug, string title, string sLang, string solution, int numPassed, int numTotal,
+            long wallTimeMs, long cpuTimeUs, long peakMemoryBytes)
         {
-            return new SubmissionDto(subId, verId, pSlug, title, sLang, solution, numPassed, numTotal);
+            return new SubmissionDto(subId, verId, pSlug, title, sLang, solution, numPassed, numTotal, wallTimeMs, cpuTimeUs, peakMemoryBytes);
         }
 
         public static SubmissionDto From(SubmissionEntity entity)
         {
             return new SubmissionDto(entity.Id, entity.ProblemVersionId, entity.ProblemVersion.Problem.Slug,
                 entity.ProblemVersion.Problem.Title, entity.SolutionLanguage,
-                entity.Solution, entity.PassedTests, entity.TotalTests);
+                entity.Solution, entity.PassedTests, entity.TotalTests, entity.WallTimeMs, entity.CpuTimeUs, entity.PeakMemoryBytes);
         }
     }
 }

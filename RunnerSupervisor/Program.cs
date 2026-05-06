@@ -179,20 +179,20 @@ internal sealed class LinuxProcessTreeMonitor
     private Task? _loopTask;
 
     private readonly HashSet<int> _tracked = new();
-    private readonly Dictionary<int, ulong> _lastCpu = new();
+    private readonly Dictionary<int, long> _lastCpu = new();
 
-    private ulong _completedCpu;
-    private ulong _currentCpu;
-    private ulong _peakRss;
+    private long _completedCpu;
+    private long _currentCpu;
+    private long _peakRss;
 
     private readonly long _ticksPerSecond;
 
-    public ulong CpuTimeUs =>
+    public long CpuTimeUs =>
         _ticksPerSecond > 0
-            ? (_completedCpu + _currentCpu) * 1_000_000UL / (ulong)_ticksPerSecond
+            ? (_completedCpu + _currentCpu) * 1_000_000L / _ticksPerSecond
             : 0;
 
-    public ulong PeakMemoryBytes => _peakRss;
+    public long PeakMemoryBytes => _peakRss;
 
     public LinuxProcessTreeMonitor(int rootPid)
     {
@@ -232,8 +232,8 @@ internal sealed class LinuxProcessTreeMonitor
     {
         var snapshot = ReadProc();
 
-        ulong cpu = 0;
-        ulong rss = 0;
+        long cpu = 0;
+        long rss = 0;
 
         foreach (var (pid, info) in snapshot)
         {
@@ -290,12 +290,12 @@ internal sealed class LinuxProcessTreeMonitor
             var parts = text[(r + 2)..].Split(' ');
 
             var ppid = int.Parse(parts[1]);
-            var utime = ulong.Parse(parts[11]);
-            var stime = ulong.Parse(parts[12]);
+            var utime = long.Parse(parts[11]);
+            var stime = long.Parse(parts[12]);
             var rssPages = long.Parse(parts[21]);
 
             var rss = rssPages > 0
-                ? (ulong)rssPages * (ulong)Environment.SystemPageSize
+                ? rssPages * Environment.SystemPageSize
                 : 0;
 
             info = new ProcInfo(pid, ppid, utime + stime, rss);
@@ -307,7 +307,7 @@ internal sealed class LinuxProcessTreeMonitor
         }
     }
 
-    private record struct ProcInfo(int Pid, int Ppid, ulong Cpu, ulong Rss);
+    private record struct ProcInfo(int Pid, int Ppid, long Cpu, long Rss);
 
     [DllImport("libc")]
     private static extern long sysconf(int name);
