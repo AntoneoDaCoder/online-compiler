@@ -211,6 +211,8 @@ namespace Runners.Shared.Runners
             if (!supervisorProc.WaitForExit(_maxProcessLifetime))
             {
                 supervisorProc.Kill();
+                supervisorProc.WaitForExit();
+
                 result.Status = RequestStatus.Failed;
                 result.Result.Status = ExecutionStatus.TimedOut;
                 result.Result.ExitCode = 124;
@@ -220,6 +222,8 @@ namespace Runners.Shared.Runners
 
                 return result;
             }
+
+            supervisorProc.WaitForExit();
 
             await Task.WhenAll(stdoutTask, stderrTask);
 

@@ -1,19 +1,25 @@
-.PHONY: up dev first-run rebuild down delete-cluster bake deploy-infra deploy-api serve minikube-start set-composite-config seed-db backup-db restore-db
+.PHONY: up dev first-run down delete-cluster bake load-images deploy-infra deploy-api serve minikube-start set-composite-config seed-db backup-db restore-db
 
 ROOT_DIR := ..
 MINIKUBE_PROFILE ?= minikube
 COMPOSITE ?= 0
 FIRST_RUN ?= 0
 TAG ?= dev
+NO_BUILD ?= 0
 
-up: minikube-start set-composite-config bake deploy-infra deploy-api serve
+ifeq ($(filter 1 true yes,$(NO_BUILD)),)
+UP_BAKE := bake
+else
+UP_BAKE :=
+endif
+
+up: minikube-start set-composite-config $(UP_BAKE) load-images deploy-infra deploy-api serve
 dev: up
 
-first-run: minikube-start set-composite-config bake deploy-infra deploy-api seed-db serve
+first-run: minikube-start set-composite-config $(UP_BAKE) load-images deploy-infra deploy-api seed-db serve
 
-rebuild:
-	@echo [93mBuilding images in parallel via Bake...[0m
-	@powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File ./rebuild.ps1 -Tag $(TAG)
+load-images:
+	@TAG=$(TAG) MINIKUBE_PROFILE=$(MINIKUBE_PROFILE) COMPOSITE=$(COMPOSITE) FIRST_RUN=$(FIRST_RUN) bash ./image-loader.sh
 
 down: backup-db
 	@echo [93mStopping minikube....[0m
@@ -32,10 +38,8 @@ minikube-start:
 
 bake:
 	@echo [93mStarting parallel builds via Docker Bake...[0m
-	@set TAG=$(TAG)
-	@bake_wrapper.bat default
-	@powershell -ExecutionPolicy Bypass -File image-loader.ps1 -TAG $(TAG) -MINIKUBE_PROFILE $(MINIKUBE_PROFILE) -COMPOSITE $(COMPOSITE) -FIRST_RUN $(FIRST_RUN)
-
+	@bash ./bake-wrapper.sh default
+	
 deploy-infra:
 	@kubectl config current-context
 	@kubectl get ns
@@ -51,13 +55,7 @@ deploy-infra:
 	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=300s
 	@echo [92mPostgreSQL deployed and ready![0m
 
-ifeq ($(FIRST_RUN),1)
-	@echo [93mCreating Keycloak database schema...[0m
-	@kubectl -n postgresql exec postgres-0 -- bash -c "PGPASSWORD=admin123 psql -U postgresadmin -d postgres -tc \"SELECT 1 FROM pg_database WHERE datname = 'keycloakdb'\" | grep -q 1 || PGPASSWORD=admin123 psql -U postgresadmin -d postgres -c \"CREATE DATABASE keycloakdb\""
-	@echo [92mKeycloak database has been created![0m
-else
-	$(MAKE) restore-db
-endif
+	@$(MAKE) restore-db FIRST_RUN=$(FIRST_RUN)
 
 	@echo [93mSetting up Keycloak...[0m
 	@cd $(ROOT_DIR) && \
@@ -70,16 +68,16 @@ endif
 		--from-literal=KC_DB_USERNAME=postgresadmin \
 		--from-literal=KC_DB_PASSWORD=admin123 && \
 	kubectl -n keycloak apply -f k8s/keycloak.yaml && \
-	kubectl -n keycloak wait --for=condition=ready pod -l app=keycloak --timeout=300s
+	kubectl -n keycloak wait --for=condition=ready pod -l app=keycloak --timeout=600s
 	@echo [92mKeycloak deployed and ready![0m
 
-	@echo [93mSetting up MinIO...[0m
+	@echo [93mSetting up MinIO...[0m 
 	@cd $(ROOT_DIR) && \
 	kubectl create ns minio --dry-run=client -o yaml | kubectl apply -f - && \
 	kubectl -n minio delete secret minio-secret --ignore-not-found && \
 	kubectl -n minio create secret generic minio-secret \
-		--from-literal=MINIO_ROOT_USER=minioadmin \
-		--from-literal=MINIO_ROOT_PASSWORD=minioadmin123 && \
+	  --from-literal=MINIO_ROOT_USER=minioadmin \
+	  --from-literal=MINIO_ROOT_PASSWORD=minioadmin123 && \
 	kubectl -n minio apply -f k8s/minio-statefulset.yaml && \
 	kubectl -n minio wait --for=condition=ready pod -l app=minio --timeout=120s
 	@echo [92mMinIO deployed and ready![0m
@@ -101,11 +99,11 @@ deploy-api:
 
 serve:
 	@echo [93mStarting port-forward to API...[0m
-	@port_forwarder.bat
+	@bash ./port-forwarder.sh
 	@echo [92mPort forwarding is active[0m
 ifeq ($(FIRST_RUN),0)
 	@echo [93mRestoring Minio from the backup folder...[0m
-	@bash restore-minio.sh
+	@bash ./restore-minio.sh
 	@echo [92mMinio data has been restored![0m
 endif
 	@echo [92mAPI is ready to run code![0m

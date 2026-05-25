@@ -129,7 +129,7 @@ namespace Runners.Shared.Runners
             ManifestDto manifest;
             try
             {
-                manifest = ManifestParser.Parse(userSolution.TestManifestJson, userSolution.LanguageCode);
+                manifest = ManifestParser.Parse(userSolution.TestManifestJson, userSolution.LanguageCode); // конвертация тестового манифеста из JSON в объектное представление
             }
             catch (InvalidTestTemplateException ex)
             {
@@ -183,39 +183,38 @@ namespace Runners.Shared.Runners
                    }
                    );
 
-            var executablePath = Path.Combine(_basePath, $"{userSolution.RequestId:N}.dll");
+            var executablePath = Path.Combine(_basePath, $"{userSolution.RequestId:N}.dll"); // формирование пути будущего исполняемого файла
 
-            var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.UserSolution, "SolutionContainer");
+            var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.UserSolution, "SolutionContainer"); // получение итогового текста программы
 
-            var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
+            var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken); // создание синтаксического дерева на основе полученного итогового текста программы
 
             var options = new CSharpCompilationOptions(
                 OutputKind.ConsoleApplication,
                 optimizationLevel: OptimizationLevel.Release,
-                allowUnsafe: false);
-
+                allowUnsafe: false); // составление опций компиляции (уровень оптимизации, тип выходного файла, ограничение на использование unsafe-кода)
 
             var compiledAssembly = CSharpCompilation.Create(
                 "UserProgram",
                 new[] { syntaxTree },
                 GetReferences(),
-                options);
+                options); // компиляциия синт. дерева в сборку (Assembly)
 
 
             using var ms = new MemoryStream();
 
-            var compilationResult = compiledAssembly.Emit(ms, cancellationToken: cancellationToken);
+            var compilationResult = compiledAssembly.Emit(ms, cancellationToken: cancellationToken); // генерация IL-кода в указанный поток памяти
 
-            var compilationResultString = string.Join("\n", compilationResult.Diagnostics);
+            var compilationResultString = string.Join("\n", compilationResult.Diagnostics); // составление результатов компиляции
 
             if (compilationResult.Success)
             {
                 ms.Seek(0, SeekOrigin.Begin);
-                using var fs = File.Create(executablePath);
+                using var fs = File.Create(executablePath); // запись скомпилированной программы на диск
                 ms.CopyTo(fs);
             }
 
-            if (Interlocked.Increment(ref _compilationCount) % 5 == 0)
+            if (Interlocked.Increment(ref _compilationCount) % 5 == 0) // выполнение сборки мусора каждые 5 компиляций
             {
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
                 GC.WaitForPendingFinalizers();
@@ -234,7 +233,7 @@ namespace Runners.Shared.Runners
 
         public async Task<CodeResponseDto> ExecuteCodeAsync(ExecutionData data, CancellationToken cancellationToken = default)
         {
-            var result = new CodeResponseDto()
+            var result = new CodeResponseDto() // предварительное формирование ответа
             {
                 RequestId = data.RequestId,
                 UserId = data.UserId,
@@ -249,7 +248,7 @@ namespace Runners.Shared.Runners
                 }
             };
 
-            var runRequest = new RunRequestDto()
+            var runRequest = new RunRequestDto() // формирование запроса к компоненту тестирования
             {
                 ExecutorFileName = "dotnet",
                 CommandLineArguments = ["exec", "--runtimeconfig", _tmpRuntimeConfigPath],
@@ -257,25 +256,27 @@ namespace Runners.Shared.Runners
                 MaxProcessLifetime = _maxProcessLifetime
             };
 
-            var serializedRequest = JsonSerializer.Serialize(runRequest);
+            var serializedRequest = JsonSerializer.Serialize(runRequest); // сериализация запроса
 
             using var supervisorProc = new Process()
             {
                 StartInfo = _supervisorPsi
             };
 
-            supervisorProc.Start();
+            supervisorProc.Start(); // запуск компонента тестирования
 
-            await supervisorProc.StandardInput.WriteAsync(serializedRequest);
+            await supervisorProc.StandardInput.WriteAsync(serializedRequest); // запись запроса в StdIn компонента тестирования
 
-            supervisorProc.StandardInput.Close();
+            supervisorProc.StandardInput.Close(); // закрытие StdIn
 
-            var stdoutTask = supervisorProc.StandardOutput.ReadToEndAsync(cancellationToken);
-            var stderrTask = supervisorProc.StandardError.ReadToEndAsync(cancellationToken);
+            var stdoutTask = supervisorProc.StandardOutput.ReadToEndAsync(cancellationToken); // получение задачи на чтение stdout
+            var stderrTask = supervisorProc.StandardError.ReadToEndAsync(cancellationToken); // получение задачи на чтение stderr
 
             if (!supervisorProc.WaitForExit(_maxProcessLifetime))
             {
                 supervisorProc.Kill();
+                supervisorProc.WaitForExit();
+
                 result.Status = RequestStatus.Failed;
                 result.Result.Status = ExecutionStatus.TimedOut;
                 result.Result.ExitCode = 124;
@@ -285,6 +286,8 @@ namespace Runners.Shared.Runners
 
                 return result;
             }
+
+            supervisorProc.WaitForExit();
 
             await Task.WhenAll(stdoutTask, stderrTask);
 

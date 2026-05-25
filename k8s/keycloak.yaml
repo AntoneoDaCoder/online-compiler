@@ -20,10 +20,11 @@ spec:
     spec:
       containers:
         - name: keycloak
-          image: quay.io/keycloak/keycloak:latest
+          image: keycloak:dev
           imagePullPolicy: IfNotPresent
           args:
             - start
+            - --optimized
             - --http-enabled=true
             - --hostname=http://localhost:8080
             - --hostname-backchannel-dynamic=true
@@ -53,14 +54,15 @@ spec:
                 secretKeyRef:
                   name: keycloak-db-secret 
                   key: KC_DB_PASSWORD
-            - name: KC_DB
-              value: postgres
             - name: KC_DB_URL
               value: jdbc:postgresql://postgres.postgresql.svc.cluster.local:5432/keycloakdb
-            - name: KC_HEALTH_ENABLED
-              value: "true"
-            - name: KC_METRICS_ENABLED
-              value: "true"
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: 9000
+            periodSeconds: 5
+            failureThreshold: 60
+            timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /health/ready
@@ -68,6 +70,7 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
+            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /health/live
@@ -75,13 +78,14 @@ spec:
             initialDelaySeconds: 60
             periodSeconds: 20
             timeoutSeconds: 5
+            failureThreshold: 6
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 250m
+              memory: 512Mi
             limits:
-              cpu: 500m
-              memory: 768Mi
+              cpu: 1000m
+              memory: 1Gi
 ---
 apiVersion: v1
 kind: Service

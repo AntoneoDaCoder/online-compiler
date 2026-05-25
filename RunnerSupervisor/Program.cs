@@ -18,8 +18,8 @@ public class Program
     {
         try
         {
-            var input = await Console.In.ReadToEndAsync();
-            var req = JsonSerializer.Deserialize<RunRequestDto>(input, _opt);
+            var input = await Console.In.ReadToEndAsync(); // считать запрос с StdIn
+            var req = JsonSerializer.Deserialize<RunRequestDto>(input, _opt); // получить объектное представление запроса
 
             if (req is null)
             {
@@ -27,8 +27,8 @@ public class Program
                 return 0;
             }
 
-            var result = await ExecuteAsync(req);
-            await Console.Out.WriteAsync(JsonSerializer.Serialize(result, _opt));
+            var result = await ExecuteAsync(req); // выполнить тестирование
+            await Console.Out.WriteAsync(JsonSerializer.Serialize(result, _opt)); // записать в stdout итоговый ответ 
             return 0;
         }
         catch (Exception ex)
@@ -70,7 +70,7 @@ public class Program
             RedirectStandardError = true
         };
 
-        foreach (var arg in req.CommandLineArguments ?? Enumerable.Empty<string>())
+        foreach (var arg in req.CommandLineArguments ?? Enumerable.Empty<string>()) // формирование итоговой командной строки для создания процесса пользовательского кода
             psi.ArgumentList.Add(arg);
 
         psi.ArgumentList.Add(req.ExecutableFileName);
@@ -83,19 +83,19 @@ public class Program
                 return Fail("Failed to start executable process");
 
             var monitor = new LinuxProcessTreeMonitor(proc.Id);
-            var monitorTask = monitor.StartAsync();
+            var monitorTask = monitor.StartAsync(); // запуск монитора метрик
 
-            var sw = Stopwatch.StartNew();
+            var sw = Stopwatch.StartNew(); // запуск секундомера
 
-            var stdoutTask = proc.StandardOutput.ReadToEndAsync();
-            var stderrTask = proc.StandardError.ReadToEndAsync();
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync(); // получение задачи чтения stdout процесса с пользовательским кодом
+            var stderrTask = proc.StandardError.ReadToEndAsync(); // получение задачи чтения stderr процесса с пользовательским кодом
 
-            var exited = proc.WaitForExit(req.MaxProcessLifetime);
+            var exited = proc.WaitForExit(req.MaxProcessLifetime); // ожидание завершения процесса
 
             if (!exited)
             {
-                TryKill(proc);
-                proc.WaitForExit();
+                TryKill(proc); // принудительное завершение процесса (таймаут вышел)
+                proc.WaitForExit(); // ожидание окончательного заврешения процесса
 
                 sw.Stop();
 
@@ -115,7 +115,7 @@ public class Program
                 };
             }
 
-            proc.WaitForExit();
+            proc.WaitForExit(); // оиждание окончательного завершения дерева процессов
 
             await Task.WhenAll(stdoutTask, stderrTask);
             await monitor.StopAsync();

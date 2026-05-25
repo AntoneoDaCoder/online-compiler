@@ -8,7 +8,7 @@ namespace ServerAPIApp.Core.PipelineBehaviours
 {
     public class ValidationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse> where TRequest : IValidatableRequest<TResponse>
     {
-        private readonly IEnumerable<IValidator<TRequest>> _validators;
+        private readonly IEnumerable<IValidator<TRequest>> _validators; // коллекция всех зарегистрированных валидаторов для типа TRequest, предоставляемая контейнером зависимостей
 
         public ValidationBehaviour(IEnumerable<IValidator<TRequest>> validators)
         {
@@ -20,20 +20,20 @@ namespace ServerAPIApp.Core.PipelineBehaviours
             RequestHandlerDelegate<TResponse> next,
             CancellationToken cancellationToken)
         {
-            if (request is IValidatableRequest<TResponse>)
+            if (request is IValidatableRequest<TResponse>) // если запрос помечен интерфейсом-маркером
             {
-                if (_validators.Any())
+                if (_validators.Any()) // если для такого типа существуют валидаторы
                 {
-                    var context = new ValidationContext<TRequest>(request);
+                    var context = new ValidationContext<TRequest>(request); // создание нового контекста валидации для указанного типа
 
                     var validationResults = await Task.WhenAll(
                         _validators.Select(v =>
-                            v.ValidateAsync(context, cancellationToken)));
+                            v.ValidateAsync(context, cancellationToken))); // запуск всех возможных для данного типа валидаторов используя контекст валидации
 
-                    var failures = validationResults
+                    var failures = validationResults 
                         .SelectMany(r => r.Errors)
                         .Where(f => f != null)
-                        .ToList();
+                        .ToList(); // сбор ошибок
 
                     if (failures.Count != 0)
                     {
@@ -47,7 +47,7 @@ namespace ServerAPIApp.Core.PipelineBehaviours
                 }
             }
 
-            return await next(cancellationToken);
+            return await next(cancellationToken); // передача запроса следующему обработчику в конвейере
         }
     }
 }

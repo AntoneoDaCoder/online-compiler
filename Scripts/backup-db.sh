@@ -5,12 +5,16 @@ NAMESPACE="postgresql"
 POD_NAME="postgres-0"
 DB_USER="postgresadmin"
 DB_PASSWORD="admin123"
-BACKUP_DIR="/c/OnlineCompilerMinikubeVolumes/Postgres"
 
-mkdir -p "$BACKUP_DIR"
+BASE_BACKUP_DIR="/c/OnlineCompilerMinikubeVolumes/Postgres"
+KEYCLOAK_DIR="$BASE_BACKUP_DIR/Keycloak"
+COMPILER_DIR="$BASE_BACKUP_DIR/CompilerData"
 
-# Генерируем имя файла с датой и временем
-BACKUP_FILE="$BACKUP_DIR/backup-$(date +%Y%m%d_%H%M%S).sql"
+mkdir -p "$KEYCLOAK_DIR" "$COMPILER_DIR"
+
+TS="$(date +%Y%m%d_%H%M%S)"
+KEYCLOAK_FILE="$KEYCLOAK_DIR/keycloak-$TS.sql"
+COMPILER_FILE="$COMPILER_DIR/compiler-data-$TS.sql"
 
 echo "Checking if PostgreSQL pod exists..."
 if ! kubectl get pod "$POD_NAME" -n "$NAMESPACE" >/dev/null 2>&1; then
@@ -24,9 +28,16 @@ if ! kubectl wait --for=condition=ready pod/"$POD_NAME" -n "$NAMESPACE" --timeou
   exit 0
 fi
 
-echo "Creating full PostgreSQL cluster backup..."
+echo "Creating Keycloak backup..."
 kubectl exec -n "$NAMESPACE" "$POD_NAME" -- \
-  bash -c "PGPASSWORD=$DB_PASSWORD pg_dumpall -U $DB_USER --clean --if-exists" \
-  > "$BACKUP_FILE"
+  bash -lc "PGPASSWORD='$DB_PASSWORD' pg_dump -U '$DB_USER' --clean --if-exists --no-owner --no-privileges keycloakdb" \
+  > "$KEYCLOAK_FILE"
 
-echo "Backup completed successfully: $BACKUP_FILE"
+echo "Creating CompilerData backup..."
+kubectl exec -n "$NAMESPACE" "$POD_NAME" -- \
+  bash -lc "PGPASSWORD='$DB_PASSWORD' pg_dumpall -U '$DB_USER' --clean --if-exists --exclude-database=keycloakdb" \
+  > "$COMPILER_FILE"
+
+echo "Backups completed successfully:"
+echo "  Keycloak:    $KEYCLOAK_FILE"
+echo "  CompilerData: $COMPILER_FILE"

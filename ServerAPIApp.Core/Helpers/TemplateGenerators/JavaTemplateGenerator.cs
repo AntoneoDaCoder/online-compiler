@@ -15,14 +15,14 @@ namespace ServerAPIApp.Core.Helpers.TemplateGenerators
             if (manifest.Signature == null) throw new ArgumentNullException(nameof(manifest.Signature));
 
             var signature = manifest.Signature;
-            var methodName = NormalizeMethodName(manifest.Entrypoint);
+            var methodName = NormalizeMethodName(manifest.Entrypoint); // получение нормализованного имени метода
 
             var parameters = signature.Parameters ?? new List<ParameterDescriptor>();
             var parameterList = string.Join(", ",
                 parameters.Select((p, i) =>
-                    $"{RenderTypeName(p.Type)} {NormalizeIdentifier(p.Name, $"arg{i}")}"));
+                    $"{RenderTypeName(p.Type)} {NormalizeIdentifier(p.Name, $"arg{i}")}")); // получение списка нормализованных параметров метода с их типами
 
-            var returnType = RenderTypeName(signature.ReturnType);
+            var returnType = RenderTypeName(signature.ReturnType); // получение типа возвращаемого значения ожидаемой подпрограммы решения
 
             var sb = new StringBuilder();
 

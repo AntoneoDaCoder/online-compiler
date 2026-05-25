@@ -1,9 +1,7 @@
 ﻿namespace ServerAPIApp.Domain.Entities
 {
-    public class ProblemDeletionRequestEntity : IBaseEntity
+    public class ProblemDeletionRequestEntity : BaseEntity
     {
-        public Guid Id { get; set; }
-
         public Guid ProblemId { get; set; }
         public ProblemEntity Problem { get; set; }
 

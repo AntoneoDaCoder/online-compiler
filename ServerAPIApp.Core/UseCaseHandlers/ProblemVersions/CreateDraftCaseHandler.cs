@@ -55,8 +55,6 @@ namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
                 draft.TestTemplateKey = key;
             }
 
-
-            ////???????????? the fucks going on here?
             await _repo.CreateAsync(draft, cancellationToken);
 
             foreach (var language in languages)

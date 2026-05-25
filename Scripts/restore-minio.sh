@@ -4,22 +4,25 @@ set -euo pipefail
 MINIO_URL="${MINIO_URL:-http://host.docker.internal:9000}"
 BUCKET="${BUCKET:-manifestbucket}"
 SOURCE_DIR="${SOURCE_DIR:-/c/OnlineCompilerMinikubeVolumes/Minio}"
-SOURCE_DIR_WIN="$(cygpath -am "$SOURCE_DIR")"
 
 MINIO_ALIAS="${MINIO_ALIAS:-myminio}"
 MINIO_ROOT_USER="${MINIO_ROOT_USER:-minioadmin}"
 MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-minioadmin123}"
 
-sleep 5
+if ! command -v cygpath >/dev/null 2>&1; then
+  echo "cygpath not found"
+  exit 1
+fi
 
 if [[ ! -d "${SOURCE_DIR}" ]]; then
   echo "Source directory not found: ${SOURCE_DIR}"
   exit 1
 fi
 
-mkdir -p "${SOURCE_DIR}"
+SOURCE_DIR_WIN="$(cygpath -am "$SOURCE_DIR")"
 
 echo "Restoring MinIO from local backup..."
+
 MSYS_NO_PATHCONV=1 docker run --rm \
   --entrypoint /bin/sh \
   --add-host=host.docker.internal:host-gateway \
@@ -30,9 +33,15 @@ MSYS_NO_PATHCONV=1 docker run --rm \
   -e MINIO_ROOT_PASSWORD="$MINIO_ROOT_PASSWORD" \
   -v "${SOURCE_DIR_WIN}:/restore" \
   minio/mc -ec '
-    mc alias set "$MINIO_ALIAS" "$MINIO_URL" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
-    mc ls "$MINIO_ALIAS/$BUCKET" >/dev/null
-    mc mirror --overwrite /restore "$MINIO_ALIAS/$BUCKET"
+    set -eu
+
+    until mc alias set "$MINIO_ALIAS" "$MINIO_URL" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null 2>&1; do
+      echo "Waiting for MinIO..."
+      sleep 2
+    done
+
+    mc mb --ignore-existing "$MINIO_ALIAS/$BUCKET"
+    mc mirror --overwrite --remove /restore "$MINIO_ALIAS/$BUCKET"
   '
 
 echo "Done"

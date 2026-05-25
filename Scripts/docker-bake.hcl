@@ -3,7 +3,7 @@ variable "TAG" {
 }
 
 group "default" {
-  targets = ["api", "csharp", "java", "nodejs", "kotlin", "typescript", "seeder"]
+  targets = ["api", "csharp", "java", "nodejs", "kotlin", "typescript", "seeder","keycloak"]
 }
 
 # group "composite" {
@@ -62,7 +62,7 @@ target "csharp" {
     shared        = "Shared/"
     runners-shared = "Runners/Runners.Shared/"
     server-domain = "ServerAPIApp.Domain/"
-    supervisor =  "RunnerSupervisor/"
+    supervisor = "RunnerSupervisor/"
   }
 }
 
@@ -70,9 +70,9 @@ target "java" {
   dockerfile = "Dockerfile"
   context    = "Runners/JavaRunner/"
   tags       = ["java-runner:${TAG}"]
-    contexts   = {
+  contexts   = {
     shared        = "Shared/"
-    supervisor =  "RunnerSupervisor/"
+    supervisor = "RunnerSupervisor/"
     server-domain = "ServerAPIApp.Domain/"
   }
 }
@@ -85,7 +85,7 @@ target "nodejs" {
     shared        = "Shared/"
     server-domain = "ServerAPIApp.Domain/"
     runners-shared = "Runners/Runners.Shared/"
-    supervisor =  "RunnerSupervisor/"
+    supervisor = "RunnerSupervisor/"
   }
 }
 
@@ -95,7 +95,7 @@ target "kotlin" {
   tags       = ["kotlin-runner:${TAG}"]
   contexts   = {
     shared        = "Shared/"
-    supervisor =  "RunnerSupervisor/"
+    supervisor = "RunnerSupervisor/"
     server-domain = "ServerAPIApp.Domain/"
   }
 }
@@ -108,6 +108,11 @@ target "typescript" {
     shared        = "Shared/"
     server-domain = "ServerAPIApp.Domain/"
     runners-shared = "Runners/Runners.Shared/"
-    supervisor =  "RunnerSupervisor/"
+    supervisor = "RunnerSupervisor/"
   }
+}
+
+target "keycloak" {
+  dockerfile = "k8s/Dockerfile"
+  tags = ["keycloak:${TAG}"]
 }
