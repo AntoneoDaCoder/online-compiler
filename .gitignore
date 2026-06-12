@@ -7,6 +7,10 @@ results-table.xlsx
 whatever.txt
 /Runners/JavaRunner/.idea/
 /Runners/KotlinRunner/.idea/
+/Scripts/secrets.env
+/Scripts/.pf*
+/Scripts/.vs
+
 
 # User-specific files
 *.suo
