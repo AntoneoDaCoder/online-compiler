@@ -158,6 +158,7 @@ spec:
       containers:
         - name: mc
           image: minio/mc:latest
+          imagePullPolicy: IfNotPresent
           env:
             - name: MINIO_ROOT_USER
               valueFrom:
