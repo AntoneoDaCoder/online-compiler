@@ -8,47 +8,127 @@ is_windows_shell() {
   esac
 }
 
-launch_linux() {
-  local title="$1"
-  local cmdline="$2"
+PID_DIR="${PID_DIR:-.pf-pids}"
+LOG_DIR="${LOG_DIR:-.pf-logs}"
 
-  if command -v gnome-terminal >/dev/null 2>&1; then
-    gnome-terminal --title="$title" -- bash -lc "$cmdline" >/dev/null 2>&1 &
-  elif command -v konsole >/dev/null 2>&1; then
-    konsole --new-tab -p tabtitle="$title" -e bash -lc "$cmdline" >/dev/null 2>&1 &
-  elif command -v xfce4-terminal >/dev/null 2>&1; then
-    xfce4-terminal --title="$title" -e "bash -lc $(printf '%q' "$cmdline")" >/dev/null 2>&1 &
-  elif command -v kitty >/dev/null 2>&1; then
-    kitty --title="$title" bash -lc "$cmdline" >/dev/null 2>&1 &
-  elif command -v xterm >/dev/null 2>&1; then
-    xterm -T "$title" -e bash -lc "$cmdline" >/dev/null 2>&1 &
-  else
-    echo "No GUI terminal found; falling back to nohup for $title" >&2
-    nohup bash -lc "$cmdline" >/dev/null 2>&1 &
-  fi
+mkdir -p "$PID_DIR" "$LOG_DIR"
+
+pidfile_for() {
+  printf '%s/%s.pid' "$PID_DIR" "$1"
 }
 
-launch_windows() {
-  local title="$1"
-  local cmdline="$2"
-
-  if command -v powershell.exe >/dev/null 2>&1; then
-    PF_TITLE="$title" PF_CMD="$cmdline" powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \
-      "Start-Process -FilePath 'cmd.exe' -ArgumentList '/k', \$env:PF_CMD -WindowStyle Normal"
-  else
-    cmd.exe /c start "" cmd.exe /k "$cmdline"
-  fi
+logfile_for() {
+  printf '%s/port-forward-%s.log' "$LOG_DIR" "$1"
 }
 
-launch_terminal() {
-  local title="$1"
-  local cmdline="$2"
+is_running() {
+  local pid="$1"
 
   if is_windows_shell; then
-    launch_windows "$title" "$cmdline"
+    tasklist /FI "PID eq $pid" /NH 2>/dev/null | grep -q "$pid"
   else
-    launch_linux "$title" "$cmdline"
+    kill -0 "$pid" 2>/dev/null
   fi
+}
+
+start_pf_linux() {
+  local ns="$1"
+  local svc="$2"
+  local local_port="$3"
+  local remote_port="$4"
+  local name="$5"
+
+  local pidfile log pid
+  pidfile="$(pidfile_for "$name")"
+  log="$(logfile_for "$name")"
+
+  if [[ -f "$pidfile" ]]; then
+    pid="$(cat "$pidfile" || true)"
+    if [[ -n "${pid:-}" ]] && is_running "$pid"; then
+      echo "$name already running (PID $pid)"
+      return 0
+    fi
+    rm -f "$pidfile"
+  fi
+
+  : >"$log"
+
+  if [[ -n "$ns" ]]; then
+    nohup kubectl -n "$ns" port-forward "svc/$svc" "${local_port}:${remote_port}" >>"$log" 2>&1 < /dev/null &
+  else
+    nohup kubectl port-forward "svc/$svc" "${local_port}:${remote_port}" >>"$log" 2>&1 < /dev/null &
+  fi
+
+  pid=$!
+  echo "$pid" >"$pidfile"
+  echo "Started $name (PID $pid)"
+}
+
+start_pf_windows() {
+  local ns="$1"
+  local svc="$2"
+  local local_port="$3"
+  local remote_port="$4"
+  local name="$5"
+
+  local pidfile log
+  pidfile="$(pidfile_for "$name")"
+  log="$(logfile_for "$name")"
+
+  if [[ -f "$pidfile" ]]; then
+    local pid
+    pid="$(cat "$pidfile" || true)"
+    if [[ -n "${pid:-}" ]] && is_running "$pid"; then
+      echo "$name already running (PID $pid)"
+      return 0
+    fi
+    rm -f "$pidfile"
+  fi
+
+  : >"$log"
+  : >"${log}.err"
+
+  PF_NS="$ns" \
+  PF_SVC="$svc" \
+  PF_LOCAL="$local_port" \
+  PF_REMOTE="$remote_port" \
+  PF_PIDFILE="$pidfile" \
+  PF_LOGFILE="$log" \
+  PF_NAME="$name" \
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -Command '
+    $ns = $env:PF_NS
+    $svc = $env:PF_SVC
+    $local = $env:PF_LOCAL
+    $remote = $env:PF_REMOTE
+    $pidfile = $env:PF_PIDFILE
+    $logfile = $env:PF_LOGFILE
+    $name = $env:PF_NAME
+
+    $args = @()
+    if ($ns) { $args += @("-n", $ns) }
+    $args += @("port-forward", "svc/$svc", "$local`:$remote")
+
+    $proc = Start-Process `
+      -FilePath "kubectl.exe" `
+      -ArgumentList $args `
+      -PassThru `
+      -WindowStyle Hidden `
+      -RedirectStandardOutput $logfile `
+      -RedirectStandardError "$logfile.err"
+
+    Set-Content -Path $pidfile -Value $proc.Id -NoNewline
+
+    Start-Sleep -Seconds 1
+    if (-not (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue)) {
+      Write-Host "Failed to start $name (PID $($proc.Id))"
+      if (Test-Path $logfile) { Get-Content $logfile -Tail 20 }
+      if (Test-Path "$logfile.err") { Get-Content "$logfile.err" -Tail 20 }
+      Remove-Item $pidfile -ErrorAction SilentlyContinue
+      exit 1
+    }
+
+    Write-Host "Started $name (PID $($proc.Id))"
+  '
 }
 
 start_pf() {
@@ -57,28 +137,102 @@ start_pf() {
   local local_port="$3"
   local remote_port="$4"
   local name="$5"
-  local log="port-forward-${name}.log"
-
-  : >"$log"
-
-  local kubectl_cmd
-  if [ -n "$ns" ]; then
-    kubectl_cmd="kubectl -n \"$ns\" port-forward svc/$svc ${local_port}:${remote_port} > \"$log\" 2>&1"
-  else
-    kubectl_cmd="kubectl port-forward svc/$svc ${local_port}:${remote_port} > \"$log\" 2>&1"
-  fi
 
   if is_windows_shell; then
-    launch_windows "$name" "$kubectl_cmd"
+    start_pf_windows "$ns" "$svc" "$local_port" "$remote_port" "$name"
   else
-    launch_linux "$name" "$kubectl_cmd"
+    start_pf_linux "$ns" "$svc" "$local_port" "$remote_port" "$name"
   fi
 }
 
-start_pf ""        api-server 12345 8080 api-server
-start_pf postgresql postgres  5432  5432 postgres
-start_pf minio     minio      9001  9001 minio-9001
-start_pf minio     minio      9000  9000 minio-9000
-start_pf keycloak  keycloak   8080  8080 keycloak
+stop_pf() {
+  local name="$1"
+  local pidfile pid
 
-exit 0
+  pidfile="$(pidfile_for "$name")"
+
+  if [[ ! -f "$pidfile" ]]; then
+    echo "Not found: $name"
+    return 0
+  fi
+
+  pid="$(cat "$pidfile" || true)"
+  if [[ -z "${pid:-}" ]]; then
+    rm -f "$pidfile"
+    echo "Stale pidfile removed: $name"
+    return 0
+  fi
+
+  if is_running "$pid"; then
+    if is_windows_shell; then
+      taskkill /PID "$pid" /T /F >/dev/null 2>&1 || true
+    else
+      kill "$pid" 2>/dev/null || true
+      for _ in {1..10}; do
+        if ! is_running "$pid"; then
+          break
+        fi
+        sleep 0.2
+      done
+      if is_running "$pid"; then
+        kill -9 "$pid" 2>/dev/null || true
+      fi
+    fi
+    echo "Stopped $name (PID $pid)"
+  else
+    echo "$name was not running (stale PID $pid)"
+  fi
+
+  rm -f "$pidfile"
+}
+
+status_pf() {
+  local name="$1"
+  local pidfile pid
+
+  pidfile="$(pidfile_for "$name")"
+  if [[ -f "$pidfile" ]]; then
+    pid="$(cat "$pidfile" || true)"
+    if [[ -n "${pid:-}" ]] && is_running "$pid"; then
+      echo "$name: running (PID $pid)"
+    else
+      echo "$name: stale pidfile"
+    fi
+  else
+    echo "$name: not running"
+  fi
+}
+
+start_all() {
+  start_pf ""         api-server 12345 8080 api-server
+  start_pf postgresql postgres   5432  5432 postgres
+  start_pf minio      minio      9001  9001 minio-9001
+  start_pf minio      minio      9000  9000 minio-9000
+  start_pf keycloak   keycloak   8080  8080 keycloak
+}
+
+stop_all() {
+  stop_pf api-server
+  stop_pf postgres
+  stop_pf minio-9001
+  stop_pf minio-9000
+  stop_pf keycloak
+}
+
+status_all() {
+  status_pf api-server
+  status_pf postgres
+  status_pf minio-9001
+  status_pf minio-9000
+  status_pf keycloak
+}
+
+case "${1:-start}" in
+  start)  start_all ;;
+  stop)   stop_all ;;
+  status) status_all ;;
+  *)
+    echo "Usage: $0 {start|stop|status}" >&2
+    exit 1
+    ;;
+esac

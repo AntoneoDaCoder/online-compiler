@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+set -a
+. ./secrets.env
+set +a
+
 NAMESPACE="postgresql"
 POD_NAME="postgres-0"
-DB_USER="postgresadmin"
-DB_PASSWORD="admin123"
+DB_USER=$DbUser
+DB_PASSWORD=$DbPass
 
 BASE_BACKUP_DIR="/c/OnlineCompilerMinikubeVolumes/Postgres"
 KEYCLOAK_DIR="$BASE_BACKUP_DIR/Keycloak"

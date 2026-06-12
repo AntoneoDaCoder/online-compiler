@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+set -a
+. ./secrets.env
+set +a
+
 MINIO_URL="${MINIO_URL:-http://host.docker.internal:9000}"
-BUCKET="${BUCKET:-manifestbucket}"
+BUCKET=$ManifestBucket
 SOURCE_DIR="${SOURCE_DIR:-/c/OnlineCompilerMinikubeVolumes/Minio}"
 
-MINIO_ALIAS="${MINIO_ALIAS:-myminio}"
-MINIO_ROOT_USER="${MINIO_ROOT_USER:-minioadmin}"
-MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-minioadmin123}"
+MINIO_ALIAS=$MinioAlias
+MINIO_ROOT_USER=$AccessKey
+MINIO_ROOT_PASSWORD=$SecretKey
 
 if ! command -v cygpath >/dev/null 2>&1; then
   echo "cygpath not found"

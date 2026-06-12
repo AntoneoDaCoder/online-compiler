@@ -25,6 +25,7 @@ add_image() {
 add_image "api-server:$TAG"
 add_image "postgres:latest"
 add_image "minio/minio:latest"
+add_image "minio/mc:latest"
 add_image "keycloak:$TAG"
 
 if [ "$COMPOSITE" -eq 1 ]; then

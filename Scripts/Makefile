@@ -22,11 +22,17 @@ load-images:
 	@TAG=$(TAG) MINIKUBE_PROFILE=$(MINIKUBE_PROFILE) COMPOSITE=$(COMPOSITE) FIRST_RUN=$(FIRST_RUN) bash ./image-loader.sh
 
 down: backup-db
+	@echo [93mStopping port forwarding....[0m
+	@bash ./port-forwarder.sh stop
+	@echo [92mForwarding has been stopped![0m
 	@echo [93mStopping minikube....[0m
 	@minikube stop -p $(MINIKUBE_PROFILE)
 	@echo [92mAPI has been stopped[0m
 
 delete-cluster: backup-db
+	@echo [93mStopping port forwarding....[0m
+	@bash ./port-forwarder.sh stop
+	@echo [92mForwarding has been stopped![0m
 	@echo [93mDeleting minikube cluster....[0m
 	@minikube delete -p $(MINIKUBE_PROFILE)
 	@echo [92mCluster deleted[0m
@@ -48,9 +54,10 @@ deploy-infra:
 	@cd $(ROOT_DIR) && \
 	kubectl create ns postgresql --dry-run=client -o yaml | kubectl apply -f - && \
 	kubectl -n postgresql delete secret postgres-secret --ignore-not-found && \
+	set -a && . ./Scripts/secrets.env && set +a && \
 	kubectl -n postgresql create secret generic postgres-secret \
-		--from-literal=POSTGRES_USER=postgresadmin \
-		--from-literal=POSTGRES_PASSWORD=admin123 && \
+		--from-literal=POSTGRES_USER=$$DbUser \
+		--from-literal=POSTGRES_PASSWORD=$$DbPass && \
 	kubectl -n postgresql apply -f k8s/postgres-statefulset.yaml && \
 	kubectl -n postgresql wait --for=condition=ready pod -l app=postgres --timeout=300s
 	@echo [92mPostgreSQL deployed and ready![0m
@@ -61,12 +68,13 @@ deploy-infra:
 	@cd $(ROOT_DIR) && \
 	kubectl create ns keycloak --dry-run=client -o yaml | kubectl apply -f - && \
 	kubectl -n keycloak delete secret keycloak-admin-secret keycloak-db-secret --ignore-not-found && \
+	set -a && . ./Scripts/secrets.env && set +a && \
 	kubectl -n keycloak create secret generic keycloak-admin-secret \
-		--from-literal=KC_BOOTSTRAP_ADMIN_USERNAME=admin \
-		--from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD=admin123 && \
+		--from-literal=KC_BOOTSTRAP_ADMIN_USERNAME=$$KCAdmin \
+		--from-literal=KC_BOOTSTRAP_ADMIN_PASSWORD=$$KCPass && \
 	kubectl -n keycloak create secret generic keycloak-db-secret \
-		--from-literal=KC_DB_USERNAME=postgresadmin \
-		--from-literal=KC_DB_PASSWORD=admin123 && \
+		--from-literal=KC_DB_USERNAME=$$DbUser \
+		--from-literal=KC_DB_PASSWORD=$$DbPass && \
 	kubectl -n keycloak apply -f k8s/keycloak.yaml && \
 	kubectl -n keycloak wait --for=condition=ready pod -l app=keycloak --timeout=600s
 	@echo [92mKeycloak deployed and ready![0m
@@ -75,9 +83,10 @@ deploy-infra:
 	@cd $(ROOT_DIR) && \
 	kubectl create ns minio --dry-run=client -o yaml | kubectl apply -f - && \
 	kubectl -n minio delete secret minio-secret --ignore-not-found && \
+	set -a && . ./Scripts/secrets.env && set +a && \
 	kubectl -n minio create secret generic minio-secret \
-	  --from-literal=MINIO_ROOT_USER=minioadmin \
-	  --from-literal=MINIO_ROOT_PASSWORD=minioadmin123 && \
+	  --from-literal=MINIO_ROOT_USER=$$AccessKey \
+	  --from-literal=MINIO_ROOT_PASSWORD=$$SecretKey && \
 	kubectl -n minio apply -f k8s/minio-statefulset.yaml && \
 	kubectl -n minio wait --for=condition=ready pod -l app=minio --timeout=120s
 	@echo [92mMinIO deployed and ready![0m
@@ -85,12 +94,13 @@ deploy-infra:
 deploy-api:
 	@echo [93mDeploying API to Kubernetes[0m
 	@cd $(ROOT_DIR) && \
+	set -a && . ./Scripts/secrets.env && set +a && \
 	kubectl delete secret api-secret --ignore-not-found && \
 	kubectl create secret generic api-secret \
-		--from-literal=DbConnectionString="Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=onlinecompilerdb;Username=postgresadmin;Password=admin123" \
-		--from-literal=AccessKey=minioadmin \
-		--from-literal=SecretKey=minioadmin123 \
-		--from-literal=ApiClientSecret=GWAz8Um7nsGsb4Hzl7C49ib5t6CUo5AR && \
+		--from-literal=DbConnectionString=$$DbConnectionString \
+		--from-literal=AccessKey=$$AccessKey \
+		--from-literal=SecretKey=$$SecretKey \
+		--from-literal=ApiClientSecret=$$ApiClientSecret && \
 	kubectl apply -f k8s/rbac.yaml && \
 	kubectl apply -f k8s/api-deployment.yaml && \
 	kubectl rollout restart deployment api-server -n default && \
@@ -99,7 +109,7 @@ deploy-api:
 
 serve:
 	@echo [93mStarting port-forward to API...[0m
-	@bash ./port-forwarder.sh
+	@bash ./port-forwarder.sh start
 	@echo [92mPort forwarding is active[0m
 ifeq ($(FIRST_RUN),0)
 	@echo [93mRestoring Minio from the backup folder...[0m
@@ -121,11 +131,12 @@ ifeq ($(FIRST_RUN),1)
 	@cd $(ROOT_DIR) && \
 	kubectl delete job db-seeder --ignore-not-found && \
 	kubectl -n postgresql delete secret seeder-secret --ignore-not-found && \
+	set -a && . ./Scripts/secrets.env && set +a && \
 	kubectl -n postgresql create secret generic seeder-secret \
-		--from-literal=ACCESS_KEY=minioadmin \
-		--from-literal=SECRET_KEY=minioadmin123 \
-		--from-literal=ConnectionString="Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=onlinecompilerdb;Username=postgresadmin;Password=admin123" \
-		--from-literal=ApiClientSecret=GWAz8Um7nsGsb4Hzl7C49ib5t6CUo5AR && \
+		--from-literal=ACCESS_KEY=$$AccessKey \
+		--from-literal=SECRET_KEY=$$SecretKey \
+		--from-literal=ConnectionString=$$DbConnectionString \
+		--from-literal=ApiClientSecret=$$ApiClientSecret && \
 	kubectl -n postgresql apply -f k8s/db-seeder-job.yaml && \
 	kubectl -n postgresql wait --for=condition=complete --timeout=300s job/db-seeder && \
 	echo [92mdb-seeder job completed successfully![0m || \
