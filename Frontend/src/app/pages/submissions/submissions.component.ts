@@ -134,7 +134,7 @@ export class SubmissionsComponent implements OnInit {
         this.router.navigate(['/submissions', id], {
             state: {
                 submissionId: id,
-                languageDisplayName: this.formatLanguage(view.submission.solutionLanguage)
+                languageDisplayName: this.formatLanguage(view.submission.solutionLanguage),
             }
         });
     }

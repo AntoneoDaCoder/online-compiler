@@ -93,6 +93,7 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
             if (navState.code) {
                 this.code = navState.code;
                 this.disableSelectors = true;
+                this.applyMonacoLanguage();
             } else if (this.selectedLangId) {
                 this.loadTemplateForSelectedLanguage();
             } else {
@@ -164,9 +165,12 @@ export class CodeEditorComponent implements OnInit, OnDestroy {
             cpp: 'cpp',
             cxx: 'cpp',
             cc: 'cpp',
-            cs: 'csharp',
+            csharp: 'csharp',
+            nodejs: 'javascript',
+            typescript: 'typescript',
+            java: 'java',
+            kotlin: 'kotlin',
             js: 'javascript',
-            ts: 'typescript',
             md: 'markdown',
             yml: 'yaml'
         };
