@@ -2,19 +2,9 @@
 
 namespace ServerAPIApp.Contracts.Abstractions
 {
-    public interface IProblemRepository
+    public interface IProblemRepository : IBaseRepository<ProblemEntity>
     {
-        Task<ProblemEntity?> GetByIdAsync
-         (Guid problemId,
-         CancellationToken cancellationToken = default);
-        Task<ProblemEntity> UpdateAsync
-            (ProblemEntity problem,
-            CancellationToken cancellationToken = default);
-        Task<ProblemEntity> CreateAsync
-            (ProblemEntity problem,
-            CancellationToken cancellationToken = default);
-        Task<bool> DeleteAsync
-            (Guid problemId,
-            CancellationToken cancellationToken = default);
+        IQueryable<ProblemEntity> Query();
+        Task SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

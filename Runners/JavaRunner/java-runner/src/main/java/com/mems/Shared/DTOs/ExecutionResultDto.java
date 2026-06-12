@@ -1,18 +1,48 @@
 package com.mems.Shared.DTOs;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mems.Shared.Enums.ExecutionStatus;
 
+import java.time.OffsetDateTime;
+
 public class ExecutionResultDto {
-    public ExecutionStatus status;
-    public int exitCode;
-    public String consoleOutput;
-    public LocalDateTime requestSentAt;
-    public LocalDateTime responseSentAt;
-    
+    @JsonProperty("Status")
+    public ExecutionStatus Status;
+
+    @JsonProperty("ExitCode")
+    public int ExitCode;
+
+    @JsonProperty("ConsoleOutput")
+    public String ConsoleOutput;
+
+    @JsonProperty("PassedTests")
+    public int PassedTests;
+
+    @JsonProperty("TotalTests")
+    public int TotalTests;
+
+    @JsonProperty("WallTimeMs")
+    public Long WallTimeMs = 0L;
+    @JsonProperty("PeakMemoryBytes")
+    public Long PeakMemoryBytes = 0L;
+    @JsonProperty("CpuTimeUs")
+
+    public Long CpuTimeUs = 0L;
+
+    @JsonProperty("RequestSentAt")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    public OffsetDateTime RequestSentAt;
+
+    @JsonProperty("ResponseSentAt")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    public OffsetDateTime ResponseSentAt;
+
+    // Compute latency on serialization (matches C# property)
+    @JsonProperty("LatencyInSeconds")
     public double getLatencyInSeconds() {
-        return Duration.between(requestSentAt, responseSentAt).toMillis() / 1000.0;
+        if (RequestSentAt == null || ResponseSentAt == null) return 0.0;
+        long millis = java.time.Duration.between(RequestSentAt, ResponseSentAt).toMillis();
+        return millis / 1000.0;
     }
 }

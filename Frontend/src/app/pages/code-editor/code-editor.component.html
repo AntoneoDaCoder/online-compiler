@@ -1,0 +1,55 @@
+<div class="code-editor-page">
+    <div class="code-editor">
+        <div class="editor-left card">
+            <!-- Верх: селектор языков -->
+            <div class="controls">
+                <div class="field">
+                    <label class="label">Язык решения</label>
+                    <select [disabled]="disableSelectors" [(ngModel)]="selectedLangId" (change)="onLangChange()"
+                        class="select">
+                        <option value="" disabled>Выберите язык</option>
+                        <option *ngFor="let l of supportedLanguages" [value]="l.id">{{ l.displayName || l.code }}
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Центр: код — занимает всё доступное пространство -->
+            <div class="code-field">
+                <label class="label">Код</label>
+
+                <ngx-monaco-editor class="code-input monaco-host" [(ngModel)]="code" [options]="editorOptions"
+                    (onInit)="onEditorInit($event)">
+                </ngx-monaco-editor>
+            </div>
+
+            <!-- Низ: кнопка (фиксированная высота) -->
+            <div class="actions">
+                <button class="btn-primary" (click)="onSubmit()"
+                    [disabled]="!selectedLangId || !problemVersionId">Отправить
+                    решение</button>
+            </div>
+        </div>
+
+        <div class="editor-right">
+            <div class="card statement-card">
+                <div class="stmt-header">
+                    <div class="stmt-title">{{ displayHeading }}</div>
+                    <hr class="splitter" />
+                    <h4 class="stmt-subtitle">Условие</h4>
+                </div>
+
+                <div class="stmt-body">
+                    <div *ngIf="!problemVersionId" class="muted">Версия задачи не выбрана — откройте задачу и выберите
+                        версию.</div>
+                    <pre *ngIf="problemVersionId" class="statement-pre">{{ statement }}</pre>
+                </div>
+            </div>
+
+            <div class="card result-card">
+                <h4>Результат</h4>
+                <pre class="result-pre">{{ result }}</pre>
+            </div>
+        </div>
+    </div>
+</div>

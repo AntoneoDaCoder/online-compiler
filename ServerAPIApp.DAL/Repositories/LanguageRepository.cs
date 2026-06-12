@@ -31,6 +31,11 @@ namespace ServerAPIApp.DAL.Repositories
             return entity;
         }
 
+        public async Task<List<LanguageEntity>?> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.Languages.ToListAsync(cancellationToken);
+        }
+
         public async Task<LanguageEntity> CreateAsync(LanguageEntity entity, CancellationToken cancellationToken = default)
         {
             var entry = _context.Languages.Add(entity);
@@ -40,13 +45,19 @@ namespace ServerAPIApp.DAL.Repositories
             return entry.Entity;
         }
 
-        public async Task<LanguageEntity> UpdateAsync(LanguageEntity entity, CancellationToken cancellationToken = default)
+        public async Task<bool> UpdateAsync(LanguageEntity entity, CancellationToken cancellationToken = default)
         {
-            var entry = _context.Languages.Update(entity);
+            var affected = await _context.Languages
+                .Where(x => x.Id == entity.Id)
+                .ExecuteUpdateAsync
+                (
+                    x => x
+                    .SetProperty(x => x.Code, entity.Code)
+                    .SetProperty(x => x.DisplayName, entity.DisplayName),
+                    cancellationToken
+                );
 
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return entry.Entity;
+            return affected > 0;
         }
 
         public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)

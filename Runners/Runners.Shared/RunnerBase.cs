@@ -15,7 +15,6 @@ namespace Runners.Shared
             PropertyNameCaseInsensitive = true
         };
 
-
         private HttpListener _listener = new HttpListener();
         private HttpClient _client = new HttpClient();
         private IRunner _runner;
@@ -34,7 +33,7 @@ namespace Runners.Shared
             GC.SuppressFinalize(this);
         }
 
-        public async Task ListenAsync(CancellationToken cancellationToken)
+        public async Task ListenAsync(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -52,7 +51,17 @@ namespace Runners.Shared
 
                             Console.WriteLine($"[Runner] Received request [Id:{codeRequest.RequestId}]");
 
-                            _ = ExecuteUserCodeAsync(codeRequest, cancellationToken);
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    await ExecuteUserCodeAsync(codeRequest, cancellationToken);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"[Runner] Failed to execute code: {ex}");
+                                }
+                            }, cancellationToken);
 
                             Console.WriteLine($"[Runner] Scheduled request [Id:{codeRequest.RequestId}]");
                         }
@@ -76,10 +85,8 @@ namespace Runners.Shared
             }
         }
 
-        private async Task NotifyJobManagerAsync(CodeResponseDto response, string callbackUrl, Guid requestId, CancellationToken cancellationToken)
+        private async Task NotifyJobManagerAsync(CodeResponseDto response, string callbackUrl, Guid requestId, CancellationToken cancellationToken = default)
         {
-            response.Result.ResponseSentAt = DateTime.UtcNow;
-
             try
             {
                 await _client.PostAsJsonAsync(callbackUrl, response, cancellationToken);
@@ -92,27 +99,31 @@ namespace Runners.Shared
             }
         }
 
-        private async Task ExecuteUserCodeAsync(ProblemSolutionDto request, CancellationToken cancellationToken)
+        private async Task ExecuteUserCodeAsync(ProblemSolutionDto request, CancellationToken cancellationToken = default)
         {
-            var wrappedCode = _runner.WrapCode(request);
-
             Console.WriteLine("[Runner] Compiling code");
 
-            var compilationResult = await _runner.CompileCodeAsync(wrappedCode, cancellationToken);
+            var compilationResult = await _runner.CompileCodeAsync(request, cancellationToken);
 
             if (!compilationResult.Success)
             {
                 var result = new CodeResponseDto()
                 {
                     RequestId = request.RequestId,
-                    Language = request.Language,
                     Status = RequestStatus.Failed,
+                    VersionId = request.VersionId,
+                    UserId = request.UserId,
+                    UserSolution = request.UserSolution,
+                    Language = request.LanguageCode,
                     Result = new ExecutionResultDto()
                     {
-                        RequestSentAt = request.SentAt,
                         Status = ExecutionStatus.CompileError,
                         ExitCode = 1,
-                        ConsoleOutput = compilationResult.CompilationErrors
+                        ConsoleOutput = compilationResult.CompilationErrors,
+                        PassedTests = 0,
+                        TotalTests = compilationResult.TotalTests,
+                        RequestSentAt = request.SentAt,
+                        ResponseSentAt = DateTimeOffset.UtcNow,
                     }
                 };
 
@@ -123,7 +134,19 @@ namespace Runners.Shared
 
             Console.WriteLine("[Runner] Code has been compiled, ready to execute it");
 
-            var executionResult = await _runner.ExecuteCodeAsync(request.RequestId, request.SentAt, cancellationToken);
+            var executionData = new ExecutionData()
+            {
+                RequestId = request.RequestId,
+                RequestDate = request.SentAt,
+                Language = request.LanguageCode,
+                UserId = request.UserId,
+                VersionId = request.VersionId,
+                UserSolution = request.UserSolution,
+                TotalTests = compilationResult.TotalTests,
+                ExecutablePath = compilationResult.ExecutablePath
+            };
+
+            var executionResult = await _runner.ExecuteCodeAsync(executionData, cancellationToken);
 
             Console.WriteLine("[Runner] Got the execution results, sending them back to the client");
 

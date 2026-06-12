@@ -1,0 +1,61 @@
+<div class="tasks-page layout">
+    <div class="tasks-main">
+        <section class="filters card">
+            <input placeholder="Фильтр по жетону задачи" [(ngModel)]="filterSlug" (input)="applyFilters()" />
+            <select [(ngModel)]="showOnlyPublished" (change)="applyFilters()">
+                <option value="all">Все</option>
+                <option value="published">Опубликованные</option>
+                <option value="unpublished">Неопубликованные</option>
+            </select>
+            <div class="row">
+                <button (click)="clearFilters()">Очистить</button>
+            </div>
+        </section>
+
+        <section class="problems-list">
+            <div *ngFor="let p of filtered" class="problem-card" (click)="setRestoreTarget(p)">
+                <div class="problem-main">
+                    <div class="title">{{ p.title }} <small class="slug">({{ p.slug }})</small></div>
+                    <div class="langs">
+                        <span class="tag">Кликните по карточке для просмотра информации</span>
+                    </div>
+                </div>
+
+                <div class="problem-meta">
+                    <div class="actions">
+                        <button type="button" class="btn-solve"
+                            (click)="$event.stopPropagation(); setRestoreTarget(p, false); onRestoreProblem(p)">
+                            Восстановить
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="filtered.length === 0" class="muted small">Нет задач по текущим фильтрам.</div>
+        </section>
+    </div>
+
+    <app-sidebar class="tasks-sidebar"></app-sidebar>
+</div>
+
+<div class="delete-modal card" *ngIf="detailsDialogOpen" (click)="$event.stopPropagation()">
+    <div class="delete-modal__header">
+        <div class="title">Восстановить задачу</div>
+        <div class="muted small" *ngIf="restoreTarget">
+            {{ restoreTarget.task.title }} ({{ restoreTarget.task.slug }})
+        </div>
+    </div>
+
+    <div class="delete-modal__body">
+        <label for="deleteReason">Причина запроса</label>
+        <textarea readonly="readonly" [value]="restoreTarget?.deleteRequest?.reason || 'Причина не найдена'" rows="5"
+            placeholder="Причина удаления"></textarea>
+    </div>
+
+    <div class="delete-modal__footer row">
+        <button class="secondary" (click)="closeDetailsDialog()">Отмена</button>
+        <button class="btn-primary" (click)="confirmRestoreRequest()" [disabled]="restoreSubmitting">
+            Восстановить
+        </button>
+    </div>
+</div>

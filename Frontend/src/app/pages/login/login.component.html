@@ -1,0 +1,21 @@
+<div class="login">
+  <div class="button-container">
+    <button
+      type="button"
+      class="btn-primary"
+      (click)="onLogin()"
+      [disabled]="loading"
+    >
+      Войти
+    </button>
+
+    <button
+      type="button"
+      class="btn-ghost"
+      (click)="onRegister()"
+      [disabled]="loading"
+    >
+      Регистрация
+    </button>
+  </div>
+</div>

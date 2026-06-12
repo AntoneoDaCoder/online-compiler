@@ -1,14 +1,13 @@
-﻿using Shared.Models;
-
-namespace Shared.DTOs
+﻿namespace Shared.DTOs
 {
     public class ProblemSolutionDto
     {
         public Guid RequestId { get; set; }
-        public long MaxAllowedTimeInMilliseconds { get; set; }
-        public string Language { get; set; } = string.Empty;
-        public string Code { get; set; } = string.Empty;
-        public Problem Problem { get; set; }
-        public DateTime SentAt { get; set; }
+        public Guid VersionId { get; set; }
+        public Guid UserId { get; set; }
+        public string TestManifestJson { get; set; }
+        public string LanguageCode { get; set; } = string.Empty;
+        public string UserSolution { get; set; } = string.Empty;
+        public DateTimeOffset SentAt { get; set; }
     }
 }

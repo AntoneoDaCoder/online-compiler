@@ -1,0 +1,17 @@
+<header class="app-header">
+    <div class="left">
+        <a routerLink="/tasks" class="logo">Judge Frontend</a>
+    </div>
+
+    <div class="center"></div>
+
+    <div class="right">
+        <button *ngIf="showBack()" class="btn-ghost" (click)="goBack()">Назад</button>
+        <button class="btn-ghost" (click)="logout()">Выйти</button>
+    </div>
+</header>
+
+<main class="app-main container">
+    <router-outlet></router-outlet>
+    <app-toast></app-toast>
+</main>

@@ -1,0 +1,83 @@
+{
+  "entrypoint": "Solution",
+  "signature": {
+    "returnType": {
+      "kind": "primitive",
+      "name": "int"
+    },
+    "parameters": [
+      {
+        "name": "arr",
+        "type": {
+          "kind": "array",
+          "items": {
+            "kind": "primitive",
+            "name": "int"
+          }
+        }
+      },
+      {
+        "name": "target",
+        "type": {
+          "kind": "primitive",
+          "name": "int"
+        }
+      }
+    ]
+  },
+  "advancedTests": [
+    {
+      "name": "adv_timeout_test",
+      "timeoutMs": 100,
+      "languageCode": "csharp",
+      "source": "public static async System.Threading.Tasks.Task adv_timeout_test() { await System.Threading.Tasks.Task.Delay(200); }"
+    }
+  ],
+  "sampleTests": [
+    {
+      "name": "test_found",
+      "inputs": [
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        3
+      ],
+      "expected": 2,
+      "comparator": "eq",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_not_found",
+      "inputs": [
+        [
+          1,
+          2,
+          3
+        ],
+        5
+      ],
+      "expected": -1,
+      "comparator": "eq",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_first_occurrence",
+      "inputs": [
+        [
+          1,
+          2,
+          2,
+          3
+        ],
+        2
+      ],
+      "expected": 1,
+      "comparator": "eq",
+      "timeoutMs": 2000
+    }
+  ]
+}

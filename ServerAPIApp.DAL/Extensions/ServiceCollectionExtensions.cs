@@ -1,35 +1,39 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using ServerAPIApp.Contracts.Abstractions;
+using ServerAPIApp.DAL.Confs;
 using ServerAPIApp.DAL.Contexts;
-using ServerAPIApp.Domain.Entities;
 using ServerAPIApp.DAL.Repositories;
 
 namespace ServerAPIApp.DAL.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        public static void ConfigureDbContext(this IServiceCollection services)
+        public static void ConfigureDbContext(this IServiceCollection services, IConfiguration conf)
         {
             services.AddDbContext<BaseDbContext>
                 (
-                    options => options.UseNpgsql(Environment.GetEnvironmentVariable("CONNECTION_STRING"))
+                    options => options.UseNpgsql(conf.GetConnectionString("DbConnectionString"))
                 );
 
-            services.AddIdentity<UserEntity, IdentityRole<Guid>>
-                (
-                    options =>
+            services.AddHangfire((sp, cfg) =>
+            {
+                cfg.UsePostgreSqlStorage(opts =>
+                    opts.UseNpgsqlConnection(conf.GetConnectionString("DbConnectionString")),
+                    new PostgreSqlStorageOptions
                     {
-                        options.Password.RequireDigit = true;
-                        options.Password.RequireUppercase = true;
-                        options.Password.RequiredLength = 10;
-                        options.Password.RequireNonAlphanumeric = false;
-                        options.User.RequireUniqueEmail = true;
-                    }
-                )
-                .AddEntityFrameworkStores<BaseDbContext>()
-                .AddDefaultTokenProviders();
+                        SchemaName = "hangfire",
+                        PrepareSchemaIfNecessary = true,
+                        StartupConnectionMaxRetries = 0,
+                        AllowDegradedModeWithoutStorage = false
+                    });
+            });
+
+            services.AddHangfireServer();
         }
 
         public static void ConfigureRepositories(this IServiceCollection services)
@@ -45,6 +49,17 @@ namespace ServerAPIApp.DAL.Extensions
             services.AddScoped<ISubmissionRepository, SubmissionRepository>();
 
             services.AddScoped<IUserRepository, UserRepository>();
+
+            services.AddScoped<IProblemDeletionRequestRepository, ProblemDeletionRequestRepository>();
+        }
+
+        public static void ConfigureObjectStorage(this IServiceCollection services, IConfiguration cfg)
+        {
+            var minioConfSection = cfg.GetSection("Minio");
+
+            services.Configure<MinioConfiguration>(minioConfSection);
+
+            services.AddSingleton<IObjectStorage, ObjectStorage>();
         }
     }
 }

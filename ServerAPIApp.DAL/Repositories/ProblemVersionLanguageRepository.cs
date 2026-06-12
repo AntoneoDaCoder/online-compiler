@@ -2,6 +2,7 @@
 using ServerAPIApp.Contracts.Abstractions;
 using ServerAPIApp.DAL.Contexts;
 using ServerAPIApp.Domain.Entities;
+using System;
 
 namespace ServerAPIApp.DAL.Repositories
 {
@@ -75,6 +76,15 @@ namespace ServerAPIApp.DAL.Repositories
                 _context.Entry(entry).State = EntityState.Detached;
 
             return affected > 0;
+        }
+
+        public async Task CreateRangeAsync
+            (IEnumerable<ProblemVersionLanguage> range,
+            CancellationToken cancellationToken = default)
+        {
+            await _context.VersionLanguages.AddRangeAsync(range, cancellationToken);
+
+            await _context.SaveChangesAsync(cancellationToken);
         }
     }
 }

@@ -15,10 +15,31 @@ spec:
       serviceAccountName: api-server-sa
       containers:
       - name: api-server
-        image: api-server:local
+        image: api-server:dev
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
+        - name: ConnectionStrings__DbConnectionString
+          valueFrom:
+            secretKeyRef:
+              name: api-secret
+              key: DbConnectionString
+        - name: Minio__AccessKey
+          valueFrom:
+            secretKeyRef:
+              name: api-secret
+              key: AccessKey
+        - name: Minio__SecretKey
+          valueFrom:
+            secretKeyRef:
+              name: api-secret
+              key: SecretKey
+        - name: KeycloakConfiguration__ApiClientSecret
+          valueFrom:
+            secretKeyRef:
+              name: api-secret
+              key: ApiClientSecret
         - name: UseComposite
           valueFrom:
             configMapKeyRef:

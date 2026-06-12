@@ -1,0 +1,96 @@
+﻿using k8s;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
+using ServerAPIApp.Configs;
+using ServerAPIApp.Contracts.Abstractions;
+using ServerAPIApp.Dispatchers;
+using ServerAPIApp.IdProviders;
+using ServerAPIApp.Middlewares;
+using ServerAPIApp.Notifiers;
+
+namespace ServerAPIApp.Extensions
+{
+    public static class ServiceCollectionExtensions
+    {
+        public static void AddRoleHandler(this IServiceCollection services)
+        {
+            services.AddSingleton<IAuthorizationHandler, RoleHandler>();
+        }
+
+        public static void ConfigureDispatchers(this IServiceCollection services, IConfiguration config)
+        {
+            var supportedLanguages = config.GetRequiredSection("SupportedLanguages").Get<string[]>();
+
+            if (supportedLanguages is null || (supportedLanguages.Length == 0))
+                throw new InvalidOperationException("[API] Fatal error. Supported languages are not configured");
+
+            services.AddSignalR();
+
+            services.AddSingleton<IUserIdProvider, JwtUserIdProvider>();
+
+            services.AddScoped<INotificationService, NotificationService>();
+
+            services.AddScoped<ISubmissionNotifier, SubmissionNotifier>();
+
+            services.AddSingleton<IKubernetes>(sp =>
+            {
+                var kubeConfig = KubernetesClientConfiguration.BuildDefaultConfig();
+                return new Kubernetes(kubeConfig);
+            });
+
+            var useComposite = config.GetValue<bool>("UseComposite");
+
+            if (useComposite)
+            {
+                Console.WriteLine("[API] Server starts in composite mode");
+
+                services.Configure<LanguageConfig>("composite", config.GetSection($"Languages:composite"));
+
+                services.AddSingleton<CompositeKubernetesJobManager>(sp =>
+                {
+                    var mgr = new CompositeKubernetesJobManager(
+                        sp.GetRequiredService<IKubernetes>(),
+                        sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>());
+
+                    foreach (var lang in supportedLanguages)
+                        mgr.RegisterLanguage(lang);
+
+                    return mgr;
+                });
+
+                foreach (var lang in supportedLanguages)
+                {
+                    services.AddSingleton<IKubernetesJobManager>(sp =>
+                        new CompositeJobManagerProxy(lang, sp.GetRequiredService<CompositeKubernetesJobManager>()));
+                }
+            }
+            else
+            {
+                Console.WriteLine("[API] Server starts in default mode");
+
+                foreach (var lang in supportedLanguages)
+                {
+                    services.Configure<LanguageConfig>(lang, config.GetSection($"Languages:{lang}"));
+                }
+
+                foreach (var lang in supportedLanguages)
+                {
+                    services.AddSingleton<IKubernetesJobManager>(sp =>
+                    {
+                        var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
+                        return new KubernetesJobManager(
+                            lang,
+                            sp.GetRequiredService<IKubernetes>(),
+                            monitor
+                        );
+                    });
+                }
+            }
+
+            services.AddHostedService<ManagerAdapter>();
+            services.AddSingleton<ICodeDispatcher, CodeDispatcher>();
+            services.AddHostedService(provider => provider.GetRequiredService<ICodeDispatcher>());
+        }
+    }
+}

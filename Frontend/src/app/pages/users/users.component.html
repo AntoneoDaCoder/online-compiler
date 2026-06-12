@@ -1,0 +1,66 @@
+<div class="tasks-page layout">
+    <div class="tasks-main">
+        <section class="filters card">
+            <input placeholder="Фильтр по почте или имени пользователя" [(ngModel)]="filterValue"
+                (input)="applyFilters()" />
+
+            <select [(ngModel)]="filterTarget" (change)="applyFilters()">
+                <option value="username">Имя пользователя</option>
+                <option value="email">Почта пользователя</option>
+            </select>
+            <div class="row">
+                <button (click)="clearFilters()">Очистить</button>
+            </div>
+        </section>
+
+        <section class="problems-list">
+            <div *ngFor="let p of filteredUsers" class="problem-card">
+                <div class="problem-main">
+                    <div class="title">{{ p.username }} <small class="slug">({{ p.email }})</small></div>
+                    <div class="langs">
+                        <span>Дата создания: {{ formatTimestamp(p.createdTimestamp)}}</span>
+                    </div>
+                </div>
+
+                <div class="problem-meta">
+                    <div class="actions">
+                        <button class="btn-solve" (click)="onChangeRoles(p)">Изменить роли</button>
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="filteredUsers.length === 0" class="muted small">Нет пользователей по текущим фильтрам.</div>
+        </section>
+    </div>
+
+    <app-sidebar class="tasks-sidebar"></app-sidebar>
+</div>
+
+<div class="modal-backdrop" *ngIf="detailsDialogOpen" (click)="closeDetailsDialog()"></div>
+
+<div class="delete-modal card" *ngIf="detailsDialogOpen" (click)="$event.stopPropagation()">
+    <div class="delete-modal__header">
+        <div class="title">Изменить роли</div>
+        <div class="muted small" *ngIf="updateTarget">
+            {{ updateTarget.userName }} ({{ updateTarget.email }})
+        </div>
+    </div>
+
+    <div class="delete-modal__body" *ngIf="availableRoles">
+        <div class="roles-list">
+            <label class="role-item" *ngFor="let role of availableRoles; trackBy: trackByRole"
+                [class.role-item--fixed]="role === defaultRole">
+                <input type="checkbox" [checked]="isRoleSelected(role)" [disabled]="role === defaultRole"
+                    (change)="onRoleToggle(role, $any($event.target).checked)" />
+                <span>{{ role }}</span>
+            </label>
+        </div>
+    </div>
+
+    <div class="delete-modal__footer row">
+        <button type="button" class="secondary" (click)="closeDetailsDialog()">Отмена</button>
+        <button type="button" class="btn-primary" (click)="confirmUpdateRoles()" [disabled]="updateRolesSubmitting">
+            Подтвердить
+        </button>
+    </div>
+</div>

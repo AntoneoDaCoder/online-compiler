@@ -1,0 +1,56 @@
+<div class="tasks-page layout">
+    <div class="tasks-main">
+        <section class="filters card">
+            <select [(ngModel)]="filterLanguage" (change)="applyFilters()">
+                <option value="">Все языки</option>
+                <option *ngFor="let l of languages" [value]="l.code">{{ l.displayName }}</option>
+            </select>
+
+
+            <select [(ngModel)]="showOnlyStatus" (change)="applyFilters()">
+                <option value="all">Все статусы</option>
+                <option value="passed">Passed</option>
+                <option value="failed">Failed</option>
+            </select>
+
+            <select [(ngModel)]="sortOrder" (change)="applyFilters()">
+                <option value="descending">Сначала новые</option>
+                <option value="ascending">Сначала старые</option>
+            </select>
+
+
+            <div class="row">
+                <button (click)="clearFilters()">Очистить</button>
+            </div>
+        </section>
+
+
+        <section class="problems-list">
+            <div *ngFor="let v of filtered" class="problem-card">
+                <div class="problem-main">
+                    <div class="title">
+                        <span>Submission ID: {{ v.submission.id }}</span>
+                    </div>
+
+                    <div class="status">
+                        <span class="lang">{{ formatLanguage(v.submission.solutionLanguage) }}</span>
+                        <span class="tests"> {{ v.submission.passedTests }}/{{ v.submission.totalTests }},
+                            {{v.created}}</span>
+                    </div>
+                </div>
+
+
+                <div class="actions">
+                    <button class="btn-open" (click)="openSubmission(v)">Открыть</button>
+                    <button class="btn-delete" (click)="deleteSubmission(v)">Удалить</button>
+                </div>
+            </div>
+
+
+            <div *ngIf="filtered.length === 0" class="muted small">Нет сабмишнов по текущим фильтрам.</div>
+        </section>
+    </div>
+
+
+    <app-sidebar class="tasks-sidebar"></app-sidebar>
+</div>

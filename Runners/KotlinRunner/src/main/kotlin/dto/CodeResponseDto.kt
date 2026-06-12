@@ -1,20 +1,28 @@
 package dto
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import enums.RequestStatus
 import java.util.UUID
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Contextual
 
-@Serializable
 data class CodeResponseDto(
-    @Contextual
-    @SerialName("RequestId")
-    val requestId: UUID,
-    @SerialName("Status")
-    val requestStatus: RequestStatus,
-    @SerialName("Language")
-    val language: String = "",
-    @SerialName("Result")
-    val result: ExecutionResultDto
+    @field:JsonProperty("RequestId")
+    var RequestId: UUID? = null,
+
+    @field:JsonProperty("Status")
+    var Status: RequestStatus? = null,
+
+    @field:JsonProperty("VersionId")
+    var VersionId: UUID? = null,
+
+    @field:JsonProperty("UserId")
+    var UserId: UUID? = null,
+
+    @field:JsonProperty("UserSolution")
+    var UserSolution: String? = null,
+
+    @field:JsonProperty("Language")
+    var Language: String? = null,
+
+    @field:JsonProperty("Result")
+    var Result: ExecutionResultDto? = null
 )

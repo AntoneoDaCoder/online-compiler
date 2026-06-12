@@ -1,4 +1,5 @@
 ﻿using Runners.Shared;
+using Runners.Shared.CodeWrappers.CSharp;
 using Runners.Shared.Runners;
 
 class Runner
@@ -12,7 +13,7 @@ class Runner
             cts.Cancel();
         };
 
-        using (var runner = new RunnerBase(new DotNetRunner()))
+        using (var runner = new RunnerBase(new DotNetRunner(new CSharpWrapper())))
         {
             await runner.ListenAsync(cts.Token);
         }

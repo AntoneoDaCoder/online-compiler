@@ -1,0 +1,67 @@
+{
+  "entrypoint": "Solution",
+  "signature": {
+    "returnType": {
+      "kind": "array",
+      "items": {
+        "kind": "primitive",
+        "name": "int"
+      }
+    },
+    "parameters": [
+      {
+        "name": "numbers",
+        "type": {
+          "kind": "array",
+          "items": {
+            "kind": "primitive",
+            "name": "int"
+          }
+        }
+      }
+    ]
+  },
+  "sampleTests": [
+    {
+      "name": "test_basic",
+      "inputs": [
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      "expected": [
+        2,
+        4
+      ],
+      "comparator": "seq_eq",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_empty",
+      "inputs": [
+        []
+      ],
+      "expected": [],
+      "comparator": "seq_eq",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_contains_check",
+      "inputs": [
+        [
+          10,
+          15,
+          20,
+          25
+        ]
+      ],
+      "expected": 20,
+      "comparator": "contains",
+      "timeoutMs": 2000
+    }
+  ]
+}

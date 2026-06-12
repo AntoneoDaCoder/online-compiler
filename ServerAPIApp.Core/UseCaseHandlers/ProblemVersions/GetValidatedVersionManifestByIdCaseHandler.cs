@@ -1,0 +1,54 @@
+﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using ServerAPIApp.Contracts.Abstractions;
+using ServerAPIApp.Core.UseCases.ProblemVersions;
+using ServerAPIApp.DAL.Confs;
+using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
+using ServerAPIApp.Domain.Exceptions.NotFoundExceptions;
+
+namespace ServerAPIApp.Core.UseCaseHandlers.ProblemVersions
+{
+    public class GetValidatedVersionManifestByIdCaseHandler : IRequestHandler<GetValidatedVersionManifestByIdCase, string>
+    {
+        private IProblemVersionRepository _repo;
+        private IObjectStorage _storage;
+
+        private readonly string _bucketName = "manifestbucket";
+
+        public GetValidatedVersionManifestByIdCaseHandler(IProblemVersionRepository repo, IObjectStorage storage, IOptions<MinioConfiguration> conf)
+        {
+            _repo = repo;
+            _storage = storage;
+            _bucketName = conf.Value.BucketName;
+        }
+
+        public async Task<string> Handle(GetValidatedVersionManifestByIdCase command, CancellationToken cancellationToken)
+        {
+            var entity = await _repo.Query()
+                .AsNoTracking()
+                .Where(x => x.Id == command.VersionId)
+                .Include(x => x.SupportedLanguages)
+                .ThenInclude(x => x.Language)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (entity is null)
+                throw new ResourceNotFoundException("Version not found");
+
+            if (entity.SupportedLanguages.Count == 0 || !entity.SupportedLanguages.Any(pl => pl.Language?.Code == command.LanguageCode))
+                throw new UnsupportedLanguageException($"This problem does not support {command.LanguageCode} language");
+
+            if (string.IsNullOrEmpty(entity.TestTemplateKey))
+                throw new InvalidTestTemplateException("Empty test template key");
+
+            var key = $"problems/{entity.ProblemId}/versions/{entity.Id}/template.json";
+
+            var manifestString = await _storage.GetStringAsync(_bucketName, key, cancellationToken);
+
+            if (manifestString is null)
+                throw new InvalidTestTemplateException("Empty manifest data");
+
+            return manifestString;
+        }
+    }
+}

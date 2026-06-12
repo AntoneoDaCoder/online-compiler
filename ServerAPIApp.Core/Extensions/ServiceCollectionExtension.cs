@@ -1,84 +1,113 @@
-﻿using k8s;
+﻿using FluentValidation;
+using MediatR;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using ServerAPIApp.Core.Abstractions;
+using ServerAPIApp.Core.AuthorizationRequirements;
 using ServerAPIApp.Core.Configs;
-using ServerAPIApp.Core.Repositories;
+using ServerAPIApp.Core.Helpers.TemplateGenerators;
+using ServerAPIApp.Core.PipelineBehaviours;
 using ServerAPIApp.Core.Services;
+using ServerAPIApp.Core.UseCaseHandlers.Users;
+using ServerAPIApp.Core.Validators.Problems;
+using ServerAPIApp.DAL.Extensions;
+using ServerAPIApp.Domain.Constants;
 
 namespace ServerAPIApp.Core.Extensions
 {
     public static class ServiceCollectionExtension
     {
-        private static readonly string[] SupportedLanguages = new[]
-        {
-            "csharp", /*"swift",*/ "java", "postgresql",
-            "mssql", "nodejs", "kotlin", "typescript"
-        };
-
         public static IServiceCollection RegisterServices(this IServiceCollection services, IConfiguration config)
         {
-            services.AddSingleton<ProblemRepository>();
+            services.ConfigureDbContext(config);
+            services.ConfigureObjectStorage(config);
+            services.ConfigureRepositories();
 
-            services.AddSingleton<IKubernetes>(sp =>
+            services.AddAuthorizationBuilder()
+            .AddPolicy("AdminAccess", policy => policy
+                   .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                   .AddRequirements(new RoleRequirement([UserRelatedConstants.AdminRoleName])))
+            .AddPolicy("DefaultAccess", policy => policy
+                   .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                   .AddRequirements(new RoleRequirement([UserRelatedConstants.AdminRoleName, UserRelatedConstants.DefaultUserRole])))
+            .AddPolicy("EditorAccess", policy => policy
+                   .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                   .AddRequirements(new RoleRequirement([UserRelatedConstants.AdminRoleName, UserRelatedConstants.EditorRoleName])));
+
+            var keycloakConf = config.GetSection("KeycloakConfiguration");
+            services.Configure<KeycloakConfiguration>(keycloakConf);
+            var keycloakSettings = keycloakConf.Get<KeycloakConfiguration>();
+
+            services.AddHttpClient<IExternalAuthService, KeycloakService>((sp, client) =>
             {
-                var kubeConfig = KubernetesClientConfiguration.BuildDefaultConfig();
-                return new Kubernetes(kubeConfig);
+                client.BaseAddress = new Uri(keycloakSettings.BaseUrl);
             });
 
-            var useComposite = config.GetValue<bool>("UseComposite");
-
-            if (useComposite)
+            services.AddAuthentication(opt =>
             {
-                Console.WriteLine("[API] Server starts in composite mode");
-
-                services.Configure<LanguageConfig>("composite", config.GetSection($"Languages:composite"));
-
-                services.AddSingleton<CompositeKubernetesJobManager>(sp =>
-                {
-                    var mgr = new CompositeKubernetesJobManager(
-                        sp.GetRequiredService<IKubernetes>(),
-                        sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>());
-
-                    foreach (var lang in SupportedLanguages)
-                        mgr.RegisterLanguage(lang);
-
-                    return mgr;
-                });
-
-                foreach (var lang in SupportedLanguages)
-                {
-                    services.AddSingleton<IKubernetesJobManager>(sp =>
-                        new CompositeJobManagerProxy(lang, sp.GetRequiredService<CompositeKubernetesJobManager>()));
-                }
-            }
-            else
+                opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                opt.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
             {
-                Console.WriteLine("[API] Server starts in default mode");
+                options.MetadataAddress =
+                  keycloakSettings.BaseUrl + "/realms/" + keycloakSettings.Realm + "/.well-known/openid-configuration";
 
-                foreach (var lang in SupportedLanguages)
-                {
-                    services.Configure<LanguageConfig>(lang, config.GetSection($"Languages:{lang}"));
-                }
+                options.RequireHttpsMetadata = false;
 
-                foreach (var lang in SupportedLanguages)
+                options.Events = new JwtBearerEvents
                 {
-                    services.AddSingleton<IKubernetesJobManager>(sp =>
+                    OnMessageReceived = context =>
                     {
-                        var monitor = sp.GetRequiredService<IOptionsMonitor<LanguageConfig>>();
-                        return new KubernetesJobManager(
-                            lang,
-                            sp.GetRequiredService<IKubernetes>(),
-                            monitor
-                        );
-                    });
-                }
-            }
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
 
-            services.AddHostedService<ManagerAdapter>();
-            services.AddSingleton<ICodeDispatcher, CodeDispatcher>();
-            services.AddHostedService(provider => provider.GetRequiredService<ICodeDispatcher>());
+                        if (!string.IsNullOrEmpty(accessToken) &&
+                            path.StartsWithSegments("/api/hubs/user"))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = keycloakSettings.HostName + "/realms/" + keycloakSettings.Realm,
+
+                    ValidateAudience = true,
+                    ValidAudience = keycloakSettings.FrontEndClientId,
+
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true
+                };
+            });
+
+            services.AddKeyedSingleton<ITemplateGenerator, CSharpTemplateGenerator>("csharp");
+            services.AddKeyedSingleton<ITemplateGenerator, NodeJsTemplateGenerator>("nodejs");
+            services.AddKeyedSingleton<ITemplateGenerator, TypeScriptTemplateGenerator>("typescript");
+            services.AddKeyedSingleton<ITemplateGenerator, JavaTemplateGenerator>("java");
+            services.AddKeyedSingleton<ITemplateGenerator, KotlinTemplateGenerator>("kotlin");
+
+            services.AddScoped<IClaimsTransformation, KeycloakClaimTransformer>();
+
+            services.AddScoped<ICleanupService, CleanupService>();
+
+            services.AddMediatR
+                (
+                cfg => cfg.RegisterServicesFromAssembly(typeof(UpdateRolesCaseHandler).Assembly)
+                );
+
+            services.AddValidatorsFromAssembly(typeof(CreateProblemDeletionRequestValidator).Assembly);
+
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
 
             return services;
         }

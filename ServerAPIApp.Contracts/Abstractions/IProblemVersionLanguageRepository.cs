@@ -17,6 +17,9 @@ namespace ServerAPIApp.Contracts.Abstractions
         Task<ProblemVersionLanguage> UpdateAsync
             (ProblemVersionLanguage entity,
             CancellationToken cancellationToken = default);
+        Task CreateRangeAsync
+            (IEnumerable<ProblemVersionLanguage> range,
+            CancellationToken cancellationToken = default);
         Task<bool> DeleteAsync
            (Guid versionId,
             Guid languageId,

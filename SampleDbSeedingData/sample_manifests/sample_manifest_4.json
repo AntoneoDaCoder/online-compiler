@@ -1,0 +1,68 @@
+{
+  "entrypoint": "Solution",
+  "signature": {
+    "returnType": {
+      "kind": "primitive",
+      "name": "int"
+    },
+    "parameters": [
+      {
+        "name": "text",
+        "type": {
+          "kind": "primitive",
+          "name": "string"
+        }
+      }
+    ]
+  },
+  "helpers": [
+    {
+      "inline": "namespace Helpers { public static class VowelHelper { public static bool IsVowel(char c) { return \"aeiouAEIOU\".Contains(c); } } }",
+      "languageCode": "csharp"
+    },
+    {
+      "inline": "class VowelHelper { public static boolean isVowel(char c) { return \"aeiouAEIOU\".indexOf(c) != -1; } }",
+      "languageCode": "java"
+    },
+    {
+      "inline": "const VowelHelper = { isVowel: (c) => /[aeiou]/i.test(c) };",
+      "languageCode": "nodejs"
+    },
+    {
+      "inline": "const VowelHelper = { isVowel: (c: string): boolean => /[aeiou]/i.test(c) };",
+      "languageCode": "typescript"
+    },
+    {
+      "inline": "object VowelHelper { @JvmStatic fun isVowel(c: Char): Boolean = c.toLowerCase() in setOf('a', 'e', 'i', 'o', 'u') }",
+      "languageCode": "kotlin"
+    }
+  ],
+  "advancedTests": [
+    {
+      "name": "adv_test_helper",
+      "timeoutMs": 2000,
+      "languageCode": "csharp",
+      "source": "public static async System.Threading.Tasks.Task adv_test_helper() { if (!Helpers.VowelHelper.IsVowel('a')) throw new System.Exception(\"Vowel check failed\"); await System.Threading.Tasks.Task.CompletedTask; }"
+    }
+  ],
+  "sampleTests": [
+    {
+      "name": "test_basic",
+      "inputs": [
+        "Hello World"
+      ],
+      "expected": 3,
+      "comparator": "eq",
+      "timeoutMs": 2000
+    },
+    {
+      "name": "test_all_vowels",
+      "inputs": [
+        "aeiouAEIOU"
+      ],
+      "expected": 10,
+      "comparator": "eq",
+      "timeoutMs": 2000
+    }
+  ]
+}

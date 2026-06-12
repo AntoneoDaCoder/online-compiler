@@ -30,8 +30,6 @@ else {
         'api-server:local',
         'csharp-runner:local',
         'java-runner:local',
-        'postgresql-runner:local',
-        #'swift-runner:local',
         'nodejs-runner:local',
         'kotlin-runner:local',
         'typescript-runner:local'
@@ -44,7 +42,6 @@ else {
         'nodejs-runner:local'     = @{ ns='nodejs-runners-namespace';     dep='nodejs-runners-deployment' }
         'kotlin-runner:local'     = @{ ns='kotlin-runners-namespace';     dep='kotlin-runners-deployment' }
         'typescript-runner:local' = @{ ns='typescript-runners-namespace'; dep='typescript-runners-deployment' }
-        #'swift-runner:local'     = @{ ns='swift-runners-namespace';      dep='swift-runners-deployment' }
     }
 }
 

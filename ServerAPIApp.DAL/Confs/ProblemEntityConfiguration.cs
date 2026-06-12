@@ -46,27 +46,25 @@ namespace ServerAPIApp.DAL.Confs
             b.Property(x => x.DeletionDeadline)
                 .HasColumnName("deletion_deadline");
 
-            b.Property(x => x.InitiatorId)
-                .HasColumnName("initiator_id");
-
-            b.HasOne(x => x.Initiator)
-                .WithMany()
-                .HasForeignKey(x => x.InitiatorId)
-                .OnDelete(DeleteBehavior.Restrict);
-
             b.Property(x => x.ModifiedAt)
                 .HasColumnName("modified_at");
 
             b.Property(x => x.ModifiedBy)
                 .HasColumnName("modified_by");
 
+            b.Property(x => x.DeletionJobId)
+                .IsRequired(false)
+                .HasMaxLength(36)
+                .HasColumnName("deletion_job_id");
+
             b.HasOne(x => x.Editor)
                 .WithMany()
                 .HasForeignKey(x => x.ModifiedBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            b.Property(x => x.LastPublishedVersion)
-                .HasColumnName("last_published_version");
+            b.Property(x => x.LastPublishedVersionId)
+                .HasColumnName("last_published_version")
+                .IsRequired(false);
 
             b.HasOne(x => x.LastPublishedVersion)
                 .WithMany()
@@ -80,7 +78,7 @@ namespace ServerAPIApp.DAL.Confs
 
             b.HasIndex(x => x.Slug).IsUnique().HasDatabaseName("ux_problems_slug");
             b.HasIndex(x => x.CreatedBy).HasDatabaseName("ix_problems_createdby");
-            b.HasIndex(x => x.IsDeleted).HasDatabaseName("ix_problems_isdeleted");
+            b.HasIndex(x => x.DeletionJobId).HasDatabaseName("ix_problems_deletion_job_id");
         }
     }
 }

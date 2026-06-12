@@ -1,0 +1,623 @@
+----Task-45721 - Фильтрация четных чисел----
+
+// C#
+public class Solution {
+    public static int[] Solution(int[] numbers) {
+        if (numbers == null) return new int[0];
+        return numbers.Where(n => n % 2 == 0).ToArray();
+    }
+}
+
+// Java
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
+public class Solution {
+    public static int[] Solution(int[] numbers) {
+        if (numbers == null) return new int[0];
+        return Arrays.stream(numbers)
+                     .filter(n -> n % 2 == 0)
+                     .toArray();
+    }
+}
+
+// Kotlin
+class Solution {
+    companion object {
+        fun Solution(numbers: IntArray?): IntArray {
+            return numbers?.filter { it % 2 == 0 }?.toIntArray() ?: intArrayOf()
+        }
+    }
+}
+
+// TypeScript
+export class Solution {
+   function solution(numbers: number[] | null): number[] {
+        if (!numbers) return [];
+        return numbers.filter(n => n % 2 === 0);
+    }
+}
+
+// Node.js
+class Solution {
+    function solution(numbers) {
+        if (!numbers) return [];
+        return numbers.filter(n => n % 2 === 0);
+    }
+}
+
+module.exports = { Solution };
+
+----Task-89234 - Поиск максимального элемента----
+
+// C#
+public class Solution {
+    public static int Solution(int[] arr) {
+        if (arr == null || arr.Length == 0) {
+            throw new ArgumentException("Array cannot be empty");
+        }
+        int max = arr[0];
+        for (int i = 1; i < arr.Length; i++) {
+            if (arr[i] > max) max = arr[i];
+        }
+        return max;
+    }
+}
+
+// Java
+public class Solution {
+    public static int solution(int[] arr) {
+        if (arr == null || arr.length == 0) {
+            throw new IllegalArgumentException("Array cannot be empty");
+        }
+        int max = arr[0];
+        for (int i = 1; i < arr.length; i++) {
+            if (arr[i] > max) max = arr[i];
+        }
+        return max;
+    }
+}
+
+// Kotlin
+class Solution {
+    companion object {
+        fun solution(arr: IntArray?): Int {
+            require(!(arr == null || arr.isEmpty())) { "Array cannot be empty" }
+            var max = arr[0]
+            for (i in 1 until arr.size) {
+                if (arr[i] > max) max = arr[i]
+            }
+            return max
+        }
+    }
+}
+
+// TypeScript
+export class Solution {
+    function solution(arr: number[] | null): number {
+        if (!arr || arr.length === 0) {
+            throw new Error("Array cannot be empty");
+        }
+        let max = arr[0];
+        for (let i = 1; i < arr.length; i++) {
+            if (arr[i] > max) max = arr[i];
+        }
+        return max;
+    }
+}
+
+// Node.js
+class Solution {
+    function solution(arr) {
+        if (!arr || arr.length === 0) {
+            throw new Error("Array cannot be empty");
+        }
+        let max = arr[0];
+        for (let i = 1; i < arr.length; i++) {
+            if (arr[i] > max) max = arr[i];
+        }
+        return max;
+    }
+}
+
+module.exports = { Solution };
+
+----Task-56389 - Обращение строки----
+
+// C#
+public class Solution {
+    public static string Solution(string str) {
+        if (str == null) return null;
+        char[] charArray = str.ToCharArray();
+        Array.Reverse(charArray);
+        return new string(charArray);
+    }
+}
+
+// Java
+public class Solution {
+    public static String solution(String str) {
+        if (str == null) return null;
+        return new StringBuilder(str).reverse().toString();
+    }
+}
+
+// Kotlin
+class Solution {
+    companion object {
+        fun solution(str: String?): String? {
+            return str?.reversed()
+        }
+    }
+}
+
+// TypeScript
+export class Solution {
+    static reverse(str: string | null): string | null {
+        if (str === null) return null;
+        return str.split('').reverse().join('');
+    }
+}
+
+// Node.js
+class Solution {
+    static reverse(str) {
+        if (str === null) return null;
+        return str.split('').reverse().join('');
+    }
+}
+
+module.exports = { Solution };
+
+----Task-71246 - Подсчет гласных----
+
+// C#
+public class Solution {
+    public static int Solution(string text) {
+        if (string.IsNullOrEmpty(text)) return 0;
+        int count = 0;
+        string vowels = "aeiouAEIOU";
+        foreach (char c in text) {
+            if (vowels.Contains(c)) count++;
+        }
+        return count;
+    }
+}
+
+// Java
+public class Solution {
+    public static int solution(String text) {
+        if (text == null) return 0;
+        int count = 0;
+        String vowels = "aeiouAEIOU";
+        for (int i = 0; i < text.length(); i++) {
+            if (vowels.indexOf(text.charAt(i)) != -1) count++;
+        }
+        return count;
+    }
+}
+
+// Kotlin
+class Solution {
+    companion object {
+        fun solution(text: String?): Int {
+            if (text.isNullOrEmpty()) return 0
+            val vowels = setOf('a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U')
+            return text.count { it in vowels }
+        }
+    }
+}
+
+// TypeScript
+export class Solution {
+    function solution(text: string | null): number {
+        if (!text) return 0;
+        const vowels = /[aeiou]/gi;
+        const matches = text.match(vowels);
+        return matches ? matches.length : 0;
+    }
+}
+
+// Node.js
+class Solution {
+    function solution(text) {
+        if (!text) return 0;
+        const vowels = /[aeiou]/gi;
+        const matches = text.match(vowels);
+        return matches ? matches.length : 0;
+    }
+}
+
+module.exports = { Solution };
+
+----Task-34891 - Сортировка по возрастанию----
+
+// C#
+public class Solution {
+    public static int[] SortArray(int[] arr) {
+        if (arr == null) return new int[0];
+        int[] sorted = new int[arr.Length];
+        Array.Copy(arr, sorted, arr.Length);
+        Array.Sort(sorted);
+        return sorted;
+    }
+}
+
+// Java
+import java.util.Arrays;
+
+public class Solution {
+    public static int[] sortArray(int[] arr) {
+        if (arr == null) return new int[0];
+        int[] sorted = arr.clone();
+        Arrays.sort(sorted);
+        return sorted;
+    }
+}
+
+// Kotlin
+class Solution {
+    companion object {
+        fun sortArray(arr: IntArray?): IntArray {
+            return arr?.sortedArray() ?: intArrayOf()
+        }
+    }
+}
+
+// TypeScript
+export class Solution {
+    static sortArray(arr: number[] | null): number[] {
+        if (!arr) return [];
+        return arr.slice().sort((a, b) => a - b);
+    }
+}
+
+// Node.js
+class Solution {
+    static sortArray(arr) {
+        if (!arr) return [];
+        return arr.slice().sort((a, b) => a - b);
+    }
+}
+
+module.exports = { Solution };
+
+----Task-62573 - Проверка палиндрома----
+
+// C#
+public class Solution {
+    public static bool Solution(string str) {
+        if (str == null) return false;
+        string cleaned = new string(str.ToLower().Where(char.IsLetterOrDigit).ToArray());
+        return cleaned.SequenceEqual(cleaned.Reverse());
+    }
+}
+
+// Java
+public class Solution {
+    public static boolean solution(String str) {
+        if (str == null) return false;
+        String cleaned = str.toLowerCase().replaceAll("[^a-z0-9]", "");
+        return new StringBuilder(cleaned).reverse().toString().equals(cleaned);
+    }
+}
+
+// Kotlin
+class Solution {
+    companion object {
+        fun solution(str: String?): Boolean {
+            if (str == null) return false
+            val cleaned = str.toLowerCase().filter { it.isLetterOrDigit() }
+            return cleaned == cleaned.reversed()
+        }
+    }
+}
+
+// TypeScript
+export class Solution {
+    function solution(str: string | null): boolean {
+        if (str === null) return false;
+        const cleaned = str.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return cleaned === cleaned.split('').reverse().join('');
+    }
+}
+
+// Node.js
+class Solution {
+    function solution(str) {
+        if (str === null) return false;
+        const cleaned = str.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return cleaned === cleaned.split('').reverse().join('');
+    }
+}
+
+module.exports = { Solution };
+
+----Task-78912 - Сумма матрицы----
+
+// C#
+public class Solution {
+    public static int Solution(int[][] matrix) {
+        if (matrix == null) return 0;
+        int sum = 0;
+        foreach (var row in matrix) {
+            foreach (var val in row) {
+                sum += val;
+            }
+        }
+        return sum;
+    }
+}
+
+// Java
+public class Solution {
+    public static int Solution(int[][] matrix) {
+        if (matrix == null) return 0;
+        int sum = 0;
+        for (int[] row : matrix) {
+            for (int val : row) {
+                sum += val;
+            }
+        }
+        return sum;
+    }
+}
+
+// Kotlin
+class Solution {
+    companion object {
+        fun Solution(matrix: Array<IntArray>?): Int {
+            if (matrix == null) return 0
+            var sum = 0
+            for (row in matrix) {
+                for (value in row) {
+                    sum += value
+                }
+            }
+            return sum
+        }
+    }
+}
+
+// TypeScript
+export class Solution {
+    function solution(matrix: number[][] | null): number {
+        if (!matrix) return 0;
+        let sum = 0;
+        for (let row of matrix) {
+            for (let val of row) {
+                sum += val;
+            }
+        }
+        return sum;
+    }
+}
+
+// Node.js
+class Solution {
+    function solution(matrix) {
+        if (!matrix) return 0;
+        let sum = 0;
+        for (let row of matrix) {
+            for (let val of row) {
+                sum += val;
+            }
+        }
+        return sum;
+    }
+}
+
+module.exports = { Solution };
+
+----Task-93456 - Удаление дубликатов----
+
+// C#
+public class Solution {
+    public static string[] Solution(string[] items) {
+        if (items == null) return new string[0];
+        var seen = new HashSet<string>();
+        var result = new List<string>();
+        foreach (var item in items) {
+            if (!seen.Contains(item)) {
+                seen.Add(item);
+                result.Add(item);
+            }
+        }
+        return result.ToArray();
+    }
+}
+
+// Java
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+
+public class Solution {
+    public static String[] solution(String[] items) {
+            if (items == null) return new String[0];
+            HashSet<String> seen = new HashSet<>();
+            List<String> result = new ArrayList<>();
+            for (String item : items) {
+                if (!seen.contains(item)) {
+                    seen.add(item);
+                    result.add(item);
+                }
+            }
+            return result.toArray(new String[0]);
+    }
+}
+
+// Kotlin
+class Solution {
+    companion object {
+        fun solution(items: Array<String>?): Array<String> {
+            if (items == null) return emptyArray()
+            val seen = mutableSetOf<String>()
+            val result = mutableListOf<String>()
+            for (item in items) {
+                if (seen.add(item)) {
+                    result.add(item)
+                }
+            }
+            return result.toTypedArray()
+        }
+    }
+}
+
+// TypeScript
+export class Solution {
+    function solution(items: string[] | null): string[] {
+        if (!items) return [];
+        const seen = new Set<string>();
+        const result: string[] = [];
+        for (const item of items) {
+            if (!seen.has(item)) {
+                seen.add(item);
+                result.push(item);
+            }
+        }
+        return result;
+    }
+}
+
+// Node.js
+class Solution {
+    function solution(items) {
+        if (!items) return [];
+        const seen = new Set();
+        const result = [];
+        for (const item of items) {
+            if (!seen.has(item)) {
+                seen.add(item);
+                result.push(item);
+            }
+        }
+        return result;
+    }
+}
+
+module.exports = { Solution };
+
+----Task-28167 - Поиск индекса элемента----
+
+// C#
+public class Solution {
+    public static int FindIndex(int[] arr, int target) {
+        if (arr == null) return -1;
+        for (int i = 0; i < arr.Length; i++) {
+            if (arr[i] == target) return i;
+        }
+        return -1;
+    }
+}
+
+// Java
+public class Solution {
+    public static int findIndex(int[] arr, int target) {
+        if (arr == null) return -1;
+        for (int i = 0; i < arr.length; i++) {
+            if (arr[i] == target) return i;
+        }
+        return -1;
+    }
+}
+
+// Kotlin
+class Solution {
+    companion object {
+        fun findIndex(arr: IntArray?, target: Int): Int {
+            if (arr == null) return -1
+            for (i in arr.indices) {
+                if (arr[i] == target) return i
+            }
+            return -1
+        }
+    }
+}
+
+// TypeScript
+export class Solution {
+    static findIndex(arr: number[] | null, target: number): number {
+        if (!arr) return -1;
+        for (let i = 0; i < arr.length; i++) {
+            if (arr[i] === target) return i;
+        }
+        return -1;
+    }
+}
+
+// Node.js
+class Solution {
+    static findIndex(arr, target) {
+        if (!arr) return -1;
+        for (let i = 0; i < arr.length; i++) {
+            if (arr[i] === target) return i;
+        }
+        return -1;
+    }
+}
+
+module.exports = { Solution };
+
+----Task-51324 - Объединение массивов----
+
+// C#
+public class Solution {
+    public static int[] Solution(int[] arr1, int[] arr2) {
+        List<int> list = new List<int>();
+        if (arr1 != null) list.AddRange(arr1);
+        if (arr2 != null) list.AddRange(arr2);
+        return list.ToArray();
+    }
+}
+
+// Java
+import java.util.ArrayList;
+import java.util.List;
+
+public class Solution {
+    public static int[] solution(int[] arr1, int[] arr2) {
+        List<Integer> list = new ArrayList<>();
+        if (arr1 != null) {
+            for (int num : arr1) list.add(num);
+        }
+        if (arr2 != null) {
+            for (int num : arr2) list.add(num);
+        }
+        return list.stream().mapToInt(i -> i).toArray();
+    }
+}
+
+// Kotlin
+class Solution {
+    companion object {
+        fun Solution(arr1: IntArray?, arr2: IntArray?): IntArray {
+            val list = mutableListOf<Int>()
+            arr1?.forEach { list.add(it) }
+            arr2?.forEach { list.add(it) }
+            return list.toIntArray()
+        }
+    }
+}
+
+// TypeScript
+export class Solution {
+    exports.Solution = async function(arr1: number[] | null, arr2: number[] | null): Promise<number[]>  {
+        const result: number[] = [];
+        if (arr1) result.push(...arr1);
+        if (arr2) result.push(...arr2);
+        return result;
+    }
+}
+
+// Node.js
+class Solution {
+     exports.Solution = async function(arr1, arr2) {
+        const result = [];
+        if (arr1) result.push(...arr1);
+        if (arr2) result.push(...arr2);
+        return result;
+    }
+}
+
+module.exports = { Solution };

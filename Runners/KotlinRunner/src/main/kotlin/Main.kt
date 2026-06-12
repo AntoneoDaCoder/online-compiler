@@ -1,39 +1,32 @@
-import core.KotlinRunner
-import core.RunnerServer
+import core.*
 import dto.CodeResponseDto
 import dto.ProblemSolutionDto
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
+import core.JsonUtils
 import org.slf4j.LoggerFactory
-import java.time.LocalDateTime
-import java.util.UUID
-import core.UUIDSerializer
-import core.LocalDateTimeSerializer
 
 fun main(args: Array<String>) {
-    val logger = LoggerFactory.getLogger("Main")
-    val runner = KotlinRunner()
-
-    // тот же Json, что и в RunnerServer
-    val json = Json {
-        ignoreUnknownKeys = true
-        prettyPrint = false
-        encodeDefaults = true
-        serializersModule = SerializersModule {
-            contextual(UUID::class, UUIDSerializer)
-            contextual(LocalDateTime::class, LocalDateTimeSerializer)
-        }
+    val supervisorProcessBuilder = ProcessBuilder("./RunnerSupervisor"
+    ).apply {
+        redirectErrorStream(false)
     }
+
+    val logger = LoggerFactory.getLogger("Main")
+    val runner = KotlinRunner(supervisorProcessBuilder)
 
     when {
         args.contains("--once") -> {
             try {
                 val input = System.`in`.readBytes().toString(Charsets.UTF_8)
-                val request = json.decodeFromString(ProblemSolutionDto.serializer(), input)
+                logger.info("[Main] Received input (${input.length} chars)")
+
+                // Используем JsonUtils.objectMapper
+                val request = JsonUtils.objectMapper.readValue(input, ProblemSolutionDto::class.java)
+                logger.info("[Main] Parsed request: RequestId=${request.RequestId}, Manifest length=${request.TestManifestJson?.length}")
 
                 val response: CodeResponseDto = runner.run(request, logger)
 
-                println(json.encodeToString(CodeResponseDto.serializer(), response))
+                val output = JsonUtils.objectMapper.writeValueAsString(response)
+                println(output)
             } catch (e: Exception) {
                 System.err.println("[KotlinRunner] CLI mode failed: $e")
                 e.printStackTrace(System.err)
@@ -47,8 +40,12 @@ fun main(args: Array<String>) {
             logger.info("[Main] Server started on port 5000")
         }
 
+        args.contains("--test") -> {
+            // ... тестовый режим остается без изменений
+        }
+
         else -> {
-            System.err.println("Usage: java -jar app.jar [--once | --server]")
+            System.err.println("Usage: java -jar app.jar [--once | --server | --test <json-file>]")
         }
     }
 }

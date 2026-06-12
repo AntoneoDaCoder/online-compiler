@@ -1,24 +1,38 @@
 package dto
 
+import com.fasterxml.jackson.annotation.JsonFormat
+import com.fasterxml.jackson.annotation.JsonProperty
 import enums.ExecutionStatus
-import java.time.Duration
-import java.time.LocalDateTime
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Contextual
+import java.time.OffsetDateTime
 
-@Serializable
 data class ExecutionResultDto(
-    @SerialName("Status")
-    val status: ExecutionStatus,
-    @SerialName("ExitCode")
-    val exitCode: Int = 0,
-    @SerialName("ConsoleOutput")
-    val consoleOutput: String = "",
-    @Contextual
-    @SerialName("RequestSentAt")
-    val requestSentAt: java.time.LocalDateTime,
-    @Contextual
-    @SerialName("ResponseSentAt")
-    val responseSentAt: java.time.LocalDateTime
+    @field:JsonProperty("Status")
+    var Status: ExecutionStatus? = null,
+
+    @field:JsonProperty("ExitCode")
+    var ExitCode: Int = 0,
+
+    @field:JsonProperty("ConsoleOutput")
+    var ConsoleOutput: String? = null,
+
+    @field:JsonProperty("PassedTests")
+    var PassedTests: Int = 0,
+
+    @field:JsonProperty("TotalTests")
+    var TotalTests: Int = 0,
+
+    @field:JsonProperty("WallTimeMs")
+    var WallTimeMs: Long = 0,
+    @field:JsonProperty("PeakMemoryBytes")
+    var PeakMemoryBytes: Long = 0,
+    @field:JsonProperty("CpuTimeUs")
+    var CpuTimeUs: Long = 0,
+
+    @field:JsonProperty("RequestSentAt")
+    @field:JsonFormat(shape = JsonFormat.Shape.STRING)
+    var RequestSentAt: OffsetDateTime? = null,
+
+    @field:JsonProperty("ResponseSentAt")
+    @field:JsonFormat(shape = JsonFormat.Shape.STRING)
+    var ResponseSentAt: OffsetDateTime? = null
 )

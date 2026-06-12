@@ -1,7 +1,905 @@
-html, body {
-  height: 100%;
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: auto;
+/* src/styles.css - глобальные стили для проекта */
+
+/* --- variables --- */
+:root {
+    --bg: #f6f8fb;
+    --card: #ffffff;
+    --muted: #6b7280;
+    --accent: #0b5cff;
+    --danger: #e11d48;
+    --success: #16a34a;
+    --border: #e6e9ef;
+    --radius: 8px;
+    --shadow: 0 6px 18px rgba(22, 24, 26, 0.06);
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;
+    --ui-font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --gap: 16px;
+}
+
+/* --- reset / base --- */
+* {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--ui-font);
+    background: var(--bg);
+    color: #111827;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.4;
+    font-size: 14px;
+}
+
+/* page shell */
+.app-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* header */
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 20px;
+    background: linear-gradient(90deg, #fff, #fafbff);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+    z-index: 10;
+}
+
+/* left logo */
+.app-header .left .logo {
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 18px;
+}
+
+/* center area (flex filler) */
+.app-header .center {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* right area: spacing between items to avoid "слипания" */
+.app-header .right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* top-nav (keep for other uses) */
+.top-nav {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.top-nav a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 6px 8px;
+    border-radius: 6px;
+}
+
+.top-nav a:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+/* links/buttons in header right */
+.app-header .right a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 6px 8px;
+    border-radius: 6px;
+}
+
+.app-header .right a:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+/* ghost button used for "Назад" (app.component uses class btn-ghost) */
+.btn-ghost {
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease, transform .06s;
+    color: var(--muted);
+}
+
+.btn-ghost:hover {
+    background: rgba(11, 92, 255, 0.06);
+    border-color: rgba(11, 92, 255, 0.12);
+    color: var(--accent);
+    transform: translateY(-1px);
+}
+
+/* primary button (for send etc) - consistent look */
+.btn-primary {
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .06s ease, box-shadow .06s, background .12s;
+}
+
+.btn-primary:not(:disabled):hover {
+    transform: translateY(-1px);
+    background: #0648d4;
+}
+
+.btn-primary:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* main area */
+.app-main {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.container {
+    width: 100%;
+    max-width: var(--max-width);
+    display: block;
+}
+
+/* layout helper used by pages */
+.layout {
+    display: flex;
+    gap: var(--gap);
+    align-items: flex-start;
+}
+
+/* default card */
+.card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 12px;
+}
+
+/* sidebar (right) */
+.sidebar {
+    width: 260px;
+    flex: 0 0 260px;
+    position: sticky;
+    top: 20px;
+    align-self: flex-start;
+}
+
+.sidebar ul {
+    list-style: none;
+    margin: 0;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sidebar a {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: #0f172a;
+    text-decoration: none;
+}
+
+.sidebar a:hover {
+    background: #f1f5f9;
+}
+
+/* page-specific */
+.tasks-page .tasks-main {
+    flex: 1;
+}
+
+.tasks-sidebar {
+    flex: 0 0 260px;
+}
+
+/* problems list */
+.problems-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.problem-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 10px rgba(16, 24, 40, 0.03);
+}
+
+.problem-card:hover {
+    box-shadow: 0 4px 10px rgba(14, 22, 37, 0.03);
+    border-color: #558af4;
+}
+
+
+.problem-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.title {
+    font-weight: 600;
+}
+
+.slug {
+    font-weight: 400;
+    color: var(--muted);
+    font-size: 12px;
+    margin-left: 6px;
+}
+
+.langs {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+.problem-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+
+.actions button {
+    margin-left: 8px;
+}
+
+/* versions / submissions list */
+.version-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.version-card div {
+    font-size: 13px;
+    color: #111827;
+}
+
+/* левая панель: 60% ширины */
+.code-editor .editor-left {
+    width: 60%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    box-sizing: border-box;
+    min-height: 0;
+    /* важно для корректного поведения в flex */
+}
+
+/* textarea/select/input common styles */
+.code-input,
+textarea,
+input,
+select {
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #fff;
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+/* textarea внутри редактора: занимает всё доступное пространство между селектором и кнопкой */
+.code-editor .code-field {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* критично */
+    display: flex;
+    flex-direction: column;
+}
+
+.code-editor .code-field .code-input {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* критично, чтобы overflow работал */
+    resize: none;
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #fff;
+    overflow: auto;
+}
+
+/* кнопка отправки располагается внизу левой панели */
+.code-editor .actions {
+    flex: 0 0 52px;
+    display: flex;
+    align-items: center;
+}
+
+/* statement/result blocks inside right panel:
+   statement-card ~60% height, result-card ~40% height (flex ratios) */
+.code-editor .statement-card {
+    flex: 6 1 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+}
+
+.code-editor .result-card {
+    flex: 4 1 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+}
+
+/* body of statement/result should be scrollable */
+.code-editor .stmt-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+.code-editor .statement-pre {
+    margin: 0;
+    padding: 8px;
+    background: #fafafa;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    height: 100%;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.code-editor .result-pre {
+    margin: 0;
+    padding: 8px;
+    background: #f7f7ff;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    height: 100%;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
+/* statement font */
+.statement pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: var(--ui-font);
+    font-size: 13px;
+}
+
+/* result font */
+.result pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: var(--mono);
+    font-size: 13px;
+}
+
+/* problem editor */
+.problem-editor textarea {
+    min-height: 140px;
+}
+
+.helpers,
+.simple-tests,
+.adv-tests {
+    margin-top: 12px;
+}
+
+.helper-item {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.helper-item textarea {
+    flex: 1;
+}
+
+/* forms and buttons */
+label {
+    font-size: 13px;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 4px;
+}
+
+input,
+select,
+textarea {
+    box-sizing: border-box;
+}
+
+button {
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: transform .06s ease, box-shadow .06s, background .12s;
+}
+
+button:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(11, 92, 255, 0.12);
+}
+
+button[disabled] {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+button.secondary {
+    background: #fff;
+    color: var(--accent);
+    border: 1px solid var(--border);
+    font-weight: 500;
+}
+
+button.ghost {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+}
+
+/* tags / status */
+.tag {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: var(--accent);
+    font-size: 12px;
+}
+
+.status-failed {
+    color: var(--danger);
+}
+
+.status-ok {
+    color: var(--success);
+}
+
+/* utilities */
+.flex {
+    display: flex;
+}
+
+.row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.small {
+    font-size: 12px;
+}
+
+/* responsive */
+@media (max-width: 960px) {
+    .layout {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        position: relative;
+        width: 100%;
+    }
+
+    .code-editor {
+        flex-direction: column;
+        width: 100%;
+        margin: 0;
+        height: auto;
+    }
+
+    .code-editor .editor-left,
+    .code-editor .editor-right {
+        width: 100%;
+    }
+
+    .code-editor .statement-card,
+    .code-editor .result-card {
+        flex: none;
+    }
+}
+
+/* accessibility focus */
+:focus {
+    outline: 2px solid rgba(11, 92, 255, 0.12);
+    outline-offset: 2px;
+}
+
+
+.code-editor-page {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+/* ===== Code editor layout override ===== */
+
+/* контейнер для страницы редактора — во всю ширину */
+.app-main .container:has(.code-editor) {
+    max-width: none;
+    width: 100%;
+    padding-left: 10vw;
+    padding-right: 10vw;
+}
+
+.submission-page {
+    display: flex;
+    flex-direction: row;
+}
+
+.submission-detail {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.app-main .submission-page {
+    height: 100%;
+}
+
+.app-main:has(.submission-page) {
+    height: 60%;
+}
+
+.submission-detail .body {
+    height: 60%;
+    margin-top: 3%;
+}
+
+.submission-detail .code-field {
+    height: 90%;
+}
+
+.submission-detail .code-field .code-input {
+    height: 100%;
+}
+
+.submission-page .card {
+    flex: 6 1 0;
+    height: 600px;
+}
+
+.submission-detail .header {
+    display: flex;
+    height: 30%;
+    flex-direction: column;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1000;
+}
+
+.delete-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(620px, calc(100vw - 32px));
+    z-index: 1001;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.delete-modal__header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.delete-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.delete-modal__body textarea {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+    font-family: var(--ui-font);
+}
+
+.delete-modal__footer {
+    justify-content: flex-end;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1000;
+}
+
+.delete-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(620px, calc(100vw - 32px));
+    z-index: 1001;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: min(80vh, 720px);
+    overflow: hidden;
+}
+
+.delete-modal__header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.delete-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.delete-modal__footer {
+    justify-content: flex-end;
+}
+
+.roles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.role-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    user-select: none;
+}
+
+.role-item input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
+.role-item span {
+    font-family: var(--ui-font);
+    font-size: 14px;
+    color: #111827;
+}
+
+.role-item--fixed {
+    background: #f8fafc;
+    cursor: default;
+    opacity: 1;
+}
+
+.role-item--fixed span {
+    color: var(--muted);
+}
+
+.profile-page.layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 32px;
+}
+
+.profile-main {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: center;
+    /* центрируем карточку */
+}
+
+.profile-card {
+    width: 480px;
+    /* фиксированная ширина карточки */
+    max-width: 100%;
+}
+
+.profile-sidebar {
+    margin-left: auto;
+}
+
+.profile-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.profile-title {
+    display: block;
+}
+
+.profile-head h3 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    line-height: 1.15;
+    word-break: break-word;
+}
+
+.profile-id {
+    margin-top: 4px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 0;
+}
+
+.profile-actions {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.profile-sidebar,
+app-sidebar.profile-sidebar {
+    display: block;
+    flex: 0 0 340px;
+    width: 340px;
+    min-width: 340px;
+    margin-left: auto;
+}
+
+app-sidebar.profile-sidebar .sidebar {
+    width: 340px;
+    min-width: 340px;
+}
+
+.sidebar a {
+    white-space: nowrap;
+}
+
+@media (max-width: 1024px) {
+    .profile-page.layout {
+        flex-direction: column;
+    }
+
+    .profile-main,
+    .profile-sidebar,
+    app-sidebar.profile-sidebar,
+    app-sidebar.profile-sidebar .sidebar {
+        width: 100%;
+        min-width: 0;
+        flex: 1 1 auto;
+        margin-left: 0;
+    }
+
+    .sidebar a {
+        white-space: normal;
+    }
+}
+
+.profile-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.45);
+    z-index: 1000;
+}
+
+.profile-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(620px, calc(100vw - 32px));
+    max-height: min(80vh, 720px);
+    z-index: 1001;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
+}
+
+.profile-modal__header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.profile-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.profile-modal__body textarea {
+    width: 100%;
+    min-height: 140px;
+    resize: vertical;
+    font-family: var(--ui-font);
+}
+
+.profile-modal__footer {
+    justify-content: flex-end;
+}
+
+.submission-page__header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }

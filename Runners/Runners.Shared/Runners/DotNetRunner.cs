@@ -1,33 +1,22 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
 using NUnitLite;
+using ServerAPIApp.Domain.Exceptions.BadRequestExceptions;
 using Shared.DTOs;
 using Shared.Enums;
+using Shared.Helpers;
 using System.Diagnostics;
 using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
+using System.Text.Json;
 
 namespace Runners.Shared.Runners
 {
     public class DotNetRunner : IRunner
     {
         const int _maxProcessLifetime = 25000;
-        const string _tmpDllPath = "/tmp/UserProgram.dll";
-        const string _tmpRuntimeConfigPath = "/tmp/UserProgram.runtimeconfig.json";
-
-        const string _boilerplateUsings = """
-                using System;
-                using System.Collections.Generic;
-                using System.Linq;
-                using System.Text;
-                using System.Threading.Tasks;
-                using NUnit.Framework;
-                using NUnitLite;
-                using Microsoft.EntityFrameworkCore;
-                """;
+        const string _basePath = "/tmp";
+        readonly string _tmpRuntimeConfigPath = Path.Combine(_basePath, "UserProgram.runtimeconfig.json");
 
         const string _runtimeConfig =
                """
@@ -36,10 +25,10 @@ namespace Runners.Shared.Runners
                          "configProperties": {
                             "System.GC.Server": false
                     },
-                    "tfm": "net9.0",
+                    "tfm": "net10.0",
                     "framework": {
                         "name": "Microsoft.NETCore.App",
-                        "version": "9.0.0"
+                        "version": "10.0.1"
                         }
                     }
                 }
@@ -48,14 +37,6 @@ namespace Runners.Shared.Runners
         static string[] _dllsToCopy = new[] {
             "nunitlite.dll",
             "nunit.framework.dll",
-            "Microsoft.EntityFrameworkCore.dll",
-        };
-        static ProcessStartInfo _pInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            Arguments = $"{_tmpDllPath}",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
         };
 
         private static int _compilationCount = 0;
@@ -63,6 +44,18 @@ namespace Runners.Shared.Runners
         private static List<AssemblyMetadata> _metadataCache;
 
         private bool _isDisposed;
+
+        private ITestWrapper _codeWrapper;
+
+        static readonly ProcessStartInfo _supervisorPsi = new ProcessStartInfo
+        {
+            FileName = "RunnerSupervisor",
+            UseShellExecute = false,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+
 
         static DotNetRunner()
         {
@@ -78,8 +71,7 @@ namespace Runners.Shared.Runners
                 typeof(Task).Assembly.Location,
                 typeof(Assert).Assembly.Location,
                 typeof(AutoRun).Assembly.Location,
-                typeof(DbContext).Assembly.Location,
-                typeof(DbContextOptionsBuilder).Assembly.Location,
+                typeof(JsonSerializer).Assembly.Location
             };
 
             foreach (var dll in systemAssemblies)
@@ -125,217 +117,204 @@ namespace Runners.Shared.Runners
             }
         }
 
-        public DotNetRunner()
+        public DotNetRunner(ITestWrapper wrapper)
         {
             File.WriteAllText(_tmpRuntimeConfigPath, _runtimeConfig);
+
+            _codeWrapper = wrapper;
         }
 
-        public string WrapCode(ProblemSolutionDto problemSolutionDto)
+        public Task<CompilationResult> CompileCodeAsync(ProblemSolutionDto userSolution, CancellationToken cancellationToken = default)
         {
-            var sb = new StringBuilder(_boilerplateUsings);
-
-            foreach (var definition in problemSolutionDto.Problem.AdditionalDefinitions)
+            ManifestDto manifest;
+            try
             {
-                sb.AppendLine(definition.Value);
-
-                if (definition.Value.Contains("DbContext"))
-                {
-                    sb.AppendLine(@"    public static class TestInfrastructure
-                                        {
-                                            public static string Schema = ""linq_schema"";
-
-                                            public static AppDbContext CreateContext()
-                                            {
-                                                var connectionString = ""Host=postgres.postgresql.svc.cluster.local;Port=5432;Database=postgresdb;Username=postgresadmin;Password=admin123"";
-
-                                                var options = new DbContextOptionsBuilder<AppDbContext>()
-                                                            .UseNpgsql(connectionString, o => o.MigrationsHistoryTable(""__EFMigrationsHistory"", Schema))
-                                                            .Options;
-
-                                                var context = new AppDbContext(options);
-
-                                                context.Database.ExecuteSql($""CREATE SCHEMA IF NOT EXISTS \""{Schema}\"""");
-
-                                                context.Database.EnsureDeleted();
-                                                context.Database.EnsureCreated();
-
-                                                return context;
-                                            }
-                                        }"
-                    );
-                }
+                manifest = ManifestParser.Parse(userSolution.TestManifestJson, userSolution.LanguageCode); // конвертация тестового манифеста из JSON в объектное представление
             }
-
-
-            sb.AppendLine(
-                $$"""
-            {{problemSolutionDto.Code}}
-            public class Program
+            catch (InvalidTestTemplateException ex)
             {
-                static int Main(string[] args)
-                {
-                    var argsWithNoResult = args.Concat(new[] { "--noresult" }).ToArray();
-                    var result = new AutoRun().Execute(argsWithNoResult);
-                    Console.Out.Flush();
-                    return result;
-                }
-            }
-            [TestFixture]
-            public class GeneratedTests
-            {      
-            """);
-
-
-            foreach (var testCase in problemSolutionDto.Problem.TestCases)
-            {
-                sb.AppendLine(
-                    $$"""
-                [Test]
-                public void {{testCase.Name}}()
-                {
-                    {{testCase.TestInitialization}}
-
-                    var testTask = Task.Run( ()=>
+                return Task.FromResult
+                    (
+                    new CompilationResult()
                     {
-                        {{testCase.InputExpression}}
-                        {{testCase.OutputExpression}}
-                    });
-                    
-                    try
-                    {
-                        if (!testTask.Wait(TimeSpan.FromMilliseconds({{problemSolutionDto.MaxAllowedTimeInMilliseconds}})))
-                        {
-                            Assert.Fail("Test execution timed out");
-                        }
+                        Success = false,
+                        CompilationErrors = $"Manifest validation failed: {ex.Message}",
+                        TotalTests = 0,
+                        ExecutablePath = ""
                     }
-                    catch(AggregateException ae)
-                    {
-                        throw ae.InnerException ?? ae;
-                    }
-                }
-                """
                     );
             }
-            sb.AppendLine("}");
+            catch (System.Text.Json.JsonException ex)
+            {
+                return Task.FromResult
+                  (
+                  new CompilationResult()
+                  {
+                      Success = false,
+                      CompilationErrors = $"Manifest JSON parse error: {ex.Message}",
+                      TotalTests = 0,
+                      ExecutablePath = ""
+                  }
+                  );
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult
+                    (
+                    new CompilationResult()
+                    {
+                        Success = false,
+                        CompilationErrors = $"Manifest parse error: {ex.Message}",
+                        TotalTests = 0,
+                        ExecutablePath = ""
+                    }
+                    );
+            }
 
-            return sb.ToString();
-        }
+            if (manifest.SampleTests.Count == 0 && !manifest.AdvancedTests.Any(t => t.LanguageCode == userSolution.LanguageCode))
+                return Task.FromResult
+                   (
+                   new CompilationResult()
+                   {
+                       Success = false,
+                       CompilationErrors = $"Invalid manifest: no tests for {userSolution.LanguageCode} detected",
+                       TotalTests = 0,
+                       ExecutablePath = ""
+                   }
+                   );
 
-        public Task<(bool Success, string CompilationErrors)> CompileCodeAsync(string fullCode, CancellationToken cancellationToken)
-        {
-            var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken);
+            var executablePath = Path.Combine(_basePath, $"{userSolution.RequestId:N}.dll"); // формирование пути будущего исполняемого файла
+
+            var fullCode = _codeWrapper.GenerateSource(manifest, userSolution.UserSolution, "SolutionContainer"); // получение итогового текста программы
+
+            var syntaxTree = CSharpSyntaxTree.ParseText(fullCode, cancellationToken: cancellationToken); // создание синтаксического дерева на основе полученного итогового текста программы
 
             var options = new CSharpCompilationOptions(
                 OutputKind.ConsoleApplication,
                 optimizationLevel: OptimizationLevel.Release,
-                allowUnsafe: false);
-
+                allowUnsafe: false); // составление опций компиляции (уровень оптимизации, тип выходного файла, ограничение на использование unsafe-кода)
 
             var compiledAssembly = CSharpCompilation.Create(
                 "UserProgram",
                 new[] { syntaxTree },
                 GetReferences(),
-                options);
+                options); // компиляциия синт. дерева в сборку (Assembly)
 
 
             using var ms = new MemoryStream();
 
-            var compilationResult = compiledAssembly.Emit(ms, cancellationToken: cancellationToken);
+            var compilationResult = compiledAssembly.Emit(ms, cancellationToken: cancellationToken); // генерация IL-кода в указанный поток памяти
 
-            var compilationResultString = string.Join("\n", compilationResult.Diagnostics);
+            var compilationResultString = string.Join("\n", compilationResult.Diagnostics); // составление результатов компиляции
 
             if (compilationResult.Success)
             {
                 ms.Seek(0, SeekOrigin.Begin);
-                using var fs = File.Create(_tmpDllPath);
+                using var fs = File.Create(executablePath); // запись скомпилированной программы на диск
                 ms.CopyTo(fs);
             }
 
-            if (Interlocked.Increment(ref _compilationCount) % 5 == 0)
+            if (Interlocked.Increment(ref _compilationCount) % 5 == 0) // выполнение сборки мусора каждые 5 компиляций
             {
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
                 GC.WaitForPendingFinalizers();
             }
 
-            return Task.FromResult((compilationResult.Success, compilationResultString));
+            return Task.FromResult
+                (
+                new CompilationResult()
+                {
+                    Success = compilationResult.Success,
+                    CompilationErrors = compilationResultString,
+                    TotalTests = manifest.SampleTests.Count + manifest.AdvancedTests.Count,
+                    ExecutablePath = executablePath,
+                });
         }
 
-        public async Task<CodeResponseDto> ExecuteCodeAsync(Guid requestId, DateTime requestDate, CancellationToken cancellationToken)
+        public async Task<CodeResponseDto> ExecuteCodeAsync(ExecutionData data, CancellationToken cancellationToken = default)
         {
-            var result = new CodeResponseDto()
+            var result = new CodeResponseDto() // предварительное формирование ответа
             {
-                RequestId = requestId,
-                Language = "csharp",
+                RequestId = data.RequestId,
+                UserId = data.UserId,
+                UserSolution = data.UserSolution,
+                Language = data.Language,
+                VersionId = data.VersionId,
                 Result = new ExecutionResultDto()
                 {
-                    RequestSentAt = requestDate,
+                    RequestSentAt = data.RequestDate,
+                    ResponseSentAt = DateTimeOffset.UtcNow,
+                    TotalTests = data.TotalTests,
                 }
             };
 
-            using var proc = new Process
+            var runRequest = new RunRequestDto() // формирование запроса к компоненту тестирования
             {
-                StartInfo = _pInfo,
+                ExecutorFileName = "dotnet",
+                CommandLineArguments = ["exec", "--runtimeconfig", _tmpRuntimeConfigPath],
+                ExecutableFileName = data.ExecutablePath,
+                MaxProcessLifetime = _maxProcessLifetime
             };
 
-            proc.Start();
+            var serializedRequest = JsonSerializer.Serialize(runRequest); // сериализация запроса
 
-            if (!proc.WaitForExit(_maxProcessLifetime))
+            using var supervisorProc = new Process()
             {
-                proc.Kill();
+                StartInfo = _supervisorPsi
+            };
+
+            supervisorProc.Start(); // запуск компонента тестирования
+
+            await supervisorProc.StandardInput.WriteAsync(serializedRequest); // запись запроса в StdIn компонента тестирования
+
+            supervisorProc.StandardInput.Close(); // закрытие StdIn
+
+            var stdoutTask = supervisorProc.StandardOutput.ReadToEndAsync(cancellationToken); // получение задачи на чтение stdout
+            var stderrTask = supervisorProc.StandardError.ReadToEndAsync(cancellationToken); // получение задачи на чтение stderr
+
+            if (!supervisorProc.WaitForExit(_maxProcessLifetime))
+            {
+                supervisorProc.Kill();
+                supervisorProc.WaitForExit();
+
                 result.Status = RequestStatus.Failed;
                 result.Result.Status = ExecutionStatus.TimedOut;
                 result.Result.ExitCode = 124;
-                result.Result.ConsoleOutput = "Execution timed out.";
+                result.Result.ConsoleOutput = "Supervisor timed out.";
 
-                File.Delete(_tmpDllPath);
+                File.Delete(data.ExecutablePath);
 
                 return result;
             }
 
-            result.Result.ExitCode = proc.ExitCode;
+            supervisorProc.WaitForExit();
 
-            if (proc.ExitCode != 0)
+            await Task.WhenAll(stdoutTask, stderrTask);
+
+            var stdout = stdoutTask.Result;
+            var stderr = stderrTask.Result;
+
+            var testResult = JsonSerializer.Deserialize<RunResultDto>(stdout);
+
+            if (testResult is null)
             {
                 result.Status = RequestStatus.Failed;
-                result.Result.Status = ExecutionStatus.RuntimeError;
+                result.Result.Status = ExecutionStatus.FailedToExecute;
+                result.Result.ExitCode = 1;
+                result.Result.ConsoleOutput = "Failed to parse test execution result.";
 
-                //because nuunitlite throws everything into stdout (even errors, it treats them as test result)
-                string errorString = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
+                File.Delete(data.ExecutablePath);
 
-                if (errorString.Contains("Test execution timed out"))
-                {
-                    result.Result.Status = ExecutionStatus.TimedOut;
-                }
-                else if (errorString.Contains("AssertionException") || errorString.Contains("Failed :", StringComparison.OrdinalIgnoreCase))
-                {
-                    result.Result.Status = ExecutionStatus.FailedToExecute;
-                }
-                else
-                {
-                    result.Result.Status = ExecutionStatus.RuntimeError;
-                }
-
-                var failedTestNames = new StringBuilder();
-
-                var matchCollection = Regex.Matches(errorString, @"\d+\)\s+Failed\s+:\s+([\w\.]+)");
-
-                foreach (Match match in matchCollection)
-                {
-                    failedTestNames.AppendLine(match.Groups[1].Value);
-                }
-
-                result.Result.ConsoleOutput = failedTestNames.ToString();
-            }
-            else
-            {
-                result.Status = RequestStatus.Succeeded;
-                result.Result.Status = ExecutionStatus.Succeeded;
+                return result;
             }
 
-            File.Delete(_tmpDllPath);
+            result = RunnerOutputParser.BuildExecutionReportOnProcOutput(result, testResult);
+
+            File.Delete(data.ExecutablePath);
 
             return result;
         }
+
 
         public void Dispose()
         {

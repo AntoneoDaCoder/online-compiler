@@ -1,0 +1,48 @@
+<div class="tasks-page layout">
+    <div class="tasks-main">
+        <section class="filters card">
+            <input *ngIf="filterTarget!=='status'" placeholder="Фильтр по причине запроса, названию или жетону задачи"
+                [(ngModel)]="filterValue" (input)="applyFilters()" />
+
+            <select *ngIf="filterTarget==='status' && viewAsEditor" [(ngModel)]="showOnlyApproved"
+                (change)="applyFilters()">
+                <option value="all">Все</option>
+                <option value="approved">Подтверждённые</option>
+                <option value="not-approved">Неподтверждённые</option>
+            </select>
+
+            <select [(ngModel)]="filterTarget" (change)="applyFilters()">
+                <option value="slug">Жетон</option>
+                <option value="title">Название задачи</option>
+                <option value="reason">Причина удаления</option>
+                <option *ngIf="viewAsEditor" value="status">Статус запроса</option>
+            </select>
+            <div class="row">
+                <button (click)="clearFilters()">Очистить</button>
+            </div>
+        </section>
+
+        <section class="problems-list">
+            <div *ngFor="let p of filteredRequests" class="problem-card">
+                <div class="problem-main">
+                    <div class="title">{{ p.problemTitle }} <small class="slug">({{ p.problemSlug }})</small></div>
+                    <div class="langs">
+                        <span class="tag">Причина: {{ p.reason }}, Статус: {{formatStatus(p.isApproved)}}</span>
+                    </div>
+                </div>
+
+                <div class="problem-meta">
+                    <div class="actions">
+                        <button *ngIf="isAdmin() && !viewAsEditor" class="btn-solve"
+                            (click)="onApproveRequest(p)">Подтвердить</button>
+                        <button *ngIf="!p.isApproved" class="btn-delete" (click)="onCancelRequest(p)">Отменить</button>
+                    </div>
+                </div>
+            </div>
+
+            <div *ngIf="filteredRequests.length === 0" class="muted small">Нет запросов по текущим фильтрам.</div>
+        </section>
+    </div>
+
+    <app-sidebar class="tasks-sidebar"></app-sidebar>
+</div>
